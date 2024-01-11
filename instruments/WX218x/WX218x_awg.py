@@ -372,6 +372,10 @@ class WX218x_awg(object):
                          delay=0,
                          width=64):
         
+        if position<0:
+            print('WARNING: marker position must be > 0.  Setting makrer position to zero, but this may effect timing lags.')
+            position = 0
+        
         self.configure_marker_index(channel_name, index)
         self.configure_marker_source(channel_name, source)
         self.configure_marker_position(channel_name, index, position)

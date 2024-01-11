@@ -63,49 +63,49 @@ UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\ELYSA_spare\ELYSA_spare_freq.txt
 chNum = 3
 default value = 0
-chName = ELYSA spare - freq
+chName = Abs Imaging - freq
 chLimits = 0, 10
 [[4]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_upper\cool_upper_amp_at_100MHz.txt
 chNum = 4
-default value = 2.39316239316
+default value = 0
 chName = Cool upper - amp
 chLimits = 0, 10
 [[5]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_lower\cool_lower_amp_at_100MHz.txt
 chNum = 5
-default value = 5.51892551893
+default value = 0
 chName = Cool lower - amp
 chLimits = 0, 10
 [[6]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_center\cool_center_amp_at_100MHz.txt
 chNum = 6
-default value = 2.6862026862
+default value = 0
 chName = Cool center - amp
-chLimits = 0, 10
+chLimits = 0, 2.5
 [[7]]
 UIvisible = True
 calibrationFname = ""
 chNum = 7
 default value = 0
-chName = ELYSA spare - amp
+chName = Abs imaging - amp
 chLimits = 0, 10
 [[8]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\vStirap_ref\vStirap_ref_freq.txt
 chNum = 8
 default value = 1.9731
-chName = vSTIRAP ref Omega_g (freq)
+chName = Elysa seperate branch - freq
 chLimits = 0, 10
 [[9]]
 UIvisible = True
 calibrationFname = ""
 chNum = 9
 default value = 0
-chName = vSTIRAP ref Omega_g - amp
+chName = Elysa seperate branch - amp
 chLimits = 0, 10
 [[10]]
 UIvisible = True
@@ -118,7 +118,7 @@ chLimits = 0, 10
 UIvisible = True
 calibrationFname = ""
 chNum = 11
-default value = 5
+default value = 0
 chName = Cavity lock - amp
 chLimits = 0, 10
 [[12]]
@@ -132,7 +132,7 @@ chLimits = 6.954, 8.702
 UIvisible = True
 calibrationFname = ""
 chNum = 13
-default value = 1.2
+default value = 0
 chName = ELYSA fibre offset - amp
 chLimits = 0, 1.5
 [[14]]
@@ -140,20 +140,20 @@ UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\depump\depump_freq.txt
 chNum = 14
 default value = 2.82
-chName = UNUSED:Depump - freq
+chName = Opt. Pumping DL Pro - freq
 chLimits = 2.43, 4.88
 [[15]]
 UIvisible = True
 calibrationFname = ""
 chNum = 15
 default value = 0
-chName = UNUSED:Depump - amp
+chName = Opt. Pumping DL Pro - amp
 chLimits = 0, 10
 [[16]]
 UIvisible = True
 calibrationFname = ""
 chNum = 16
-default value = 5
+default value = 0
 chName = MOT coils current
 chLimits = 0, 10
 [[17]]
@@ -181,14 +181,14 @@ chLimits = 0, 10
 UIvisible = True
 calibrationFname = ""
 chNum = 20
-default value = 4
+default value = 0
 chName = MOT Repumping
 chLimits =0,5
 [[21]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\repump_offset_lock_vco\repump_offset_lock_vco_freq.txt
 chNum = 21
-default value = 8.98901098901
+default value = 0
 chName = STIRAP offset VCO
 chLimits = -10, 10
 [[22]]

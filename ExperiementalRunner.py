@@ -369,6 +369,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
             awg.configure_trigger_source(ch, WX218x_TriggerMode.EXTERNAL)
             awg.configure_trigger_level(ch, 2)
             awg.configure_trigger_slope(ch, WX218x_TriggerSlope.POSITIVE)
+        
             
         channel_absolute_offsets = [np.rint(x*10**-6 * self.awg_config.sample_rate) for x in self.awg_config.waveform_output_channel_lags]
         channel_relative_offsets = list(map(lambda x, m=max(channel_absolute_offsets): int(m-x), channel_absolute_offsets))
@@ -423,7 +424,6 @@ class PhotonProductionExperiment(ExperimentalRunner):
                     try:
                         waveform_lengths.append(seq_waveforms[ch][j].get_n_samples() + seq_stitch_delays[ch][j])
                     except IndexError:
-                        ''' Ignore the case where the requested waveform segment doens't exist.'''
                         pass
                 print waveform_lengths
                 return int(max(waveform_lengths)) if waveform_lengths != [] else 0    
@@ -1422,7 +1422,7 @@ class Waveform(object):
         # Use a np array for ease of setting array slices to contant values.
         data = np.array([marker_levels[0]] * (len(self.data) + n_pad_right))
         for pos in marker_positions:
-            data[pos:pos+marker_width] = marker_levels[1]
+            data[int(pos):int(pos+marker_width)] = marker_levels[1]
         # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
         # then the channel remains high at the end of the sequence. Don't know why...
         if data[0]==1:

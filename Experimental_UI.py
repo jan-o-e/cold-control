@@ -133,7 +133,7 @@ class Experimental_UI(tk.LabelFrame):
         rtf_grid_opts = {'padx':5, 'pady':2, 'sticky':tk.E+tk.W}
         
         self.run_tone_awg = None
-        self.run_tone_freqs = [75.25*10**6, 106*10**6, 125.75*10**6, 75.25*10**6]
+        self.run_tone_freqs = [87.426*10**6, 84.926*10**6, 80.0*10**6, 75.25*10**6]
         self.run_tone_output_states= [False, False, False, False]
         self.run_tone_buttons = []
         
@@ -144,7 +144,7 @@ class Experimental_UI(tk.LabelFrame):
             self.run_tone_freqs[ch]=freq*10**6
         
         for i in range(4):
-            run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} freq(MHz)'.format(i+1), initVal=self.run_tone_freqs[i]*10**-6, dataType=float,
+            run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} freq (MHz)'.format(i+1), initVal=self.run_tone_freqs[i]*10**-6, dataType=float,
                                                                helpText='The run tone frequency in MHz.',
                                                                action = lambda entry_value, ch=i, f=set_run_tone_freq: f(ch, entry_value))
             toggle_run_tone_button = tk.Button(rtf, image=self.off_icon, background='red', relief=tk.RAISED, width=28)

@@ -1,5 +1,5 @@
 scan_abs_img_freq = False
-abs_img_freq_ch = 12
+abs_img_freq_ch = 3
 abs_img_freqs = 5,
 camera_trig_ch = 23
 imag_power_ch = 13

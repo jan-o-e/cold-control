@@ -1,0 +1,161 @@
+save_location = Z:/Results017_New/data
+summary_fname = automated_experiments_summary
+daq_channel_update_steps = 5
+daq_channel_update_delay = 1
+[experiments]
+[[0]]
+daq_channel_static_values = "(10, 87.0)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_87_0
+[[1]]
+daq_channel_static_values = "(10, 87.200000000000003)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_87_2
+[[2]]
+daq_channel_static_values = "(10, 87.400000000000006)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_87_4
+[[3]]
+daq_channel_static_values = "(10, 87.600000000000009)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_87_6
+[[4]]
+daq_channel_static_values = "(10, 87.800000000000011)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_87_8
+[[5]]
+daq_channel_static_values = "(10, 88.000000000000014)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_88_0
+[[6]]
+daq_channel_static_values = "(10, 88.200000000000017)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_88_2
+[[7]]
+daq_channel_static_values = "(10, 88.40000000000002)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_88_4
+[[8]]
+daq_channel_static_values = "(10, 88.600000000000023)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_88_6
+[[9]]
+daq_channel_static_values = "(10, 88.800000000000026)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_88_8
+[[10]]
+daq_channel_static_values = "(10, 89.000000000000028)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_89_0
+[[11]]
+daq_channel_static_values = "(10, 89.200000000000031)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_89_2
+[[12]]
+daq_channel_static_values = "(10, 89.400000000000034)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_89_4
+[[13]]
+daq_channel_static_values = "(10, 89.600000000000037)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_89_6
+[[14]]
+daq_channel_static_values = "(10, 89.80000000000004)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_89_8
+[[15]]
+daq_channel_static_values = "(10, 90.000000000000043)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_90_0
+[[16]]
+daq_channel_static_values = "(10, 90.200000000000045)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_90_2
+[[17]]
+daq_channel_static_values = "(10, 90.400000000000048)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_90_4
+[[18]]
+daq_channel_static_values = "(10, 90.600000000000051)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_90_6
+[[19]]
+daq_channel_static_values = "(10, 90.800000000000054)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_90_8
+[[20]]
+daq_channel_static_values = "(10, 91.000000000000057)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_91_0
+[[21]]
+daq_channel_static_values = "(10, 91.20000000000006)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_91_2
+[[22]]
+daq_channel_static_values = "(10, 91.400000000000063)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_91_4
+[[23]]
+daq_channel_static_values = "(10, 91.600000000000065)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_91_6
+[[24]]
+daq_channel_static_values = "(10, 91.800000000000068)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_91_8
+[[25]]
+daq_channel_static_values = "(10, 92.000000000000071)",
+mot_reload = 2000000
+modulation_frequencies = ,
+iterations = 500
+sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction\CavLock_92_0

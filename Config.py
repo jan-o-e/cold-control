@@ -744,7 +744,7 @@ def _makeExperimentalAutomationConfig():
     seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans\-22.5 MHz offset'
     
     config = ConfigObj()
-    config.filename =  os.getcwd() + '/configs/experimental automation/defaultExperimentalAutomationConfig'
+    config.filename =  os.getcwd() + '/configs/experimental automation/JuanExperimentalAutomationConfig'
     
     config['save_location'] = 'Z:/Results017_New/data'
     config['summary_fname'] = 'automated_experiments_summary'
@@ -774,15 +774,22 @@ def _makeExperimentalAutomationConfig():
     
     config.write()
 
-def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channel = 10, iterations=50, mot_reload = 1000*10**3):
+def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channel = 10, iterations=500, mot_reload = 1000*10**3):
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans'
+#     seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans'
+    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction'
     
     min_freq, max_freq = map(lambda x: str(x).replace('.','_'), [min(cavity_freqs), max(cavity_freqs)]) 
     
     config = ConfigObj()
-    config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/scan_cav__{0}_to_{1}'.\
+#     config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/Juan_scan_cav__{0}_to_{1}'.\
+#                                         format(min_freq, max_freq)
+
+    config.filename =  os.getcwd() + '/configs/experimental automation/Juan_scan_cav__{0}_to_{1}_190424'.\
                                         format(min_freq, max_freq)
+                                        
+                                        
+#     config.filename =  os.getcwd() + '/configs/experimental automation/Juan_try'                                        
     
     config['save_location'] = 'Z:/Results017_New/data'
     config['summary_fname'] = 'automated_experiments_summary'
@@ -796,7 +803,7 @@ def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channe
     for freq in sorted(cavity_freqs):
         
         config['experiments'][str(i)] = {'daq_channel_static_values' : [(cav_daq_channel, freq)],
-                                      'sequence_fname' : os.path.join(seq_folder, 'cav_{0}'.format(str(freq).replace('.','_'))),
+                                      'sequence_fname' : os.path.join(seq_folder, 'CavLock_{0}'.format(str(freq).replace('.','_'))),
                                       'iterations' : iterations,
                                       'mot_reload' : mot_reload, # in us
                                       'modulation_frequencies' : []}
@@ -804,6 +811,8 @@ def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channe
         i += 1
     
     config.write()
+    
+    
 
 def _makeExperimentalAutomationConfig_xBiasScan(x_biases = [], iterations=50, mot_reload = 500*10**3,  n_repeat=1):
      
@@ -916,9 +925,9 @@ def _makeExperimentalAutomationConfig_zBiasScan(z_biases = [], iterations=500, m
     config.write()
 
 
-def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations=100, mot_reload = 750*10**3):
+def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations=100, mot_reload = 1000*10**3):
      
-    seq_loc =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\seq170704'
+    seq_loc =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction'
     
     config = ConfigObj()
     config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/scan_stirap_freqs'
@@ -947,8 +956,9 @@ def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations
     print 'Done'
     
 def __copy_scan_seq_params(channels_to_copy = [17],
-                           seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans',
-                           base_seq_fname = r'cav_75_25'):
+                           seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\JuanPhotonProduction',
+                           base_seq_fname = r'CavLock_90'):
+  
   
     base_seq_reader = SequenceReader(os.path.join(seq_folder, base_seq_fname))
     
@@ -979,8 +989,17 @@ def __copy_scan_seq_params(channels_to_copy = [17],
                         seq_reader.get_global_timings(),
                         seq_reader.get_user_notes())
     
+    
+    
+    
 if __name__ == "__main__":
-  #  pass
+    pass
+
+    _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(86.5,92.1,0.1), cav_daq_channel = 10, iterations=100, mot_reload = 1000*10**3)
+
+#     __copy_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+
+
 #     _makeAbsorbtionImagingConfig()
 #     _makeSequenceConfig()
 #     _makePhotonProductionConfig()
@@ -991,9 +1010,10 @@ if __name__ == "__main__":
 
 #     _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(90.25,100.24,1))
 # #     _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[x for x in np.arange(92.75,100,0.5) if x not in (92.75, 93.25,97.75,98.25,98.75,99.25,99.75,93.75,94.25,94.75)])
-#     
-#     
-#     __copy_cav_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+#   
+#      
+#     __copy_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+    
 #       
 #     _makeExperimentalAutomationConfig_xBiasScan()
 #     freqs=np.arange(59.5,90.5,1.75)*10**6
@@ -1002,8 +1022,8 @@ if __name__ == "__main__":
     '''
     x bias scan
     '''
-    x_biases = [3,4.5,6]
-    _makeExperimentalAutomationConfig_xBiasScan(x_biases, iterations=500, mot_reload=400*10**3, n_repeat=2)
+#     x_biases = [3,4.5,6]
+#     _makeExperimentalAutomationConfig_xBiasScan(x_biases, iterations=500, mot_reload=400*10**3, n_repeat=2)
     
     '''
     y bias scan
@@ -1027,7 +1047,7 @@ if __name__ == "__main__":
     '''
 #     freqs=np.linspace(72.25,78.25,7)*10**6
 # #     freqs=np.linspace(70.25,80.25,5)*10**6
-#     _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=zip(freqs,freqs), iterations=50, mot_reload = 500*10**3)
+#     _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=zip(freqs,freqs), iterations=50, mot_reload = 1000*10**3)
      
     
     print 'Done'

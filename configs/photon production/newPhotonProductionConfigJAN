@@ -3,7 +3,7 @@ time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
 iterations = 100
-waveform sequence = '[0,1],[2,3]'
+waveform sequence = '[0],[1,2],[3],[4]'
 waveform stitch delays = '[0,0],[0,0]'
 interleave waveforms = True
 [waveforms]

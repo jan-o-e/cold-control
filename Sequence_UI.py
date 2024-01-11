@@ -571,7 +571,7 @@ class PopupEntry(object):
         
 class SequencePlot_UI(tk.LabelFrame):
     
-    def __init__(self, parent, sequence, sequence_channel_labels, text="Sequence preview", font=("Helvetica", 16), **kwargs):
+    def __init__(self, parent, sequence, sequence_channel_labels, text="Sequence preview", font=("Helvetica", 14), **kwargs):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
 
         self.sequence=sequence
@@ -864,7 +864,7 @@ class ChannelEditor_UI(tk.Frame):
         # Add one extra blank row    
         rows.append(Frame_ChannelEditorRow(rowsFrame, interval_style=IntervalStyle.FLAT, channel_calibration = chCalibration, global_timings=self.global_timings))
         
-        # Add column lables
+        # Add column labels
         lab_font = ("Helvetica", 10)
         
         down_icon = Image.open("icons/down_icon.png").resize((12,12))
