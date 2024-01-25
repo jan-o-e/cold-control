@@ -1,4 +1,4 @@
-date = 26/10/16
+date = 25/01/2024
 time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
@@ -37,18 +37,8 @@ marker channel = 3
 timestamp buffer size = 1000000
 [notes]
 user = '''Default user notes...
-
-
-
-
-
-
-
-
-
-
 '''
-config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'Cool repump - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'Cool repump - amp')", "(8, 'STIRAP ref - freq')", "(9, 'STIRAP ref - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'Abs imaging - freq')", "(13, 'Abs imaging - amp')", "(14, '14 - unused')", "(15, 'Camera trigger')", "(16, 'MOT coils current')", "(17, 'AWG trigger')", "(18, 'Bias coils current')", "(19, '19 - unused')", "(20, '20 - unused')", "(21, '21 - unused')", "(22, '22 - unused')", "(23, '23 - unused')"
+config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'Abs imaging - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'Abs imaging - amp')", "(8, 'Unused0 - freq')", "(9, 'Unused0 - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'Unused1- freq')", "(13, 'Unused1 - amp')", "(14, 'Unused2 - freq')", "(15, 'Unused2 - amp')", "(16, 'MOT coils current')", "(17, 'Bias coils current (unused)')", "(18, 'x comp. coils current')", "(19, 'y comp. coils current (/2)')", "(20, 'MOT Repumping')", "(21, 'STIRAP offset VCO')", "(22, 'AWG trigger')", "(23, 'Cavity PID Hold')"
 [sequence]
 t_step = 10.0
 global_timings = "(6000.0, 'Cool off')", "(5000.0, 'Throw start')", "(10000.0, 'AWG start')", "(27000.0, 'AWG end')", "(5350.0, 'Repump off')"
