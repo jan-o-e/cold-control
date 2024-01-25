@@ -39,28 +39,28 @@ enabled state = Low
 [DAQ channels]
 [[0]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_upper\cool_upper_freq.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_upper_freq.txt
 chNum = 0
-default value = 6.10012210012
+default value = 6.46642246642
 chName = Cool upper - freq
 chLimits = 0, 10
 [[1]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_lower\cool_lower_freq.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_lower_freq.txt
 chNum = 1
-default value = 6.10500610501
+default value = 6.59540659341
 chName = Cool lower - freq
 chLimits = 0, 10
 [[2]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_center\cool_center_freq.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_centre_freq.txt
 chNum = 2
-default value = 6.05128205128
+default value =6.39804639805
 chName = Cool center - freq
 chLimits = 0, 10
 [[3]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\ELYSA_spare\ELYSA_spare_freq.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\abs_imaging_freq.txt
 chNum = 3
 default value = 0
 chName = Abs Imaging - freq
@@ -95,23 +95,23 @@ chName = Abs imaging - amp
 chLimits = 0, 10
 [[8]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\vStirap_ref\vStirap_ref_freq.txt
+calibrationFname = ""
 chNum = 8
 default value = 1.9731
-chName = Elysa seperate branch - freq
+chName = Unused0 - freq
 chLimits = 0, 10
 [[9]]
 UIvisible = True
 calibrationFname = ""
 chNum = 9
 default value = 0
-chName = Elysa seperate branch - amp
+chName = Unused0 - amp
 chLimits = 0, 10
 [[10]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cavity_lock\cavity_lock_freq.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cavity_freq.txt
 chNum = 10
-default value = 4.0732
+default value = 4.05860805861
 chName = Cavity lock - freq
 chLimits = 0, 10
 [[11]]
@@ -123,31 +123,31 @@ chName = Cavity lock - amp
 chLimits = 0, 10
 [[12]]
 UIvisible = True
-calibrationFname = "C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\ELYSA_fibre_branch\ELYSA_fibre_branch_freq.txt"
+calibrationFname = ""
 chNum = 12
 default value = 7.834
-chName = ELYSA fibre branch - freq
+chName = Unused1 - freq
 chLimits = 6.954, 8.702
 [[13]]
 UIvisible = True
 calibrationFname = ""
 chNum = 13
 default value = 0
-chName = ELYSA fibre offset - amp
+chName = Unused1 - amp
 chLimits = 0, 1.5
 [[14]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\depump\depump_freq.txt
+calibrationFname =""
 chNum = 14
 default value = 2.82
-chName = Opt. Pumping DL Pro - freq
+chName = Unused2 - freq
 chLimits = 2.43, 4.88
 [[15]]
 UIvisible = True
 calibrationFname = ""
 chNum = 15
 default value = 0
-chName = Opt. Pumping DL Pro - amp
+chName = Unused2 - amp
 chLimits = 0, 10
 [[16]]
 UIvisible = True
@@ -161,7 +161,7 @@ UIvisible = True
 calibrationFname = ""
 chNum = 17
 default value = 0.0
-chName = Bias coils current
+chName = Bias coils current (unused)
 chLimits = 0, 10
 [[18]]
 UIvisible = True
@@ -169,14 +169,14 @@ calibrationFname = ""
 chNum = 18
 default value = 0
 chName = x comp. coils current
-chLimits = 0, 10
+chLimits = 0, 2.5
 [[19]]
 UIvisible = True
 calibrationFname = ""
 chNum = 19
 default value = 0
 chName = y comp. coils current (/2)
-chLimits = 0, 10
+chLimits = 0, 2.5
 [[20]]
 UIvisible = True
 calibrationFname = ""

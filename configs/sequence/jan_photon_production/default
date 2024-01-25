@@ -1,25 +1,25 @@
-date = 25/04/17
+date = 25/01/2024
 time = 09:27:35
 [notes]
 user = '''Default user notes...'''
 
 
-config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'Abs imaging - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'Abs imaging - amp')", "(8, 'Elysa seperate branch - freq')", "(9, 'Elysa seperate branch - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'ELYSA fibre branch - freq')", "(13, 'ELYSA fibre offset - amp')", "(14, 'Opt. Pumping DL Pro - freq')", "(15, 'Opt. Pumping DL Pro - amp')", "(16, 'MOT coils current')", "(17, 'Bias coils current')", "(18, 'x comp. coils current')", "(19, 'y comp. coils current (/2)')", "(20, 'MOT Repumping')", "(21, 'STIRAP offset VCO')", "(22, 'AWG trigger')", "(23, 'Cavity PID Hold')"
+config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'Abs imaging - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'Abs imaging - amp')", "(8, 'Unused0 - freq')", "(9, 'Unused0 - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'Unused1- freq')", "(13, 'Unused1 - amp')", "(14, 'Unused2 - freq')", "(15, 'Unused2 - amp')", "(16, 'MOT coils current')", "(17, 'Bias coils current (unused)')", "(18, 'x comp. coils current')", "(19, 'y comp. coils current (/2)')", "(20, 'MOT Repumping')", "(21, 'STIRAP offset VCO')", "(22, 'AWG trigger')", "(23, 'Cavity PID Hold')"
 [sequence]
 t_step = 10.0
 global_timings = "(15000.0, 'Cool off')", "(14000.0, 'Throw start')", "(20500.0, 'AWG start')", "(39000.0, 'AWG end')", "(15500.0, 'Depump off')", "(12000.0, 'Molasses start')", "(3000.0, 'Repump click-clack')"
 n_samples = 4001
 [sequence channels]
 [[0]]
-tV_pairs = "(0.0, 6.098919432921334)", "(12000.0, 5.346830003517509)", "(14000.0, 5.291657707872841)"
+tV_pairs = "(0.0, 6.11865811966)", "(12000.0, 5.346830003517509)", "(14000.0, 5.291657707872841)"
 V_interval_styles = 0, 0, 0
 chNum = 0
 [[1]]
-tV_pairs = "(0.0, 6.103347153084332)", "(12000.0, 5.348613892354194)", "(14000.0, 5.40674677349536)"
+tV_pairs = "(0.0, 6.59540659341)", "(12000.0, 5.348613892354194)", "(14000.0, 5.40674677349536)"
 V_interval_styles = 0, 0, 0
 chNum = 1
 [[2]]
-tV_pairs = "(0.0, 6.0491989854320405)", "(12000.0, 5.299176255211292)", "(14000.0, 5.299176255211292)"
+tV_pairs = "(0.0, 6.07011807082)", "(12000.0, 5.299176255211292)", "(14000.0, 5.299176255211292)"
 V_interval_styles = 0, 0, 0
 chNum = 2
 [[3]]
@@ -51,11 +51,11 @@ tV_pairs = "(0.0, 0.0)",
 V_interval_styles = 0,
 chNum = 9
 [[10]]
-tV_pairs = "(0.0, 4.365547626943772)",
+tV_pairs = "(0.0, 4.06837606838)",
 V_interval_styles = 0,
 chNum = 10
 [[11]]
-tV_pairs = "(0.0, 5.0)", "(20750.0, 5.0)", "(38000.0, 5.0)"
+tV_pairs = "(0.0, 0.6)", "(20750.0, 0.6)", "(38000.0, 0.6)"
 V_interval_styles = 0, 0, 0
 chNum = 11
 [[12]]
@@ -79,15 +79,15 @@ tV_pairs = "(0.0, 5.0)", "(12000.0, 0.0)"
 V_interval_styles = 0, 0
 chNum = 16
 [[17]]
-tV_pairs = "(0.0, 0.0)", "(15000.0, 0.0)", "(17000.0, 0.01)", "(39000.0, 0.01)"
+tV_pairs = "(0.0, 0.0)", "(15000.0, 0.0)", "(17000.0,0)", "(39000.0, 0)"
 V_interval_styles = 0, 0, 0, 0
 chNum = 17
 [[18]]
-tV_pairs = "(0.0, 0.0)", "(12000.0, 0.0)", "(17000.0, 1.25)", "(35000.0, 1.25)"
+tV_pairs = "(0.0, 0.0)", "(12000.0, 0.0)", "(17000.0, 0)", "(35000.0, 0)"
 V_interval_styles = 0, 0, 0, 0
 chNum = 18
 [[19]]
-tV_pairs = "(0.0, 0.0)", "(17000.0, 0.25)", "(29500.0, 0.25)"
+tV_pairs = "(0.0, 0.0)", "(17000.0, 0.5)", "(29500.0, 0.5)"
 V_interval_styles = 0, 0, 0
 chNum = 19
 [[20]]

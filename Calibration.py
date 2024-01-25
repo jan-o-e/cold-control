@@ -657,12 +657,12 @@ if __name__ == "__main__":
     # freq_v = [6.412,6.051,5.113,4.16,3.2087]
     # aom_freqs = [76,78,80,82,84]
       
-    #aom_name = 'cool_lower'
-    #amp_channel = 5
-    #freq_ch = 1
+    aom_name = 'cool_lower'
+    amp_channel = 5
+    freq_ch = 1
          
 #     freq_v = [6.412,6.051,5.113,4.16,3.2087]
-    #aom_freqs = [102,100,95,90,85]
+    aom_freqs = [102,100,95,90,85]
 #     freq_v = [6.051]
 #     aom_freqs = [100]
 
@@ -717,14 +717,13 @@ if __name__ == "__main__":
 
 #     Freq calib
 
-    aom_name = 'cool_upper'
-    freq_ch = 0
+    aom_name = 'abs_imaging'
+    freq_ch = 3
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
     daq_config_fname = config_reader.get_daq_config_fname()
-    print(daq_config_fname)
     daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
     daq_controller.continuousOutput=True
-    #daq_controller.updateChannelValue(9, 2.0) # for manual control of amplitude input (in V)
+    daq_controller.updateChannelValue(7, 1) # for manual control of amplitude input (in V)
 
     calibName = "{0}_freq".format(aom_name)
     vData, calData, units = calibrate_frequency(daq_controller,freq_ch, (0,10), calibration_V_step = get_default_calibration_Vstep())
