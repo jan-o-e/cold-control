@@ -64,6 +64,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
         self.awg_config = self.photon_production_config.awg_configuration
         
         self.iterations = c.iterations
+        #why is this multiplied by e10e-6?
         self.mot_reload_time = c.mot_reload*10**-6
         print 'MOT reload time (s)', self.mot_reload_time
         self.is_live = False # Experiment is not running yet
@@ -389,8 +390,11 @@ class PhotonProductionExperiment(ExperimentalRunner):
                                         calib_data[:,1],
                                         calib_data[:,0])
         
+        #this takes the array of waveform information and channel based waveform sequencing and returns the waveforms in the order they are to be played
         seq_waveforms = [[self.photon_production_config.waveforms[i] for i in ch_waveforms]
                         for ch_waveforms in self.photon_production_config.waveform_sequence]
+        
+        print 'seq_waveforms={}', seq_waveforms
         
         queud_markers = []
         
@@ -414,6 +418,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
 # #                             print i,j,k
 #                             seq_waveforms_stitch_delays[i][j] += seq_waveforms[k][j].get_n_samples()
 #      
+            #TODO this needs updating
             interleave_channels = [(0,1),(0,2)]
              
             def get_j_segments_max_length(seq_waveforms, channels, j, seq_stitch_delays=None):
