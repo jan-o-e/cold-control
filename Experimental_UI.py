@@ -133,7 +133,7 @@ class Experimental_UI(tk.LabelFrame):
         rtf_grid_opts = {'padx':5, 'pady':2, 'sticky':tk.E+tk.W}
         
         self.run_tone_awg = None
-        self.run_tone_freqs = [87.426*10**6, 84.926*10**6, 80.0*10**6, 75.25*10**6]
+        self.run_tone_freqs = [107.65*10**6, 78.5*10**6,62.35*10**6, 82.5*10**6]
         self.run_tone_output_states= [False, False, False, False]
         self.run_tone_buttons = []
         
@@ -360,7 +360,8 @@ class Experimental_UI(tk.LabelFrame):
             freq = self.run_tone_freqs[i_ch]
             print 'Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6)
 
-            awg.configure_standard_waveform(channel, WX218x_Waveform.SINE, frequency=freq, amplitude=2)
+            #reduce amplitude so as not to saturate the AOM
+            awg.configure_standard_waveform(channel, WX218x_Waveform.SINE, frequency=freq, amplitude=1.25)
             awg.configure_operation_mode(channel, WX218x_OperationMode.CONTINUOUS)
             awg.enable_channel(channel)
             

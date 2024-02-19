@@ -2,39 +2,55 @@ date = 25/01/2024
 time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
-iterations = 100
-waveform sequence = '[0],[1,2],[3],[4]'
-waveform stitch delays = '[0,0],[0,0]'
+iterations = 100000
+waveform sequence = '[6],[7]'
+waveform stitch delays = '[-1,[6]],[-1,[6]]'
 interleave waveforms = True
 [waveforms]
 [[0]]
-modulation frequency = 75250000
+modulation frequency = 107000000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Sin4 intensity pulse\408 drive\408 drive_0 prepad\sin4_100_408.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Sin4 intensity pulse\614 drive\614 drive_13 prepad\sin4_20_627.csv
 [[1]]
-modulation frequency = 75250000
+modulation frequency = 106000000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Sin4 intensity pulse\408 drive\408 drive_0 prepad\sin4_100_408.csv
+filename =C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\stokes_pulse_150nsRepump\stokes_150ns_30.csv
 [[2]]
-modulation frequency = 106000000
+modulation frequency = 78500000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\408 long\250 drive\tophat_100_408.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\pump_pulse_150nsRepump\pump_150ns_30.csv
 [[3]]
-modulation frequency = 106000000
+modulation frequency = 62350000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\408 long\250 drive\tophat_100_408.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_100.csv
+[[4]]
+modulation frequency = 82300000
+phases = ,
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_100.csv
+[[5]]
+modulation frequency = 0
+phases = ,
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\zeros\zero_627.csv
+[[6]]
+modulation frequency = 107000000
+phases = ,
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\152 long\122 drive\tophat_100_152.csv
+[[7]]
+modulation frequency = 78500000
+phases = ,
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\152 long\122 drive\tophat_100_152.csv
 [AWG]
 sample rate = 1228750000.0
-burst count = 10000
-waveform output channels = channel1, channel2, channel3
-waveform output channel lags = 0.550, 0.640, 0.586 
-marked channels = channel1,
+burst count = 100000
+waveform output channels = channel1, channel2
+waveform output channel lags = 0.0, 0.0, 0.0, 0.0
+marked channels = channel1
 marker width = 0.1
-waveform aom calibrations locations = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/stirap_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/depump_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg,
+waveform aom calibrations locations = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/stirap_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/depump_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg,  C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg
 [TDC]
 counter channels = 1,2
 marker channel = 3
-timestamp buffer size = 1000000
+timestamp buffer size = 10000000
 [notes]
 user = '''Default user notes...
 '''

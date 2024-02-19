@@ -2,30 +2,30 @@ date = 26/10/16
 time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
-iterations = 100
+iterations = 1000000
 waveform sequence = '[0,1],[2,3]'
 waveform stitch delays = '[0,0],[0,0]'
 interleave waveforms = True
 [waveforms]
 [[0]]
-modulation frequency = 75250000
+modulation frequency = 106000000
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Sin4 intensity pulse\408 drive\408 drive_0 prepad\sin4_100_408.csv
 [[1]]
-modulation frequency = 75250000
+modulation frequency = 106000000
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Sin4 intensity pulse\408 drive\408 drive_0 prepad\sin4_100_408.csv
 [[2]]
-modulation frequency = 106000000
+modulation frequency = 75250000
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\408 long\250 drive\tophat_100_408.csv
 [[3]]
-modulation frequency = 106000000
+modulation frequency = 75250000
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\408 long\250 drive\tophat_100_408.csv
 [AWG]
 sample rate = 1228750000.0
-burst count = 10000
+burst count = 10000000
 waveform output channels = channel1, channel2, channel3
 waveform output channel lags = 0.550, 0.640, 0.586 
 marked channels = channel1,
@@ -37,15 +37,6 @@ marker channel = 3
 timestamp buffer size = 1000000
 [notes]
 user = '''Default user notes...
-
-
-
-
-
-
-
-
-
 
 '''
 config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'Cool repump - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'Cool repump - amp')", "(8, 'STIRAP ref - freq')", "(9, 'STIRAP ref - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'Abs imaging - freq')", "(13, 'Abs imaging - amp')", "(14, '14 - unused')", "(15, 'Camera trigger')", "(16, 'MOT coils current')", "(17, 'AWG trigger')", "(18, 'Bias coils current')", "(19, '19 - unused')", "(20, '20 - unused')", "(21, '21 - unused')", "(22, '22 - unused')", "(23, '23 - unused')"

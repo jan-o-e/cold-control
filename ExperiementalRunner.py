@@ -1405,27 +1405,34 @@ class Waveform(object):
         
         return data
         
-    def get(self, sample_rate, calibration_function = lambda level: level):
+    def get(self, sample_rate, calibration_function = lambda level: level, double_pass=True):
         # Copy data to new object. We do not want to mutate original data.
         mod_data = [calibration_function(x) for x in self.data]
         t_step = 2*np.pi/sample_rate
         phi = 0.
-        phases = map(lambda x: (x[0]/2,x[1]), self.phases) # Diveded phases by two for double passed AOM.
+        if double_pass:
+            phases = map(lambda x: (x[0]/2,x[1]), self.phases) # Diveded phases by two for double passed AOM.
         next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
         for i in xrange(len(mod_data)):
+            #i here is the index of the phase list
             if i==next_i_flip:
                 phi=next_phi
                 next_phi, next_i_flip = None, None if not phases else phases.pop(0)
             mod_data[i] = mod_data[i]*np.sin(i*t_step*self.mod_frequency + phi)
         return mod_data
+    
+    def get_constant_voltage(self, calibration_function = lambda level: level):
+        # Copy data to new object. We do not want to mutate original data.
+        mod_data = [calibration_function(x) for x in self.data]
+        return mod_data
 
-    def get_marker_data(self, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0):
+    def get_marker_data(self, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0, n_pad_left=0):
         '''
         Returns a marker waveform.
         '''
         
         # Use a np array for ease of setting array slices to contant values.
-        data = np.array([marker_levels[0]] * (len(self.data) + n_pad_right))
+        data = np.array( [marker_levels[0]] * (n_pad_left + len(self.data) + n_pad_right))
         for pos in marker_positions:
             data[int(pos):int(pos+marker_width)] = marker_levels[1]
         # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
