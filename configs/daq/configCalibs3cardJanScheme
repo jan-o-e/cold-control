@@ -95,18 +95,18 @@ chName = Abs imaging - amp
 chLimits = 0, 10
 [[8]]
 UIvisible = True
-calibrationFname = ""
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\Optical Pump 1_freq.txt
 chNum = 8
-default value = 1.9731
-chName = Unused0 - freq
+default value = 0.043956043956
+chName = Optical Pump 1 - freq
 chLimits = 0, 10
 [[9]]
 UIvisible = True
 calibrationFname = ""
 chNum = 9
 default value = 0
-chName = Unused0 - amp
-chLimits = 0, 10
+chName = Optical Pump 1 - amp
+chLimits = 0, 2
 [[10]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cavity_freq.txt
@@ -122,14 +122,14 @@ default value = 0
 chName = Cavity lock - amp
 chLimits = 0, 10
 [[12]]
-UIvisible = True
+UIvisible = False
 calibrationFname = ""
 chNum = 12
 default value = 7.834
 chName = Unused1 - freq
 chLimits = 6.954, 8.702
 [[13]]
-UIvisible = True
+UIvisible = False
 calibrationFname = ""
 chNum = 13
 default value = 0
@@ -137,18 +137,18 @@ chName = Unused1 - amp
 chLimits = 0, 1.5
 [[14]]
 UIvisible = True
-calibrationFname =""
+calibrationFname =C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\Optical Pump 2_freq.txt
 chNum = 14
-default value = 2.82
-chName = Unused2 - freq
-chLimits = 2.43, 4.88
+default value = 2.48595848596
+chName = Optical Pump 2 - freq
+chLimits = 0, 10
 [[15]]
 UIvisible = True
 calibrationFname = ""
 chNum = 15
 default value = 0
-chName = Unused2 - amp
-chLimits = 0, 10
+chName = Optical Pump 2 - amp
+chLimits = 0, 2
 [[16]]
 UIvisible = True
 calibrationFname = ""

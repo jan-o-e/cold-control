@@ -717,13 +717,13 @@ if __name__ == "__main__":
 
 #     Freq calib
 
-    aom_name = 'abs_imaging'
-    freq_ch = 3
+    aom_name = 'Optical Pump 2'
+    freq_ch = 14
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
     daq_config_fname = config_reader.get_daq_config_fname()
     daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
     daq_controller.continuousOutput=True
-    daq_controller.updateChannelValue(7, 1) # for manual control of amplitude input (in V)
+    daq_controller.updateChannelValue(15, 1) # for manual control of amplitude input (in V)
 
     calibName = "{0}_freq".format(aom_name)
     vData, calData, units = calibrate_frequency(daq_controller,freq_ch, (0,10), calibration_V_step = get_default_calibration_Vstep())

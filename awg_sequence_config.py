@@ -100,7 +100,11 @@ def configure_awg(awg_config, photon_production_config):
 
     j = 0
     for channel, waveform_data, waveforms, delay, channel_abs_offset in zip(awg_chs, seq_waveform_data, seq_waveforms, seq_waveforms_stitched_delays, channel_absolute_offsets):
-        
+        if channel==Channel.CHANNEL_3:
+            constant_V=True
+        else:
+            constant_V=False
+
         waveform_aom_calibs = {}
         aom_calibration_loc = awg_config.waveform_aom_calibrations_locations[j]
         print 'For {0} using aom calibrations in {1}'.format(channel, os.path.join(aom_calibration_loc, '*MHz.txt'))
@@ -148,14 +152,14 @@ def configure_awg(awg_config, photon_production_config):
                 print '\tOnly one waveform in sequence'
                 #write delay to the single waveform in a sequence
                 if delay < 0:
-                    waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                    waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V )
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_left=abs(delay))
                 elif delay > 0:
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun) + [0]*delay
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V) + [0]*delay
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_right=delay)
                 else:
                     #no delay
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
             
             else:
@@ -163,21 +167,21 @@ def configure_awg(awg_config, photon_production_config):
                 if ind==0:
                     #write delay to the first waveform in a sequence if a sequence contains more than one waveform
                     if delay < 0:
-                        waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                        waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                         marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_left=abs(delay))
                     else:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                         marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
                 elif ind==len(waveforms)-1:
                     #write delay to the last waveform in a sequence if a sequence contains more than one waveform
                     if delay >0:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun) + [0]*delay
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V) + [0]*delay
                         marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_right=delay)
                     else:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                         marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
                 else:
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun)
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
             
 #            marker_data   += waveform.get(sample_rate=self.awg_config.sample_rate) + [0]*delay
@@ -365,7 +369,7 @@ if __name__ == '__main__':
         waveforms.append(Waveform(fname = v['filename'],
                                     mod_frequency= float(v['modulation frequency']),
                                     phases=map(float, v['phases'])))
-    print config['waveform sequence']
+        
     photon_production_config = PhotonProductionConfiguration(save_location = config['save location'],
                                                                 mot_reload  = eval(config['mot reload']),
                                                                 iterations = int(config['iterations']),
@@ -384,8 +388,14 @@ if __name__ == '__main__':
         daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
         daq_controller.continuousOutput=True
         daq_controller.updateChannelValue(22, 2.6) # for manual control of amplitude input (in V)
+        daq_controller.updateChannelValue(14, 2.485)
+        daq_controller.updateChannelValue(8, 0.0048)
         daq_controller.releaseAll()
         time.sleep(0.2)
 
 '''waveform sequence = '[0,1,0,1],[2,5,2], [3], [4]'
-waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]], [1,[0,1,0,1]]' '''
+waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]], [1,[0,1,0,1]]'
+sample rate = 1228750000.0 '''
+
+'''waveform sequence = '[1],[2]'
+waveform stitch delays = '[-1,[2]],[-1,[2]]' '''
