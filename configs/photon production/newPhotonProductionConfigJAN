@@ -23,7 +23,7 @@ filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\ne
 [[3]]
 modulation frequency = 62350000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_60.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_100.csv
 
 [[4]]
 modulation frequency = 82500000

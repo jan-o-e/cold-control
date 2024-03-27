@@ -133,7 +133,8 @@ class Experimental_UI(tk.LabelFrame):
         rtf_grid_opts = {'padx':5, 'pady':2, 'sticky':tk.E+tk.W}
         
         self.run_tone_awg = None
-        self.run_tone_freqs = [107.65*10**6, 78.5*10**6,62.35*10**6, 82.5*10**6]
+        #set channel 3 to DC Voltage
+        self.run_tone_freqs = [107.65*10**6, 78.5*10**6,1, 82.5*10**6]
         self.run_tone_output_states= [False, False, False, False]
         self.run_tone_buttons = []
         
@@ -141,12 +142,23 @@ class Experimental_UI(tk.LabelFrame):
         self.off_icon = ImageTk.PhotoImage(Image.open("icons/toggle_off_icon.png").resize((25,20)))
         
         def set_run_tone_freq(ch, freq):
-            self.run_tone_freqs[ch]=freq*10**6
+            if ch==2:
+                self.run_tone_freqs[ch]=freq
+            else:
+                self.run_tone_freqs[ch]=freq*10**6
         
         for i in range(4):
-            run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} freq (MHz)'.format(i+1), initVal=self.run_tone_freqs[i]*10**-6, dataType=float,
+
+            #ch3 is set to DC voltage
+            if i==2:
+                run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} Amplitude (V)'.format(i+1), initVal=self.run_tone_freqs[i], dataType=float,
+                                                               helpText='The run tone amplitude in V.',
+                                                               action = lambda entry_value, ch=i, f=set_run_tone_freq: f(ch, entry_value))
+            else:
+                run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} freq (MHz)'.format(i+1), initVal=self.run_tone_freqs[i]*10**-6, dataType=float,
                                                                helpText='The run tone frequency in MHz.',
                                                                action = lambda entry_value, ch=i, f=set_run_tone_freq: f(ch, entry_value))
+                
             toggle_run_tone_button = tk.Button(rtf, image=self.off_icon, background='red', relief=tk.RAISED, width=28)
             toggle_run_tone_button.config(command=lambda button=toggle_run_tone_button, i_ch=i: self.toggleRunTone(button, i_ch))
             self.run_tone_buttons.append(toggle_run_tone_button)
@@ -361,7 +373,12 @@ class Experimental_UI(tk.LabelFrame):
             print 'Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6)
 
             #reduce amplitude so as not to saturate the AOM
-            awg.configure_standard_waveform(channel, WX218x_Waveform.SINE, frequency=freq, amplitude=1.25)
+
+            #channel 3 set to DC voltage
+            if channel=='channel3':
+                awg.configure_standard_waveform(channel, WX218x_Waveform.DC, amplitude=freq)
+            else:
+                awg.configure_standard_waveform(channel, WX218x_Waveform.SINE, frequency=freq, amplitude=1)
             awg.configure_operation_mode(channel, WX218x_OperationMode.CONTINUOUS)
             awg.enable_channel(channel)
             

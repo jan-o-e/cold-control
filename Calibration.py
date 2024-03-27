@@ -102,7 +102,7 @@ def calibrate_frequency(daq_controller, chNum_to_calibrate, calibration_V_range 
 
 def calibrate_absolute_power(daq_controller, chNum_to_calibrate, calibration_V_range = (0,10), 
                     calibration_V_step = get_default_calibration_Vstep(), writeToQueryDelay=0.1,
-                    nMeasurmentCounts = 1):
+                    nMeasurmentCounts = 3):
     '''Creates a calibration file between the voltage given to an AOM and absolute power output.
     daq_controller      - a DAQ_controller object to un the DAQ cards.
     chNum_to_calibrate  - The channel number which is attahed to the AOM input
@@ -324,12 +324,13 @@ def save_calibration_plot(fname, vData, calData, units, title):
     
 def calibrate_awg_driven_aom_response(
                                   freqs,
+                                  name,
                                   awg_channel = Channel.CHANNEL_1,
-                                  level_step=0.1,
+                                  level_step=0.05,
                                   nMeasurmentCounts=3,
                                   writeToQueryDelay=0.2,
                                   calibration_lims = (0,1),
-                                  save_location = os.path.join(os.getcwd(), 'calibrations','new_awg_driven_aom_calib')):
+                                  save_location = os.path.join(os.getcwd(), 'calibrations','jan/awg_driven')):
     
 
 
@@ -397,8 +398,13 @@ def calibrate_awg_driven_aom_response(
         save_plot_location = os.path.join(save_location, 'plots')
         if not os.path.isdir(save_plot_location):
             os.makedirs(save_plot_location)
+
+        #save microWatts
+        calData = [x*10**6 for x in calData]
+        save_calibration_plot(os.path.join(save_plot_location,'{0}MHz_abs_power.png'.format(freq)), levelData, calData, "muW", "{0}MHz: Power vs level".format(freq))
+        create_calibration_file(os.path.join(save_location,'{0}_{1}_{2}MHz_abs'.format(name,awg_channel,freq)), levelData, calData, units='muW', level_units='level')
+
         
-        save_calibration_plot(os.path.join(save_plot_location,'{0}MHz_abs_power.png'.format(freq)), levelData, calData, "W", "{0}MHz: Power vs level".format(freq))
         
         end_on_max = False
         while not end_on_max:
@@ -421,9 +427,9 @@ def calibrate_awg_driven_aom_response(
             return [(l-mi)/ran for l in values]
          
         calData = [100*x for x in normalise(calData)]
-     
-        save_calibration_plot(os.path.join(save_location, 'plots','{0}MHz_rel_power.png'.format(freq)), levelData, calData, "%", "{0}MHz: % Power vs level".format(freq))
-        create_calibration_file(os.path.join(save_location,'{0}MHz'.format(freq)), levelData, calData, units='%', level_units='level')
+
+        save_calibration_plot(os.path.join(save_location,'{0}_{1}_{2}MHz_rel_power_plot.png'.format(name,awg_channel,freq)), levelData, calData, "%", "{0}MHz: Rel Power vs level".format(freq))
+        create_calibration_file(os.path.join(save_location,'{0}_{1}_{2}MHz_rel'.format(name,awg_channel,freq)), levelData, calData, units='%', level_units='level')
     
     print ('Resetting awg...',)
     awg.reset()
@@ -632,24 +638,22 @@ def test_stirap_aom_freq_response(level=0.5,
     
 
 if __name__ == "__main__":
-     #test_stirap_aom_freq_response()
-# [61.25,65.25,70.25,75.25,80.25,85.25,89.25]
-#    calibrate_stirap_aom_response(freqs=[60.0], level_step=0.004, nMeasurmentCounts=5, writeToQueryDelay=0.3)
-         
-    # calibrate_awg_driven_aom_response(awg_channel=Channel.CHANNEL_3,
-    #                                   freqs=[78,80,82],
-    #                                   level_step=0.004,
-    #                                   nMeasurmentCounts=5,
-    #                                   writeToQueryDelay=0.3,
-    #                                   calibration_lims=(0,0.9),
-    #                                   save_location=os.path.join(os.getcwd(), 'calibrations','StirapDL_awg'))
-        
-    # AMP calib
-   
+
+# AWG driven AOM calib
+#    awg_channel_1_freqs=[105,107,109]
+#    calibrate_stirap_aom_response(name='stirap_elysa',freqs=awg_channel_1_freqs, nMeasurmentCounts=5, writeToQueryDelay=0.3)
+#    awg_channel_2_freqs=[76,78.5,80]
+#    calibrate_stirap_aom_response(name='stirap_dl_pro',awg_channel = Channel.CHANNEL_2,freqs=awg_channel_2_freqs, nMeasurmentCounts=5, writeToQueryDelay=0.3)
+
+#    need to write new calibration routine for opical pumping where I am only producing a square pulse
+
+###################################################################
+    
+# DAQ AMP calib
+  
     def getCalibName(aom_name, freq):
          return '{0}_amp_at_{1}MHz'.format(aom_name, freq)
-#             
-#
+    
     # aom_name = 'vStirap_ref'
     # amp_channel = 9
     # freq_ch = 8
@@ -657,66 +661,46 @@ if __name__ == "__main__":
     # freq_v = [6.412,6.051,5.113,4.16,3.2087]
     # aom_freqs = [76,78,80,82,84]
       
-    aom_name = 'cool_lower'
-    amp_channel = 5
-    freq_ch = 1
-         
-#     freq_v = [6.412,6.051,5.113,4.16,3.2087]
-    aom_freqs = [102,100,95,90,85]
-#     freq_v = [6.051]
-#     aom_freqs = [100]
+#    aom_name = 'cool_lower'
+#    amp_channel = 5
+#    freq_ch = 1
+#    freq_v = [6.412,6.051,5.113,4.16]
+#    aom_freqs = [102,100,95,90]
 
-#     aom_freqs = [100]
+#    aom_name = 'cool_centre'
+#    freq_ch = 2
+#    amp_channel = 6
+#   freq_v = [4.141,5.089,6.017,6.383]
+#    aom_freqs = [90,95,100,102]
+#
+    
+    aom_name = 'cool_upper'
+    freq_ch = 0
+    amp_channel = 4
+    freq_v = [4.141,5.089,6.017,6.383]
+    aom_freqs = [90,95,100,102]
+    config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
+    daq_config_fname = config_reader.get_daq_config_fname()
+    daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
+    daq_controller.continuousOutput=True
 
+    for freq, v in zip(aom_freqs,freq_v):
+        calibName = '{0}_amp_at_{1}MHz'.format(aom_name, freq)
+        daq_controller.updateChannelValue(freq_ch, v)
+        time.sleep(3)
+        vData, calData, units = calibrate_absolute_power(daq_controller, amp_channel, (0.2,
+                                                                                       1.75),
+                                                        calibration_V_step = get_default_calibration_Vstep()*5,
+                                                        writeToQueryDelay = 0.5)
+        create_calibration_file(os.getcwd() + '/calibrations/jan/{0}/{1}'.format(aom_name, calibName), vData, calData, units)
+        save_calibration_plot(os.getcwd() + '/calibrations/jan/{0}/{1}_plot.png'.format(aom_name, calibName), vData, calData, units, 'freq = {0}MHz'.format(freq))
 
-######################################################
-
-#     aom_name = 'cool_center'
-#     freq_ch = 2
-#     amp_channel = 6
-# #  #
-#     #freq_v = [3.210, 4.180, 5.133, 5.313, 6.061,6.427]#[6.471]#, 6.105, 5.348, 4.200, 3.243]
-#     freq_v = [3.189,4.141,5.089,5.274,6.017,6.383]
-#     aom_freqs = [85,90,95,96,100,102]#[102]#,100,96,90,85]
-#
-#   config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
-#    daq_config_fname = config_reader.get_daq_config_fname()
-#
-# 
-#    daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
-#    daq_controller.continuousOutput=True
-
-#    for freq, v in zip(aom_freqs,freq_v):
-
-#         calibName = '{0}_amp_at_{1}MHz'.format(aom_name, freq)
-#
-#         daq_controller.updateChannelValue(freq_ch, v)
-#         time.sleep(3)
-#         vData, calData, units = calibrate_percentage_power(daq_controller, amp_channel, (0,6.5),
-#                                                            calibration_V_step = get_default_calibration_Vstep()*5,
-#                                                            writeToQueryDelay = 0.5)
-#
-#         create_calibration_file(os.getcwd() + '/calibrations/{0}/{1}'.format(aom_name, calibName), vData, calData, units)
-#         save_calibration_plot(os.getcwd() + '/calibrations/{0}/{1}_plot.png'.format(aom_name, calibName), vData, calData, units, 'freq = {0}MHz'.format(freq))
-#
-#     for freq, v in zip(aom_freqs,freq_v):
-#
-#         calibName = '{0}_abs_amp_at_{1}MHz'.format(aom_name, freq)
-#
-#         daq_controller.updateChannelValue(freq_ch, v)
-#         time.sleep(3)
-#         vData, calData, units = calibrate_absolute_power(daq_controller, amp_channel, (0,7), calibration_V_step=0.05, writeToQueryDelay=0.05)
-#
-#         create_calibration_file(os.getcwd() + '/calibrations/{0}/{1}'.format(aom_name, calibName), vData, calData, units)
-#         save_calibration_plot(os.getcwd() + '/calibrations/{0}/{1}_plot.png'.format(aom_name, calibName), vData, calData, units, 'freq = {0}MHz'.format(freq))
-#
-#     daq_controller.releaseAll()
 
 
 #####################################################
 
-#     Freq calib
-
+#     Freq calib DAQ
+"""
     aom_name = 'Optical Pump 2'
     freq_ch = 14
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
@@ -731,3 +715,4 @@ if __name__ == "__main__":
     create_calibration_file(os.getcwd() + '/calibrations/jan/{0}'.format(calibName), vData, calData, units)
     save_calibration_plot(os.getcwd() + '/calibrations/jan/{0}_plot.png'.format(calibName), vData, calData, units, '{0}_plot'.format(calibName))
     daq_controller.releaseAll()
+"""

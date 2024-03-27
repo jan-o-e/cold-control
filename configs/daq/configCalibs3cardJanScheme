@@ -98,14 +98,14 @@ UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\Optical Pump 1_freq.txt
 chNum = 8
 default value = 0.043956043956
-chName = Optical Pump 1 - freq
+chName = Optical Pump F2 Elysa - freq
 chLimits = 0, 10
 [[9]]
 UIvisible = True
 calibrationFname = ""
 chNum = 9
 default value = 0
-chName = Optical Pump 1 - amp
+chName = Optical Pump F2 Elysa - amp
 chLimits = 0, 2
 [[10]]
 UIvisible = True
@@ -140,14 +140,14 @@ UIvisible = True
 calibrationFname =C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\Optical Pump 2_freq.txt
 chNum = 14
 default value = 2.48595848596
-chName = Optical Pump 2 - freq
+chName = Optical Pump F1 DL - freq
 chLimits = 0, 10
 [[15]]
 UIvisible = True
 calibrationFname = ""
 chNum = 15
 default value = 0
-chName = Optical Pump 2 - amp
+chName = Optical Pump F1 DL - amp
 chLimits = 0, 2
 [[16]]
 UIvisible = True
@@ -188,7 +188,7 @@ chLimits =0,5
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\repump_offset_lock_vco\repump_offset_lock_vco_freq.txt
 chNum = 21
-default value = 0
+default value = 9.34554334554
 chName = STIRAP offset VCO
 chLimits = -10, 10
 [[22]]
