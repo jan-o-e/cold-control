@@ -3,7 +3,7 @@ time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
 iterations = 100000
-waveform sequence = '[0,1,0,1],[2,5,2], [3]'
+waveform sequence = '[0,1,0,1],[2,4,2], [3]'
 waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]]'
 interleave waveforms = True
 
@@ -19,18 +19,12 @@ filename =C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new
 [[2]]
 modulation frequency = 78500000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\pump_pulse_200nsRepump\pump_200ns_30.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\pump_pulse_175nsRepump\pump_175ns_30.csv
 [[3]]
 modulation frequency = 62350000
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_100.csv
-
 [[4]]
-modulation frequency = 82500000
-phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\tophat\tophat_4000ns_80.csv
-
-[[5]]
 modulation frequency = 0
 phases = ,
 filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\zeros\zero_627.csv
@@ -40,8 +34,8 @@ filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\ne
 sample rate = 1000000000.0
 burst count = 10000
 waveform output channels = channel1, channel2, channel3
-waveform output channel lags = 0.025,0, 0
-marked channels = channel1
+waveform output channel lags = 0.015,0, 0
+marked channels = channel1,
 marker width = 0.1
 waveform aom calibrations locations = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/stirap_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/depump_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg,  C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg
 [TDC]

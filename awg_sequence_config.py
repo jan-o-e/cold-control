@@ -64,6 +64,21 @@ def configure_awg(awg_config, photon_production_config):
         return lambda x: np.interp(np.abs(x),
                                     calib_data[:,1],
                                     calib_data[:,0])
+    def get_multiwaveform_marker_data(inp_data, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0, n_pad_left=0):
+        '''
+        Returns a marker waveform.
+        '''
+        
+        # Use a np array for ease of setting array slices to contant values.
+        data = np.array( [marker_levels[0]] * (n_pad_left + inp_data + n_pad_right))
+        for pos in marker_positions:
+            data[int(pos):int(pos+marker_width)] = marker_levels[1]
+        # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
+        # then the channel remains high at the end of the sequence. Don't know why...
+        if data[0]==1:
+            data[0]=0
+        # Convert np array to list for consitancy with the get() method.
+        return data.tolist()
     
     queud_markers = []
     seq_waveforms = [[photon_production_config.waveforms[i] for i in ch_waveforms]
@@ -100,10 +115,18 @@ def configure_awg(awg_config, photon_production_config):
 
     j = 0
     for channel, waveform_data, waveforms, delay, channel_abs_offset in zip(awg_chs, seq_waveform_data, seq_waveforms, seq_waveforms_stitched_delays, channel_absolute_offsets):
+        
+        #IMPORTANT THIS SET CH3 to output a constant voltage
         if channel==Channel.CHANNEL_3:
             constant_V=True
         else:
             constant_V=False
+
+        #IMPORTANT THIS SETS the indices of the waveforms on the marked channel that are actually marked for photon dectection (i.e. the VST pulses)
+        marker_waveforms_indices=[0,2]
+
+        #IMPORTANT THIS SETS the relative marker offset with respect to the delays of the VST pulse
+        marker_waveform_offset=50
 
         waveform_aom_calibs = {}
         aom_calibration_loc = awg_config.waveform_aom_calibrations_locations[j]
@@ -115,7 +138,10 @@ def configure_awg(awg_config, photon_production_config):
                 pass
         
         marker_data = []
-        
+        marker_waveform_delays=[]
+        for w in waveforms:
+            marker_waveform_delays.append(w.get_n_samples())
+
         print 'Writing onto channel:', channel
         
         for ind, waveform in enumerate(waveforms):
@@ -128,7 +154,7 @@ def configure_awg(awg_config, photon_production_config):
                 print '\tFor waveform with freq {0}MHz, using calib for {1}MHz'.format(waveform.get_mod_frequency()*10**-6, 
                                                                                         min(waveform_aom_calibs, key=lambda calib_freq: np.abs(calib_freq - waveform.get_mod_frequency()*10**-6)))
             
-            seg_length = waveform.get_n_samples() + abs(delay)
+            seg_length = waveform.get_n_samples() + abs(delay) + abs(channel_abs_offset)
             marker_pos = []
             #  for i in range(len(queud_markers)):
             #   print i, queud_markers
@@ -142,9 +168,11 @@ def configure_awg(awg_config, photon_production_config):
                     i-=1
                 i+=1
             if channel_abs_offset <= seg_length:
-                marker_pos.append(channel_abs_offset)
+                print 'Writing marker pos at', channel_abs_offset+marker_waveform_offset
+                marker_pos.append(channel_abs_offset+marker_waveform_offset)
             else:
-                queud_markers.append(channel_abs_offset)
+                print 'Queing marker at', channel_abs_offset+marker_waveform_offset
+                queud_markers.append(channel_abs_offset+marker_waveform_offset)
             
             print '\tWriting markers at', marker_pos
             print '\tWriting waveform {0} with stitch delay {1}'.format(os.path.split(waveform.fname)[1], delay)
@@ -164,34 +192,60 @@ def configure_awg(awg_config, photon_production_config):
             
             else:
                 print '\tMore than one waveform in sequence'
+                print'Configuring markers for indexed waveforms:', marker_waveforms_indices
+                marker_pos=[]
+
+                for i in marker_waveforms_indices:
+                    if i==0:
+                        marker_pos.append(channel_abs_offset+marker_waveform_offset)
+                    else:
+                        marker_pos.append(channel_abs_offset+marker_waveform_offset+sum(marker_waveform_delays[:i]))
+                marker_length=sum(marker_waveform_delays)
+                seg_length = marker_length + abs(delay) + abs(channel_abs_offset)
+
                 if ind==0:
                     #write delay to the first waveform in a sequence if a sequence contains more than one waveform
                     if delay < 0:
+
+                        #add delay to marker position
+                        for i,pos in enumerate(marker_pos):
+                            marker_pos[i]=abs(delay)+pos
+
                         waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
-                        marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_left=abs(delay))
+                        #write marker data directly with a single call with multiple defined marker positions inside multi waveform sequence
+                        marker_data= get_multiwaveform_marker_data(marker_length,marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_left=abs(delay))
+
                     else:
                         waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
-                        marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
+                        #write marker data directly with a single call with multiple defined marker positions inside multi waveform sequence
+                        marker_data = get_multiwaveform_marker_data(marker_length,marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_right=abs(delay))
                 elif ind==len(waveforms)-1:
                     #write delay to the last waveform in a sequence if a sequence contains more than one waveform
                     if delay >0:
                         waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V) + [0]*delay
-                        marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid, n_pad_right=delay)
                     else:
                         waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
-                        marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
                 else:
                     waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
-                    marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
             
-#            marker_data   += waveform.get(sample_rate=self.awg_config.sample_rate) + [0]*delay
+            if channel_abs_offset<0:
+                waveform_data=waveform_data+[0]*abs(int(channel_abs_offset))
+                marker_data=marker_data+[0]*abs(int(channel_abs_offset))
+            else:
+                waveform_data=[0]*abs(int(channel_abs_offset))+waveform_data
+                marker_data=marker_data+[0]*abs(int(channel_abs_offset))
+            
             print 'Waveform data length: {}'.format(len(waveform_data))
+            print 'Marker data length: {}'.format(len(marker_data))
+
+
             queud_markers = [x-seg_length for x in queud_markers]
         
         '''
         Wrap any makers still queued into the first waveforms markers (presuming we are looping through this sequence multiple times).
         '''
         if queud_markers != []:
+            print 'Wrapping queued markers into the first waveform marker...'
             marker_index = 0
             for ind, waveform in enumerate(waveforms):
                 seg_length = waveform.get_n_samples() + abs(delay)
@@ -235,14 +289,14 @@ def configure_awg(awg_config, photon_production_config):
         '''
         Combine the marker data for each marked channel.
         '''
-        print 'Marked Channels:{}'.format(awg_config.marked_channels)
+        print 'Marked Channels:', awg_config.marked_channels
         if channel in awg_config.marked_channels:
-            print '\tAdding marker data for', channel
             if seq_marker_data == []:
+                print('seq_marker_data is empty')
                 seq_marker_data += marker_data
             else:
                 j1, j2 = map(len,[seq_marker_data, marker_data])
-                
+                print('combining marker data in seq_marker_data')
                 if j1<j2: 
                     seq_marker_data = [sum(x) for x in zip(seq_marker_data[:j1], marker_data[:j1])]+ marker_data[j1:]
                 if j2<j1: 
@@ -279,18 +333,51 @@ def configure_awg(awg_config, photon_production_config):
 
     '''Ensure number of samples are multiples of 16'''
     print "Number of samples in each channel modulo 16:{}".format(len(x) % 16)
-    
 
-    '''Previously we wrote marker data onto channel2 - we now try to use the marker channels.  However, the
-    above work to produce a waveform-ready set of marker data is kept as it is quick and allows us to easily
-    revert back to our previous methods (simply uncomment the following line).'''
-#         wave_handle, marker_handle = awg.create_custom_adv(waveform_data, marker_data)
-            
+
+    plt.plot(seq_marker_data)
+    plt.title('Sequence Marker Data')
+    plt.show()        
     l_mark, l_seq = len(seq_marker_data), len(seq_waveform_data[0])
-            
+
+
+    #this checks whether the marker and sequence data have the same length and pads the marker data with zeros if not        
     if   l_mark < l_seq : seq_marker_data += [0]*(l_seq - l_mark)
     elif l_seq  < l_mark: seq_marker_data  = seq_marker_data[:l_seq]
+
+    #finds start of marker pulse if it has been padded
+    marker_starts = [x[0] for x in enumerate(zip([0]+seq_marker_data[:-1],seq_marker_data)) if x[1][0]==0 and x[1][1]>0]
+    print 'Marker_starts:', marker_starts
     
+    if len(marker_starts) > 2:
+        print 'ERROR: There are more markers required than can be set currently using the marker channels!'
+        marker_starts = marker_starts[:2]
+
+    print 'Writing markers to marker channels at {0}'.format(marker_starts)
+    marker_channel_index = 1
+    #for i, marker_pos in enumerate(marker_starts):
+        #this writes different markers to different channels
+    #    print(awg_chs[i])
+    #    awg.configure_marker(awg_chs[i], 
+    #                            index = marker_channel_index, 
+    #                            position = marker_pos - marker_wid/4,
+    #                            levels = marker_levs,
+    #                            width = marker_wid/2)
+
+        #when i uncomment this line it writes one marker which seems to be the first
+        #when i leave it there seems to only be the last marker
+    #    marker_channel_index += 1
+    awg.configure_marker(awg_chs[0], 
+                                index = 1, 
+                                position = marker_starts[0] - marker_wid/4,
+                                levels = marker_levs,
+                                width = marker_wid/2)
+    awg.configure_marker(awg_chs[2], 
+                                index = 2, 
+                                position = marker_starts[1] - marker_wid/4,
+                                levels = marker_levs,
+                                width = marker_wid/2)
+
     awg.clear_arbitrary_sequence()
     awg.clear_arbitrary_waveform()
     awg.configure_arb_wave_trace_mode(WX218x_TraceMode.SINGLE)
@@ -312,37 +399,16 @@ def configure_awg(awg_config, photon_production_config):
         awg.set_active_channel(channel)
         if channel == Channel.CHANNEL_1 or channel==Channel.CHANNEL_2 or channel==Channel.CHANNEL_3:
             awg.create_arbitrary_waveform_custom(data)
+
+    #awg.set_active_channel(Channel.CHANNEL_4)
+    #awg.create_arbitrary_waveform_custom(seq_marker_data)
     
             
     for channel in awg_chs:
         awg.enable_channel(channel)
         awg.configure_arb_gain(channel, 2)
 
-    '''Quick hack to write marker data to channel 2'''    
-#         awg.set_active_channel(Channel.CHANNEL_2)
-#         awg.create_arbitrary_waveform_custom(marker_data)
-#         awg.enable_channel(Channel.CHANNEL_2)
-#         awg.configure_arb_gain(Channel.CHANNEL_2, 2)
-        
-    marker_starts = [x[0] for x in enumerate(zip([0]+seq_marker_data[:-1],seq_marker_data)) if x[1][0]==0 and x[1][1]>0]
-    
-    if len(marker_starts) > 2:
-        print 'ERROR: There are more markers required than can be set currently using the marker channels!'
-        marker_starts = marker_starts[:2]
-
-    print 'Writing markers to marker channels at {0}'.format(marker_starts)
-    marker_channel_index = 1
-    for marker_pos in marker_starts:
-        awg.configure_marker(awg_chs[0], 
-                                index = marker_channel_index, 
-                                position = marker_pos - marker_wid/4,
-                                levels = marker_levs,
-                                width = marker_wid/2)
-        marker_channel_index += 1
-
     return awg, len(seq_waveform_data[0])/awg_config.sample_rate
-
-
 
 if __name__ == '__main__':
 
@@ -397,5 +463,8 @@ if __name__ == '__main__':
 waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]], [1,[0,1,0,1]]'
 sample rate = 1228750000.0 '''
 
-'''waveform sequence = '[1],[2]'
-waveform stitch delays = '[-1,[2]],[-1,[2]]' '''
+'''waveform sequence = '[0,1,0,1],[2,4,2], [3]'
+waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]]'''
+
+
+

@@ -122,14 +122,14 @@ default value = 0
 chName = Cavity lock - amp
 chLimits = 0, 10
 [[12]]
-UIvisible = False
+UIvisible = True
 calibrationFname = ""
 chNum = 12
 default value = 7.834
 chName = Unused1 - freq
 chLimits = 6.954, 8.702
 [[13]]
-UIvisible = False
+UIvisible = True
 calibrationFname = ""
 chNum = 13
 default value = 0
@@ -161,7 +161,7 @@ UIvisible = True
 calibrationFname = ""
 chNum = 17
 default value = 0.0
-chName = Bias coils current (unused)
+chName = Bias coils current
 chLimits = 0, 10
 [[18]]
 UIvisible = True
