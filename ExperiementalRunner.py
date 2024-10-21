@@ -394,11 +394,11 @@ class PhotonProductionExperiment(ExperimentalRunner):
         seq_waveforms = [[self.photon_production_config.waveforms[i] for i in ch_waveforms]
                         for ch_waveforms in self.photon_production_config.waveform_sequence]
         
-        print 'seq_waveforms={}', seq_waveforms
+        print('seq_waveforms={}', seq_waveforms)
         
         queud_markers = []
         
-        seq_waveform_data, seq_marker_data = [[] for _ in xrange(len(awg_chs))], []
+        seq_waveform_data, seq_marker_data = [[] for _ in range(len(awg_chs))], []
         
         # Note we deep copy the config stitch delays so that updating them below doesn't change the configuration settings.
         seq_waveforms_stitch_delays = copy.deepcopy(self.photon_production_config.waveform_stitch_delays)
@@ -1411,17 +1411,18 @@ class Waveform(object):
         if constant_voltage:
             return mod_data
         else:
-            t_step = 2*np.pi/sample_rate
+            t_step = 2 * np.pi / sample_rate
             phi = 0.
             if double_pass:
-                phases = map(lambda x: (x[0]/2,x[1]), self.phases) # Diveded phases by two for double passed AOM.
+                # Divided phases by two for double passed AOM.
+                phases = [(x[0] / 2, x[1]) for x in self.phases]  # Using list comprehension for clarity
             next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-            for i in xrange(len(mod_data)):
-                #i here is the index of the phase list
-                if i==next_i_flip:
-                    phi=next_phi
-                    next_phi, next_i_flip = None, None if not phases else phases.pop(0)
-                mod_data[i] = mod_data[i]*np.sin(i*t_step*self.mod_frequency + phi)
+            for i in range(len(mod_data)):
+                # i here is the index of the phase list
+                if i == next_i_flip:
+                    phi = next_phi
+                    next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
+                mod_data[i] = mod_data[i] * np.sin(i * t_step * self.mod_frequency + phi)
             return mod_data
 
 
@@ -1433,7 +1434,8 @@ class Waveform(object):
         # Use a np array for ease of setting array slices to contant values.
         data = np.array( [marker_levels[0]] * (n_pad_left + len(self.data) + n_pad_right))
         for pos in marker_positions:
-            data[pos:pos+marker_width] = marker_levels[1]
+            pos = int(pos)  # Ensure pos is an integer
+            data[pos:pos+int(marker_width)] = marker_levels[1]
         # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
         # then the channel remains high at the end of the sequence. Don't know why...
         if data[0]==1:

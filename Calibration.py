@@ -551,7 +551,7 @@ def calibrate_awg_driven_aom_response(
 #  
 
 def test_stirap_aom_freq_response(level=0.5,
-                                  freqs=xrange(60,90,1),
+                                  freqs=range(60,90,1),
                                   nMeasurmentCounts=3,
                                   writeToQueryDelay=0.2):
     

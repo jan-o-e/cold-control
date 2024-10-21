@@ -1867,7 +1867,7 @@ class Stirap_hist_plot_live(tk.LabelFrame):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
 
         self.bin_edges = bin_edges
-        self.bin_centers = np.array([bin_edges[i]+bin_edges[i+1] for i in xrange(len(bin_edges)-1)])
+        self.bin_centers = np.array([bin_edges[i]+bin_edges[i+1] for i in range(len(bin_edges)-1)])
         self.width = width
         
         self.fig, self.ax = plt.subplots()
@@ -1939,7 +1939,7 @@ class Count_rate_plot_live(tk.LabelFrame):
     def update(self, lines_data, n_iters):
         '''Each plot with new data.'''
         # TODO: speed this up
-        x_data = xrange(n_iters+1)
+        x_data = range(n_iters+1)
         for data, line in zip(lines_data, self.lines):
             if max(data) > self.y_max:
                 self.y_max = max(data)

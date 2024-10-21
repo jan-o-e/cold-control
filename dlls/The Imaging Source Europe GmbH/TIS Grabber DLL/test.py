@@ -39,7 +39,7 @@ for i in range(100):
     #cam.wait_til_frame_ready(1000)              # wait for frame ready due to trigger
 
 
-#for i in xrange(10):                        # take 10 shots
+#for i in range(10):                        # take 10 shots
 #    cam.reset_frame_ready()                 # reset frame ready flag
 #
 #    # send hardware trigger OR call cam.send_trigger() here

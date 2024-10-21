@@ -437,7 +437,7 @@ def test_modulate_data():
         phases = map(lambda x: (x[0]/2,x[1]), phases) # Diveded phases by two for double passed AOM.
         next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
         print next_phi, next_i_flip
-        for i in xrange(len(mod_data)):
+        for i in range(len(mod_data)):
             if i==next_i_flip:
                 phi=next_phi
                 next_phi, next_i_flip = None, None if not phases else phases.pop(0)

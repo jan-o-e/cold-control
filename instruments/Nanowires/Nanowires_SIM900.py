@@ -13,7 +13,7 @@ from __main__ import port
 
 class Nanowires_SIM900m_mainframe(serial.Serial):
     
-    def __init__(self, port='COM1', detector_ports=xrange(1,9), timeout=3, **kwargs):
+    def __init__(self, port='COM1', detector_ports=range(1,9), timeout=3, **kwargs):
         
         print 'Opening serial connection to nanowires (SIM900m) mainframe on port {0}...'.format(port)
         serial.Serial.__init__(

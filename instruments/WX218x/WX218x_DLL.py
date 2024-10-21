@@ -8,8 +8,8 @@ Created on 26 Sep 2016
 '''
 from ctypes import *
 from pyvisa.ctwrapper.functions import get_attribute
-from jinja2._stringdefs import combine
-from DAQ import High_Hysteresis
+#from jinja2._stringdefs import combine
+#from DAQ import High_Hysteresis
 
 # #if defined(_VI_INT64_UINT64_DEFINED)
 # typedef ViUInt64    _VI_PTR ViPUInt64;
@@ -294,7 +294,9 @@ class WX218x_DLL(object):
     """
     ctypes funcs to talk to wx218x.dll.
     """
-    wx218x_dll = windll.LoadLibrary(r'C:\Users\apc\Desktop\Cold Control Heavy py3\dlls\IVI Foundation\IVI\Bin\wx218x_64.dll')
+    #wx218x_dll = WinDLL("C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\IVI Foundation\\IVI\\Bin\\wx218x_64.dll")
+
+    wx218x_dll = windll.LoadLibrary("C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\IVI Foundation\\IVI\\Bin\\wx218x_64.dll")
     
     # ///////////////////////////////////////////////////////////////////////////
     # /*!
