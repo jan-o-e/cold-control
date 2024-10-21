@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-import Tkinter as tk
-import tkMessageBox
+import tkinter as tk
+from tkinter import messagebox as tkMessageBox
 import os
 import Styles
 
@@ -104,17 +104,17 @@ class ColdControl_UI(tk.Frame):
                                                     "Are you sure you want to close Cold Control?\nThis will release all DAQ cards and exit the program - unsaved information will be lost?",
                                                     icon='warning')
         if exitConfirmation == 'yes':
-            print 'Closing camera connections...'
+            print('Closing camera connections...')
             self.camera_UI.closeCameras()
-            print '...all camera connections closed.'
-            print 'Releasing DAQ cards...'
+            print('...all camera connections closed.')
+            print('Releasing DAQ cards...')
             if not self.development_mode: self.daq_UI.daq_controller.releaseAll()
-            print '...all cards released.'
-            print 'Saving labbook...'
+            print('...all cards released.')
+            print('Saving labbook...')
             self.labbook_UI.write()
-            print '...labbook saved'
+            print('...labbook saved')
             root.destroy()
-            print 'Cold Control closed - bye!'
+            print('Cold Control closed - bye!')
  
 if __name__ == "__main__":
     

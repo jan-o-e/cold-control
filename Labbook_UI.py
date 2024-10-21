@@ -3,9 +3,10 @@ Created on 25 Mar 2016
 
 @author: tombarrett
 '''
-import Tkinter as tk
-import ttk
-import ScrolledText
+import tkinter as tk
+from tkinter import ttk
+from tkinter import scrolledtext
+from tkinter.scrolledtext import ScrolledText
 import os
 import re
 import time
@@ -19,7 +20,7 @@ class Labbook_UI(tk.LabelFrame):
         
         self.parent = parent
         
-        self.textWid = ScrolledText.ScrolledText(self)
+        self.textWid = scrolledtext.ScrolledText(self)
         
         self.labbook_dir = labbook_dir
         self.fExt = fExt
@@ -71,14 +72,14 @@ class Labbook_UI(tk.LabelFrame):
         
     def open(self):
         f = open(self.fname, 'r')
-        print 'open: ', self.fname
+        print('open: ', self.fname)
         self.textWid.delete(1.0, tk.END)
         self.textWid.insert(tk.END, f.read())
         f.close()
 
     def write(self):
         f = open(self.fname, 'w')
-        print 'write: ', self.fname
+        print('write: ', self.fname)
         f.write(self.textWid.get('1.0', tk.END))
         f.close()
         

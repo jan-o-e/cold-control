@@ -4,9 +4,9 @@ Created on 13 Aug 2016
 @author: apc
 '''
 
-import Tkinter as tk
-import ttk
-import tkMessageBox
+import tkinter as tk
+from tkinter import ttk
+from tkinter import messagebox as tkMessageBox
 import math
 # import matlab.engine
 import numpy as np
@@ -14,7 +14,8 @@ import copy
 import re
 import os
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
 import matplotlib.pyplot as plt
 
 from Config import AbsorbtionImagingReader, PhotonProductionReader, ExperimentalAutomationReader
@@ -22,22 +23,23 @@ from ToolTip_UI import ToolTip
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
 from ExperiementalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner
-from _abcoll import Sequence
+from abcoll import Sequence
 from atom.event import Event
 from win32inetcon import STICKY_CACHE_ENTRY
-from _hotshot import resolution
+#from _hotshot import resolution
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
-from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
-from instruments.WX218x.WX218x_DLL import WX218x_OutputMode, WX218x_OperationMode, WX218x_Waveform 
-from Tkinter import StringVar
-from ScrolledText import ScrolledText
+#from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
+#from instruments.WX218x.WX218x_DLL import WX218x_OutputMode, WX218x_OperationMode, WX218x_Waveform 
+from tkinter import StringVar
+from tkinter.scrolledtext import ScrolledText
+
 
 import threading
-import Queue
+import queue
 import time
 from msilib import init_database
 
-import tkFileDialog
+from tkinter import filedialog as tkFileDialog
 
 
 class Experimental_UI(tk.LabelFrame):
@@ -291,7 +293,7 @@ class Experimental_UI(tk.LabelFrame):
                                    modulation_frequencies))
         
                 automated_experiment.close()
-                print 'Finished automated experiment.'
+                print('Finished automated experiment.')
                 automated_experiment.write_to_summary_file('\nFinished automated experiment at {0}\n\n'.format(time.strftime("%H-%M-%S")))
         
             
@@ -310,8 +312,8 @@ class Experimental_UI(tk.LabelFrame):
         import glob
         import os
         import re
-        dir = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\Absorbtion images\22-08-16\17-42-39'
-        # dir = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\Absorbtion images\26-08-16\15-12-27\raw'
+        dir = r'C:\Users\apc\workspace\Cold Control Heavy\data\Absorbtion images\22-08-16\17-42-39'
+        # dir = r'C:\Users\apc\workspace\Cold Control Heavy\data\Absorbtion images\26-08-16\15-12-27\raw'
         
         img_arrs, bkg_arrs, img_labels, bkg_labels = [],[],[],[]
         
@@ -335,7 +337,7 @@ class Experimental_UI(tk.LabelFrame):
         class MockAbsImgExperiment(object):
             
             def __init__(self, img_arrs, bkg_arrs, sequence_labels):
-                print 'Performed mock photon_production_experiment, genrating {0} images, each with dimensions {1}.'.format(len(img_arrs), img_arrs[0].shape)
+                print('Performed mock photon_production_experiment, genrating {0} images, each with dimensions {1}.'.format(len(img_arrs), img_arrs[0].shape))
                 self.img_arrs = img_arrs
                 self.bkg_arrs = bkg_arrs
                 self.sequence_labels = sequence_labels
@@ -346,8 +348,8 @@ class Experimental_UI(tk.LabelFrame):
                 
             def saveProcessedImages(self, notes=None):
                 if notes:
-                    print 'Save notes:', notes
-                print 'Saved processed images.'
+                    print('Save notes:', notes)
+                print('Saved processed images.')
         
         mock = MockAbsImgExperiment(corr_imgs, bkg_aves, img_labels)
         
@@ -370,7 +372,7 @@ class Experimental_UI(tk.LabelFrame):
                 awg = self.run_tone_awg
             
             freq = self.run_tone_freqs[i_ch]
-            print 'Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6)
+            print('Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6))
 
             #reduce amplitude so as not to saturate the AOM
 
@@ -387,7 +389,7 @@ class Experimental_UI(tk.LabelFrame):
             button.configure(bg='green', image=self.on_icon, relief=tk.SUNKEN)
 
         else:
-            print 'Turning off run tone on {0}'.format(channel)
+            print('Turning off run tone on {0}'.format(channel))
             self.run_tone_awg.disable_channel(channel)
             self.run_tone_output_states[i_ch] = False
             
@@ -397,7 +399,7 @@ class Experimental_UI(tk.LabelFrame):
                     self.run_tone_awg.configure_operation_mode(channel, WX218x_OperationMode.BURST)
                 
                 self.run_tone_awg.close()
-                print 'Connection to AWG closed.'
+                print('Connection to AWG closed.')
                 self.run_tone_awg = None
                 
             button.configure(bg='red', image=self.off_icon, relief=tk.RAISED)
@@ -1336,7 +1338,7 @@ class Absorbtion_imaging_configuration_UI(object):
         except ValueError:
             flash_col = 'red'
         
-        print self.c.cam_exposure
+        print(self.c.cam_exposure)
         # Update the display and flash the widget accordingly.
         entry_wid.delete(0, tk.END)
         entry_wid.insert(0, self.exposure_to_string(1./self.c.cam_exposure))
@@ -1500,12 +1502,12 @@ class Photon_produduction_live_UI(tk.Toplevel):
                     self.after(delay_ms, lambda: self.poll_live_data(delay_ms, timeout_start_time=timeout_start_time))
             else:
                 if time.time() - timeout_start_time < final_update_timeout_ms*10**-3:
-                    print 'Final UI update timed out after {0} seconds'.format(final_update_timeout_ms*10**-3)
+                    print('Final UI update timed out after {0} seconds'.format(final_update_timeout_ms*10**-3))
                 self.data_hander.stop_polling_queue()
                 self.update_for_finished_experiment()
             
     def update_display(self):
-        print 'Updating the display'
+        print('Updating the display')
 #         if self.data_hander.new_data_waiting:
         self.UI_update_started = True     
         self.data_hander.new_data_waiting = False  
@@ -1676,7 +1678,7 @@ class Photon_production_buffered_data_handler(object):
                                              range=(0,self.t_stirap_length))[0]
             self.new_data_waiting = True
         else:
-            print 'No detections on counter channels in buffer.'
+            print('No detections on counter channels in buffer.')
 #         for item in self.analysis_buffer:
 #             item.task_done()
         
@@ -1685,7 +1687,7 @@ class Photon_production_buffered_data_handler(object):
         return self.count_rate[-1]
     
     def get_completed_iterations(self):
-        print 'returning comp iters:', self.completed_iterations
+        print('returning comp iters:', self.completed_iterations)
         return self.completed_iterations
    
 class Absorbtion_imaging_review_UI(tk.Toplevel):
@@ -1956,7 +1958,7 @@ class Count_rate_plot_live(tk.LabelFrame):
             except RuntimeError as err:
                 # Sometimes data gets out of sync and the plot fails.
                 # Just print a message and move on - hopefully it will re-sync!
-                print 'Runtime error caught and ignored:', str(err)
+                print('Runtime error caught and ignored:', str(err))
                 pass
 #             self.canvas.update()
 #             self.canvas.flush_events()

@@ -2,5 +2,6 @@
 .project
 .DS_Store
 .settings
+*.pyc
 labbook/**
 exceptions

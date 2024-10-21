@@ -12,18 +12,18 @@ cam.open()
 #cam.show_property_dialog()
 
 # change camera properties
-print cam.list_property_names()         # ['gain', 'exposure', 'hue', etc...]
+print(cam.list_property_names())         # ['gain', 'exposure', 'hue', etc...]
 cam.gain.auto = True                    # enable auto gain
 cam.exposure.auto = True
-print cam.exposure.range                # (0, 10)
+print(cam.exposure.range)                # (0, 10)
 emin = cam.exposure.min                 # 0
 emax = cam.exposure.max                 # 10
 #cam.exposure.value = (emin + emax) / 2  # disables auto exposure and sets value to half of range
-print cam.exposure.value                # 5
+print(cam.exposure.value)                # 5
 
 # change camera settings
 formats = cam.list_video_formats()
-print formats
+print(formats)
 cam.set_video_format(formats[0])        # use first available video format
 cam.enable_continuous_mode(True)        # image in continuous mode
 cam.start_live(show_display=True)       # start imaging

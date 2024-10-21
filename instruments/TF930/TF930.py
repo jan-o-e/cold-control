@@ -16,7 +16,7 @@ class TF930(serial.Serial):
     
     def __init__(self, port='COM5', timeout=3, **kwargs):
         
-        print 'Opening serial connection to TF930 on port {0}...'.format(port)
+        print('Opening serial connection to TF930 on port {0}...'.format(port))
         serial.Serial.__init__(
                             self,
                             port=port,
@@ -26,7 +26,7 @@ class TF930(serial.Serial):
                             bytesize=serial.EIGHTBITS,
                             timeout = timeout,
                         )
-        print '...connection {0}'.format('successful' if self.is_open else 'failed')
+        print('...connection {0}'.format('successful' if self.is_open else 'failed'))
        
     def query_frequency(self, read_delay=0.5):
         
@@ -63,4 +63,4 @@ class TF930(serial.Serial):
     
     def close(self):
         serial.Serial.close(self)
-        print 'Serial connection to TF930 closed'
+        print('Serial connection to TF930 closed')

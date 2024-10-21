@@ -151,7 +151,7 @@ class _ChannelSequence(object):
             
             try:            
                 changeFunc = self.getChangeFunc(changeStyle , (t_interval[0], V_0), (t_interval[-1], V_1))                    
-                V_span = np.append(V_span, map(changeFunc, t_interval))
+                V_span = np.append(V_span, list(map(changeFunc, t_interval)))
             except IndexError:
                 # If t_interval is an empty list wel'll catch that here - it just means that t_0 and t_1
                 # are so close together (or identical) so no times in t_span are between them.  The card
@@ -160,7 +160,9 @@ class _ChannelSequence(object):
                 
         return V_span
     
-    def getChangeFunc(self, style, (t_0,V_0), (t_1,V_1)):
+    def getChangeFunc(self, style, t_0_V_0, t_1_V_1):
+        t_0, V_0 = t_0_V_0
+        t_1, V_1 = t_1_V_1
         if style == IntervalStyle.FLAT:
             ''' TODO - MAKE PIECEWISE?'''
             return lambda t: V_0
@@ -207,7 +209,7 @@ class IntervalStyle:
     
     @classmethod
     def toString(cls, val):
-        for k,v in vars(cls).iteritems():
+        for k,v in vars(cls).items():
             if v==val:
                 return k.title()
 
@@ -217,5 +219,5 @@ class IntervalStyle:
     
     @classmethod
     def getAll(cls):
-        return [x.title() for x in dir(cls) if not isinstance(cls.__dict__[x], classmethod) and not x.startswith("__")]
+        return [x for x in cls.__dict__.keys() if not isinstance(cls.__dict__[x], classmethod) and not x.startswith("__")]
         

@@ -4,7 +4,7 @@
 from ctypes import *
 import os
 
-import IC_Structures as structs
+from . import IC_Structures as structs
 
 class IC_GrabberDLL(object):
     """
@@ -15,7 +15,9 @@ class IC_GrabberDLL(object):
     
     # win32
 #     _ic_grabber_dll = windll.LoadLibrary(r'C:\Users\apc\Documents\The Imaging Source Europe GmbH\TIS Grabber DLL\bin\win32\tisgrabber.dll')
-    _ic_grabber_dll = windll.LoadLibrary('tisgrabber_x64.dll')
+    windll.LoadLibrary('C:\\Users\\apc\\Desktop\\Cold Control Heavy py3\\dlls\\The Imaging Source Europe GmbH\\TIS Grabber DLL\\bin\\x64\\TIS_DShowLib10_x64.dll')
+    windll.LoadLibrary('C:\\Users\\apc\\Desktop\\Cold Control Heavy py3\\dlls\\The Imaging Source Europe GmbH\\TIS Grabber DLL\\bin\\x64\\TIS_UDSHL10_x64.dll')
+    _ic_grabber_dll = windll.LoadLibrary('C:\\Users\\apc\\Desktop\\Cold Control Heavy py3\\dlls\\The Imaging Source Europe GmbH\\TIS Grabber DLL\\bin\\x64\\tisgrabber_x64.dll')
 
     #//////////////////////////////////////////////////////////////////////////
     #/*! Initialize the ICImagingControl class library. This function must be called

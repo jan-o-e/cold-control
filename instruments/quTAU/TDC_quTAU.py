@@ -27,7 +27,7 @@ class TDC_quTAU(object):
         err = TDC_BaseDLL.init(self.deviceId)
         if err != 0:
             tdc_err = TDC_Exception(err)
-            print 'Error opening TDC with message:', tdc_err.message
+            print('Error opening TDC with message:', tdc_err.message)
             raise tdc_err
         
     def close(self):
@@ -86,7 +86,7 @@ class TDC_quTAU(object):
             size    Buffer size; Range = 1 ... 1000000
         '''
         if not 1 <= size <= 1000000:
-            print 'Buffer size must be in range 1 ... 1000000.'
+            print('Buffer size must be in range 1 ... 1000000.')
             size = int(np.clip(size, 1, 1000000))
         err = TDC_BaseDLL.setTimestampBufferSize(size)
         if err != 0:
@@ -171,7 +171,7 @@ class TDC_quTAU(object):
                                           channels.ctypes.data_as(POINTER(c_byte)),
                                           count)
         if err != 0:
-            print err
+            print(err)
             raise TDC_Exception(err)
         
     def switch_termination(self, termination_on):
