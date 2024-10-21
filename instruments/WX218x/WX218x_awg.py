@@ -7,9 +7,9 @@ from ctypes import *
 import visa
 import numpy as np
 
-from WX218x_DLL import WX218x_DLL, WX218x_MarkerSource
-from WX218x_Exception import WX218x_Exception
-from WX218x_Warning import WX218x_Warning
+from .WX218x_DLL import WX218x_DLL, WX218x_MarkerSource
+from .WX218x_Exception import WX218x_Exception
+from .WX218x_Warning import WX218x_Warning
 from esky.slaveproc import ctypes
 from docutils.utils.math.latex2mathml import functions
 
@@ -45,7 +45,7 @@ class WX218x_awg(object):
             try:
                 self.name = next(r for r in resources if self.MANUFACTURER_ID in r)
             except StopIteration as err:
-                print 'No AWG instrument can be found. Currently connected instruments are', resources
+                print('No AWG instrument can be found. Currently connected instruments are', resources)
                 raise err
         self.vi_session = c_uint()
         
@@ -66,7 +66,7 @@ class WX218x_awg(object):
             self._validate_response(WX218x_DLL.init(self.name, verify_id, reset, byref(self.vi_session)))
         else:
             self._validate_response(WX218x_DLL.init_with_options(self.name, verify_id, reset, options_string, byref(self.vi_session)))
-        print 'Connection opened to AWG instrument', self.name
+        print('Connection opened to AWG instrument', self.name)
         
     def close(self):
         '''
@@ -78,9 +78,9 @@ class WX218x_awg(object):
         '''
         Places the instrument in a known state.
         '''
-        print "Resetting AWG..."
+        print("Resetting AWG...")
         self._validate_response(WX218x_DLL.reset(self.vi_session))
-        print "...completed"
+        print("...completed")
         
     def enable_channel(self, channel_name):
         '''
@@ -473,6 +473,6 @@ class WX218x_awg(object):
         error_code = c_int32()
         error_message = create_string_buffer(256)
         WX218x_DLL.get_error(self.vi_session, byref(error_code), 256, error_message)
-        print 'Last retrieved error description:'.upper(), error_message.value
+        print('Last retrieved error description:'.upper(), error_message.value)
         
         raise err

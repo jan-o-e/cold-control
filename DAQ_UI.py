@@ -3,16 +3,15 @@ Created on 25 Mar 2016
 
 @author: tombarrett
 '''
-import Tkinter as tk
-import ttk
+import tkinter as tk
 import ToolTip_UI as tooltip
 from PIL import Image, ImageTk
 from DAQ import DAQ_controller, DAQ_channel
 import copy
-import tkMessageBox
+from tkinter import messagebox as tkMessageBox
 import numpy as np
 import math
-import tkFileDialog
+from tkinter import filedialog as tkFileDialog
 from Config import DaqReader, DaqWriter
 
 class DAQ_UI(tk.Frame):
@@ -25,7 +24,7 @@ class DAQ_UI(tk.Frame):
         if not development_mode:
             self.daq_controller = self.reader.load_DAQ_controller()
         else:
-            print "Running in development mode...\nLoading Dummy DAQ cards"
+            print("Running in development mode...\nLoading Dummy DAQ cards")
             self.daq_controller = self.reader.load_dummy_DAQ_controller()
         
         self.Frame_Channels = tk.LabelFrame(self, text="DAQ channels", font=font)
@@ -42,8 +41,8 @@ class DAQ_UI(tk.Frame):
         gridConfig = {'padx':5, 'pady':2}
  
         c = 0
-        for column in [self.channelFrames[i:i + (len(self.channelFrames)/int(numCols))] 
-                       for i in xrange(0, len(self.channelFrames)+1, int(np.ceil(len(self.channelFrames)/numCols)))]:
+        for column in [self.channelFrames[i:i + int(len(self.channelFrames)/int(numCols))]
+                       for i in range(0, int(len(self.channelFrames)+1), int(np.ceil(len(self.channelFrames)/numCols)))]:
             r = 0
             for ch in column:
                 ch.grid(row=r, column=c, **gridConfig)
@@ -81,11 +80,11 @@ class DAQ_UI(tk.Frame):
 #             r+=1
 #             
 #         c = 0
-        
         self.dioFrames = [Frame_DIOline(self.Frame_DIOs, dio) for dio in 
                           sorted(self.daq_controller.getDIOs(), key=lambda dio: dio.dio_num)]
+
         for row in [self.dioFrames[i:i + c+1] 
-                       for i in xrange(0, len(self.dioFrames), c+1)]:
+                       for i in range(0, len(self.dioFrames), c+1)]:
             c = 0
             for dioFrame in row:
                 dioFrame.grid(row=r, column=c, **gridConfig)
@@ -210,8 +209,8 @@ class Entry_DAQchannel(tk.Entry):
         self.defaultValue = self.channel.defaultValue if not self.channel.isCalibrated \
                         else self.channel.calibrationFromVFunc(self.channel.defaultValue)
         if not self.chLimits[0] <= self.defaultValue <= self.chLimits[1] :
-            print 'WARNING: Default value for DAQ channel of', self.defaultValue, 'is not within set limits of', self.chLimits, \
-                   '\nChannel will be set to mid-range of limits'
+            print('WARNING: Default value for DAQ channel of', self.defaultValue, 'is not within set limits of', self.chLimits, \
+                   '\nChannel will be set to mid-range of limits')
             self.defaultValue = sum(self.chLimits)/2
         self.chValue = float(self.defaultValue)
         
@@ -491,7 +490,7 @@ class DAQ_configuration_UI(object):
             widget - the checkbox widget clicked on
             cardNumber - the card number assosiated with the widget
             state - 0/1, checkbox is now deselected/selected'''
-        print widget, cardNumber, state.get()
+        print(widget, cardNumber, state.get())
 
     def channelSelected(self, channelLabel):
         for _,wid in self.channels.items():

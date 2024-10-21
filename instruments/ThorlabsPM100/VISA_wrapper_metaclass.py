@@ -93,7 +93,7 @@ def _short_version(s):
     _short_version('COUPling')=='COUP'
     """
     sl = s.lower()
-    return ''.join([c for i,c in enumerate(s) if s[i]<>sl[i]])
+    return ''.join([c for i,c in enumerate(s) if s[i]!=sl[i]])
 
 class TestValueFromString(TestValue):
     """ Test a value by comparing to a string. If the string is 
@@ -284,7 +284,7 @@ class GenericGetCommandClass(GenericCommandClass):
         out = "Read-only property\n\n"
         out += cls.__doc__ + "\n\n"
         args = cls.get_argument_list_name()
-        if set(args)<>set(['value']) and not len(args)==0:
+        if set(args)!=set(['value']) and not len(args)==0:
             out += "**Property value (read-only) :** "+','.join(args)+"\n\n"
         out += "**Initial SCPI command :** {0}\n\n".format(cls.cmd)
         return _make_doc(out, title)
@@ -473,11 +473,11 @@ if __name__ == "__main__":
     class Generic(object):
         __metaclass__ = InstrumentMetaclass
         def __init__(self):
-            print "Initialise dummy instrument"
+            print("Initialise dummy instrument")
         def _write(self,s):
-            print s
+            print(s)
         def _ask(self,s):
-            print s
+            print(s)
             if 'test1' in s.lower():
                 return '3'                
             return '45.4, 57.3'
@@ -512,6 +512,6 @@ if __name__ == "__main__":
             autre_valeur = Argument(1, [numbers.Number], default=3.14)
 
     scope = Test()
-    print scope.coucou_val
+    print(scope.coucou_val)
     scope.channel[1].testb = 0.2,4.5
-    print scope.channel[2].machin.truc
+    print(scope.channel[2].machin.truc)

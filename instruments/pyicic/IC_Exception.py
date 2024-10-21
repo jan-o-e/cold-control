@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import exceptions
+#import exceptions
 
 class IC_Exception(Exception):
     """

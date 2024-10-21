@@ -3,11 +3,11 @@ Created on 25 Mar 2016
 
 @author: tombarrett
 '''
-import Tkinter as tk
+import tkinter as tk
 from PIL import Image,ImageTk
-import cv2
+#import cv2
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
-import tkMessageBox
+from tkinter import messagebox as tkMessageBox
 import numpy as np
 
 class Camera_UI(tk.LabelFrame):
@@ -34,7 +34,8 @@ class Camera_UI(tk.LabelFrame):
                 
         # Select the first available camera - TODO make camera dropdown
         self.cam_names = self.ic_ic.get_unique_device_names()
-        self.cam = self.ic_ic.get_device(self.cam_names[0])
+        if self.cam_names != []:
+            self.cam = self.ic_ic.get_device(self.cam_names[0])
         self.is_live = False
         
         # Make a frame for the camera image.  By disabling pack_propagate and manually setting the height and width

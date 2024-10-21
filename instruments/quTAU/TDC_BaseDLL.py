@@ -12,33 +12,33 @@ class TDC_DevType(object):
     (DEVTYPE_1A,                    
      DEVTYPE_1B,                    
      DEVTYPE_1C,                    
-     DEVTYPE_NONE) = map(int, xrange(4))
+     DEVTYPE_NONE) = map(int, range(4))
      
 class TDC_FileFormat(object):
     (FORMAT_ASCII,                  
      FORMAT_BINARY,                 
      FORMAT_COMPRESSED,             
      FORMAT_RAW,                    
-     FORMAT_NONE) = map(c_int, xrange(5))
+     FORMAT_NONE) = map(c_int, range(5))
      
 class TDC_SignalCond(object):
     (SCOND_TTL,                     
      SCOND_LVTTL,                   
      SCOND_NIM,                     
      SCOND_MISC,                    
-     SCOND_NONE) = map(c_int, xrange(5))
+     SCOND_NONE) = map(c_int, range(5))
      
 class TDC_SimType(object):
     (SIM_FLAT,                      
      SIM_NORMAL,                    
-     SIM_NONE) = map(c_int, xrange(3))
+     SIM_NONE) = map(c_int, range(3))
      
 class TDC_BaseDLL(object):
     
     """
     ctypes funcs to talk to tdcbase.dll.
     """
-    tdc_base_dll = windll.LoadLibrary('C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\quTAU\\userlib\\lib64\\tdcbase.dll')
+    tdc_base_dll = windll.LoadLibrary('C:\\Users\\LabUser\\APC\\Cold Control Heavy\\dlls\\quTAU\\userlib\\lib64\\tdcbase.dll')
 
     #//////////////////////////////////////////////////////////////////////////
     #/*! 

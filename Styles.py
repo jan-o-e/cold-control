@@ -3,8 +3,8 @@ Created on 23 Apr 2016
 
 @author: apc
 '''
-import ttk
-import Tkinter as tk
+from tkinter import ttk
+
 
 def configureStyles():
     

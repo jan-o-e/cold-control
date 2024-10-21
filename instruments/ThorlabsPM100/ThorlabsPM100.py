@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from VISA_wrapper_metaclass import *
+from .VISA_wrapper_metaclass import *
 
 IndexedGroup.var = '<n>'
         
@@ -9,14 +9,14 @@ class Generic(object):
         self._inst = inst
     def _write(self, cmd):
         if self._verbose : 
-            print "Write command %s"%cmd
+            print("Write command %s"%cmd)
         self._inst.write(cmd)
     def _ask(self, cmd):
         if self._verbose : 
-            print "Ask command %s ..."%cmd,
+            print("Ask command %s ..."%cmd),
         out = self._inst.ask(cmd)
         if self._verbose : 
-            print "recieve %s"%out
+            print("recieve %s"%out)
         return out
         
 
