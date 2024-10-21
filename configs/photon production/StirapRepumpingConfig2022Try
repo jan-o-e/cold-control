@@ -14,11 +14,11 @@ filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\ne
 [[1]]
 modulation frequency = 84926000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\202 long\160 drive\tophat_0_202.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\stokes_pulse_150nsRepump\stokes_150ns_100.csv
 [[2]]
 modulation frequency = 80000000
 phases = ,
-filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Tom\Tophat\202 long\160 drive\tophat_100_202.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new_Jan\pump_pulse_150nsRepump\pump_150ns_100.csv
 [AWG]
 sample rate = 1228750000.0
 burst count = 10000
