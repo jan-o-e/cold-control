@@ -117,7 +117,7 @@ class _ChannelSequence(object):
         
     def getValArray(self):
         t_span = self.parent.getTimeSteps()                
-        V_span = np.array([],dtype=np.float)
+        V_span = np.array([],dtype=np.float64)
         numIntervals = len(self.V_interval_styles)
 #         
 #         if numIntervals == 1:

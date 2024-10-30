@@ -662,15 +662,16 @@ class _InteractiveLegend(object):
         self.update()
 
     def _setup_connections(self):
-        for artist in self.legend.texts + self.legend.legendHandles:
+        handles, labels = self.legend.axes.get_legend_handles_labels()
+        for artist in self.legend.texts + handles:
             artist.set_picker(10) # 10 points tolerance
 
         self.canvas.mpl_connect('pick_event', self.on_pick)
         self.canvas.mpl_connect('button_press_event', self.on_click)
 
     def _build_lookups(self, legend):
-        labels = [t.get_text() for t in legend.texts]
-        handles = legend.legendHandles
+        #labels = [t.get_text() for t in legend.texts]
+        handles, labels = legend.axes.get_legend_handles_labels()
         label2handle = dict(zip(labels, handles))
         handle2text = dict(zip(handles, legend.texts))
 
