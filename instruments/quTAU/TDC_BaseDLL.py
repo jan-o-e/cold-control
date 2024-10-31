@@ -38,7 +38,8 @@ class TDC_BaseDLL(object):
     """
     ctypes funcs to talk to tdcbase.dll.
     """
-    tdc_base_dll = windll.LoadLibrary('C:\\Users\\LabUser\\APC\\Cold Control Heavy\\dlls\\quTAU\\userlib\\lib64\\tdcbase.dll')
+    #tdc_base_dll = windll.LoadLibrary('C:\\Users\\LabUser\\APC\\Cold Control Heavy\\dlls\\quTAU\\userlib\\lib64\\tdcbase.dll')  from Mark's code
+    tdc_base_dll = windll.LoadLibrary(r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\dlls\quTAU\userlib\lib64\tdcbase.dll")
 
     #//////////////////////////////////////////////////////////////////////////
     #/*! 

@@ -18,10 +18,10 @@ import glob
 import re
 
 from DAQ import DAQ_controller, DaqPlayException
-#from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
-#from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode, WX218x_OperationMode, WX218x_SequenceAdvanceMode, WX218x_TraceMode, WX218x_TriggerImpedance, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_Waveform 
-#from instruments.quTAU.TDC_quTAU import TDC_quTAU
-#from instruments.quTAU.TDC_BaseDLL import TDC_SimType, TDC_DevType, TDC_SignalCond
+from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
+from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode, WX218x_OperationMode, WX218x_SequenceAdvanceMode, WX218x_TraceMode, WX218x_TriggerImpedance, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_Waveform 
+from instruments.quTAU.TDC_quTAU import TDC_quTAU
+from instruments.quTAU.TDC_BaseDLL import TDC_SimType, TDC_DevType, TDC_SignalCond
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
 from instruments.pyicic.IC_Exception import IC_Exception
 from instruments.TF930 import TF930
@@ -627,8 +627,10 @@ class PhotonProductionExperiment(ExperimentalRunner):
         print('Connecting to quTAU tdc..')
         tdc.open()
         print('...opened')
-        print('Enabling channels: ', self.tdc_config.counter_channels + [self.tdc_config.marker_channel])
-        tdc.set_enabled_channels(self.tdc_config.counter_channels + [self.tdc_config.marker_channel])
+        # Maps converted to lists on the line below. New syntax from python 3
+        # https://stackoverflow.com/questions/1303347/getting-a-map-to-return-a-list-in-python-3-x
+        print('Enabling channels: ', list(self.tdc_config.counter_channels) + [self.tdc_config.marker_channel])
+        tdc.set_enabled_channels(list(self.tdc_config.counter_channels) + [self.tdc_config.marker_channel])
         tdc.set_timestamp_buffer_size(self.tdc_config.timestamp_buffer_size)
         # Four our need: the exposure time determines the rate at which data is put into the buffer.
         # Future proofing: if we use the in-built quTAU functions (e.g. histograms) an exposure time
@@ -834,7 +836,8 @@ class PhotonProductionDataSaver(object):
             if type(log_input) in [list, tuple]:
                 def flatten(l):
                     for el in l:
-                        if isinstance(el, collections.Iterable) and not isinstance(el, basestring):
+                        if isinstance(el, collections.Iterable) and not isinstance(el, str):# replaced basestring with str as an update from python 2 python 3. See
+                            # https://stackoverflow.com/questions/60743762/basestring-equivalent-in-python3-str-and-string-types-from-future-and-six-not
                             for sub in flatten(el):
                                 yield sub
                         else:
