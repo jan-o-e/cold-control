@@ -225,16 +225,27 @@ class Experimental_UI(tk.LabelFrame):
 #         experiment_live_ui.closeWindow()
 
     def runSeq(self, liveUI=True, autoCloseLiveUI=False):
-        # If run tone is on, turn it off!
-        for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
-            if state:
-                button.invoke()
-                        
-        experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
-                                                sequence=self.sequence_ui.sequence,
-                                                photon_production_configuration=self.photon_production_config)
+        """
+        Function to run experimental sequences when the "Run sequence" button is pressed.
+        DISABLED DUE TO INCORRECT DIRECTORY NAMING. NOW JUST DISPLAYS A WARNING.
+        """
+
+        tkMessageBox.showwarning("Error", "This functionality has been disabled due to issues"\
+                                  " with directory naming.\nReenable with the runSeq function"\
+                                  " in Experimental_UI.py")
         
-        self.runExperiment(experiment, liveUI, autoCloseLiveUI)
+
+        # OLD CODE, CAN BE REENABLED BY UNCOMMENTING
+        # # If run tone is on, turn it off!
+        # for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
+        #     if state:
+        #         button.invoke()
+                        
+        # experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
+        #                                         sequence=self.sequence_ui.sequence,
+        #                                         photon_production_configuration=self.photon_production_config)
+        
+        # self.runExperiment(experiment, liveUI, autoCloseLiveUI)
         
     def runAutomatedExp(self, liveUI=True):
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an Experimental Automation Configuration",
