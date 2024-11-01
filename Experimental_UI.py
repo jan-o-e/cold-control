@@ -28,8 +28,8 @@ from atom.event import Event
 from win32inetcon import STICKY_CACHE_ENTRY
 #from _hotshot import resolution
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
-#from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
-#from instruments.WX218x.WX218x_DLL import WX218x_OutputMode, WX218x_OperationMode, WX218x_Waveform 
+from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
+from instruments.WX218x.WX218x_DLL import WX218x_OutputMode, WX218x_OperationMode, WX218x_Waveform 
 from tkinter import StringVar
 from tkinter.scrolledtext import ScrolledText
 

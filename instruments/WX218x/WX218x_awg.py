@@ -118,7 +118,7 @@ class WX218x_awg(object):
         self._validate_response(
             WX218x_DLL.configure(
                 self.vi_session,
-                channel_name,
+                bytes(channel_name, 'utf-8'),
                 waveform,
                 amplitude,
                 dc_offset,
