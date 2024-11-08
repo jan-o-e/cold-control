@@ -15,71 +15,100 @@ from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode
 from configobj import ConfigObj
 
 #essentially this loads all the data onto all the channels as well as the markers and awaits an external trigger to play the sequence
-def configure_awg(awg_config, photon_production_config):
+def configure_awg(awg_config: AwgConfiguration, photon_production_config: PhotonProductionConfiguration):
     '''Configure the AWG for the current experiment.
     Input args:
-    awg_config: awg instance
-    photon_production_config: photon production configuration instance
+    awg_config (AwgConfiguration): Specifies the settings of the awg including: (all in AWG section of config file)
+                                    - sample rate
+                                    - burst count
+                                    - waveform output channels
+                                    - waveform output channel lags
+                                    - marker channels
+                                    - marker width
+                                    - waveform aom calibrations locations
+    photon_production_config (PhotonProductionConfiguration): photon production configuration instance
     '''
 
+    # Connects to the AWG and clears previous settings
     print('Connecting to AWG...')
     awg = WX218x_awg()
     awg.open(reset=False)
     print('...connected')
     awg.clear_arbitrary_sequence()
     awg.clear_arbitrary_waveform()
+
+    # Configures the awg according to the awg_config and some default settings
     awg.configure_sample_rate(awg_config.sample_rate)
-    
-    awg_chs = awg_config.waveform_output_channels
-    
     awg.configure_output_mode(WX218x_OutputMode.ARBITRARY)
     awg.configure_couple_enabled(True)
             
+    
+    # Configures trigger options for every other channel????
+    awg_chs = awg_config.waveform_output_channels
     for ch in [awg_chs[x] for x in range(len(awg_chs)) if x%2==0]:
         print('Configuring trigger options for', ch)
         # Configure the burst count, operation mode, trigger source, trigger level and trigger slope
         awg.configure_burst_count(ch, awg_config.burst_count)
         awg.configure_operation_mode(ch, WX218x_OperationMode.TRIGGER)
-        time.sleep(1)
+        time.sleep(1)# why is this here?
         awg.configure_trigger_source(ch, WX218x_TriggerMode.EXTERNAL)
         awg.configure_trigger_level(ch, 2)
         awg.configure_trigger_slope(ch, WX218x_TriggerSlope.POSITIVE)
     
-        
+    
+    # Calculates absolute and relative offsets to deal with channel lags
     channel_absolute_offsets = [np.rint(x*10**-6 * awg_config.sample_rate) for x in awg_config.waveform_output_channel_lags]
-    #maximum offset is defined as the maximum of the absolute offsets
     channel_relative_offsets = list(map(lambda x, m=max(channel_absolute_offsets): int(m-x), channel_absolute_offsets))
     print("Channel relative lags (in awg steps are)", channel_relative_offsets)
     print("Channel absolute offsets (in awg steps are)", channel_absolute_offsets)
     
+    # Defines the shape of the marker pulses
     marker_levs, marker_waveform_levs = (0,1.2), (0,1)
     marker_wid  = int(awg_config.marker_width*10**-6 * awg_config.sample_rate)
     
+
     def get_waveform_calib_fnc(calib_fname, max_eff=0.9):
+        """
+        Generates a calibration function from a file containing waveform calibration data.
+        Inputs:
+         - calib_fname (str): name of the file from which to read calibration data. Has two columns.
+         - max_eff (float): maximum efficiency value. Values above this are removed from the data.
+        Returns:
+         - interp_fct (function): a function that takes in a list of points, x, and returns the
+           interpolated values of the calibration data at each of the points.
+        """
         calib_data = np.genfromtxt(calib_fname,skip_header=1)
         calib_data[:,1] /= 100. # convert % as saved to decimal efficiencies
         calib_data = calib_data[(calib_data[:,1]<=max_eff)] # remove all elements with greater than the maximum efficiency
         calib_data[:,1] /= max(calib_data[:,1]) # rescale effiencies
-        
-        return lambda x: np.interp(np.abs(x),
-                                    calib_data[:,1],
-                                    calib_data[:,0])
+
+        interp_fct = lambda x: np.interp(np.abs(x), calib_data[:,1], calib_data[:,0])
+
+        return interp_fct
+    
     def get_multiwaveform_marker_data(inp_data, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0, n_pad_left=0):
         '''
         Returns a marker waveform.
+        Inputs:
+         - inp_data (int): the length of the waveform data
+         - marker_positions (list): positions within the waveform to start each marker segment
+         - marker_levels (tuple): levels to be used in the waveform in the form (low, high)
+         - marker_width (int): width of each marker pulse
+         - n_pad_right, n_pad_left (int): number of padding elements to add at the end and beginning (respectively) of the waveform
         '''
-        
-        # Use a np array for ease of setting array slices to contant values.
-        data = np.array( [marker_levels[0]] * (n_pad_left + inp_data + n_pad_right))
+        data = np.array( [marker_levels[0]] * (n_pad_left + inp_data + n_pad_right))# Use a np array for ease of setting array slices to contant values.
         for pos in marker_positions:
             data[int(pos):int(pos+marker_width)] = marker_levels[1]
-        # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
-        # then the channel remains high at the end of the sequence. Don't know why...
-        if data[0]==1:
-            data[0]=0
-        # Convert np array to list for consitancy with the get() method.
+        
+        if data[0]==1:# This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
+            data[0]=0# then the channel remains high at the end of the sequence. Don't know why...
+
+        # Convert np array to list for consistency with the get() method.
         return data.tolist()
     
+
+
+    # Creates lists of waveforms to be sent to the awg
     queud_markers = []
     seq_waveforms = [[photon_production_config.waveforms[i] for i in ch_waveforms]
                         for ch_waveforms in photon_production_config.waveform_sequence]
@@ -88,6 +117,7 @@ def configure_awg(awg_config, photon_production_config):
     #waveform delays are the delays (in awg units) to be applied to the waveforms to synchronise them across channels,
     #these can be positive or negative accounting for delay after or before waveform respectively
     seq_waveforms_stitched_delays =  [[] for _ in range(len(awg_chs))]
+
 
     #perform stitching of different waveforms with delays to synchronise across channels        
     if photon_production_config.interleave_waveforms:
@@ -114,20 +144,29 @@ def configure_awg(awg_config, photon_production_config):
         
 
     j = 0
-    for channel, waveform_data, waveforms, delay, channel_abs_offset in zip(awg_chs, seq_waveform_data, seq_waveforms, seq_waveforms_stitched_delays, channel_absolute_offsets):
+    for channel, waveform_data, waveforms, delay, channel_abs_offset in \
+        zip(awg_chs, seq_waveform_data, seq_waveforms, seq_waveforms_stitched_delays, channel_absolute_offsets):
+        """
+        Loops through each channel, processing the waveform and marker data to be sent to the awg for each channel.
+        1. Sets channel output and marker attributes
+        2. Loads calibration files
+        3. Marker data and delays
+        4. Processes each waveform
+        5. Handles waveform sequencing
+        6. Handles channel offset
+        """
         
-        #IMPORTANT THIS SET CH3 to output a constant voltage
-        if channel==Channel.CHANNEL_3:
+
+        # 1 Setting channel output and marker attributes
+        if channel==Channel.CHANNEL_3:#IMPORTANT THIS SET CH3 to output a constant voltage
             constant_V=True
         else:
             constant_V=False
 
-        #IMPORTANT THIS SETS the indices of the waveforms on the marked channel that are actually marked for photon dectection (i.e. the VST pulses)
-        marker_waveforms_indices=[0,2]
+        marker_waveforms_indices=[0,2]#IMPORTANT THIS SETS the indices of the waveforms on the marked channel that are actually marked for photon dectection (i.e. the VST pulses)
+        marker_waveform_offset=50#IMPORTANT THIS SETS the relative marker offset with respect to the delays of the VST pulse
 
-        #IMPORTANT THIS SETS the relative marker offset with respect to the delays of the VST pulse
-        marker_waveform_offset=50
-
+        # 2 Loading calibration files
         waveform_aom_calibs = {}
         aom_calibration_loc = awg_config.waveform_aom_calibrations_locations[j]
         print('For {0} using aom calibrations in {1}'.format(channel, os.path.join(aom_calibration_loc, '*MHz.txt')))
@@ -135,17 +174,19 @@ def configure_awg(awg_config, photon_production_config):
             try:
                 waveform_aom_calibs[float(re.match(r'\d+\.*\d*', os.path.split(filename)[1]).group(0))] = get_waveform_calib_fnc(filename)
             except AttributeError:
-                pass
+                print("Warning, waveform_aom_calibs is undefined.")
         
+        # 3 Marker data and delays
         marker_data = []
         marker_waveform_delays=[]
         for w in waveforms:
             marker_waveform_delays.append(w.get_n_samples())
 
         print('Writing onto channel:', channel)
-        
+
+        # 4 Processing each waveform
         for ind, waveform in enumerate(waveforms):
-        
+            waveform: Waveform
             if not waveform_aom_calibs:
                 calib_fun = lambda x: x
             else:
@@ -173,7 +214,9 @@ def configure_awg(awg_config, photon_production_config):
             else:
                 print('Queing marker at', channel_abs_offset+marker_waveform_offset)
                 queud_markers.append(channel_abs_offset+marker_waveform_offset)
+
             
+            # 5 Waveform sequence handling
             print('\tWriting markers at', marker_pos)
             print('\tWriting waveform {0} with stitch delay {1}'.format(os.path.split(waveform.fname)[1], delay))
             if len(waveforms)==1:
@@ -190,7 +233,7 @@ def configure_awg(awg_config, photon_production_config):
                     waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=marker_waveform_levs, marker_width=marker_wid)
             
-            else:
+            else:# if there are multiple waveforms is the sequence
                 print('\tMore than one waveform in sequence')
                 print('Configuring markers for indexed waveforms:', marker_waveforms_indices)
                 marker_pos=[]
@@ -227,7 +270,9 @@ def configure_awg(awg_config, photon_production_config):
                         waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
                 else:
                     waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+
             
+            # 6 Channel offset handling
             if channel_abs_offset<0:
                 waveform_data=waveform_data+[0]*abs(int(channel_abs_offset))
                 marker_data=marker_data+[0]*abs(int(channel_abs_offset))
@@ -410,14 +455,35 @@ def configure_awg(awg_config, photon_production_config):
 
     return awg, len(seq_waveform_data[0])/awg_config.sample_rate
 
+
+
+
+
+
+
+
+
+
+
+
+#   ######  ########  #######  ##     ## ######## ##    ##  ######  ########    ########  ##     ## ##    ## ##    ## ######## ########  
+#  ##    ## ##       ##     ## ##     ## ##       ###   ## ##    ## ##          ##     ## ##     ## ###   ## ###   ## ##       ##     ## 
+#  ##       ##       ##     ## ##     ## ##       ####  ## ##       ##          ##     ## ##     ## ####  ## ####  ## ##       ##     ## 
+#   ######  ######   ##     ## ##     ## ######   ## ## ## ##       ######      ########  ##     ## ## ## ## ## ## ## ######   ########  
+#        ## ##       ##  ## ## ##     ## ##       ##  #### ##       ##          ##   ##   ##     ## ##  #### ##  #### ##       ##   ##   
+#  ##    ## ##       ##    ##  ##     ## ##       ##   ### ##    ## ##          ##    ##  ##     ## ##   ### ##   ### ##       ##    ##  
+#   ######  ########  ##### ##  #######  ######## ##    ##  ######  ########    ##     ##  #######  ##    ## ##    ## ######## ##     ## 
+
 if __name__ == '__main__':
 
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
 
     def toBool(string):
         return string.lower() in GLOB_TRUE_BOOL_STRINGS
-
-    config = ConfigObj(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\photon production\newPhotonProductionConfigJan')        
+    
+    # Converts the specified file to a "config object"
+    config = ConfigObj(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\photon production\newPhotonProductionConfigJan')
+    # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
     awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
                                     burst_count = int(config['AWG']['burst count']),
                                     waveform_output_channels = list(config['AWG']['waveform output channels']),
@@ -425,17 +491,20 @@ if __name__ == '__main__':
                                     marked_channels = list(config['AWG']['marked channels']),
                                     marker_width = eval(config['AWG']['marker width']),
                                     waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
-       
+    # Same as above but for the tdc
     tdc_config = TdcConfiguration(counter_channels = map(eval, config['TDC']['counter channels']),
                                     marker_channel = int(config['TDC']['marker channel']),
                                     timestamp_buffer_size = int(config['TDC']['timestamp buffer size']))
     
+    # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
     waveforms = []
     for x,v in config['waveforms'].items():
         waveforms.append(Waveform(fname = v['filename'],
                                     mod_frequency= float(v['modulation frequency']),
                                     phases=map(float, v['phases'])))
         
+
+    # Sets the general settings for the whole process as a photon production configuration
     photon_production_config = PhotonProductionConfiguration(save_location = config['save location'],
                                                                 mot_reload  = eval(config['mot reload']),
                                                                 iterations = int(config['iterations']),
@@ -445,13 +514,19 @@ if __name__ == '__main__':
                                                                 interleave_waveforms = toBool(config['interleave waveforms']),
                                                                 awg_configuration = awg_config,
                                                                 tdc_configuration = tdc_config)
+    
 
+    # Calls the configure_awg function with the values extracted from the config object
     awg_test=configure_awg(awg_config, photon_production_config)
 
+
+    # Opens a new config file as a "config reader" object.
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
     for i in range(1,10000):
-        daq_config_fname = config_reader.get_daq_config_fname()
-        daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
+        daq_config_fname = config_reader.get_daq_config_fname()# gets the name of the config file for the DAQ cards
+        daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()# reads the config file to create a "daq reader" object
+
+        # The below lines all control the DAQ cards manually aside from the config file
         daq_controller.continuousOutput=True
         daq_controller.updateChannelValue(22, 2.6) # for manual control of amplitude input (in V)
         daq_controller.updateChannelValue(14, 2.485)

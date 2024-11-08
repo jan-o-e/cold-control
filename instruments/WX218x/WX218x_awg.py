@@ -63,11 +63,6 @@ class WX218x_awg(object):
         functions.
         '''
         if not options_string:
-            print(f"name: {self.name} (type: {type(self.name)})")
-            print(f"verify_id: {verify_id} (type: {type(verify_id)})")
-            print(f"reset: {reset} (type: {type(reset)})")
-            print(f"vi_session: {self.vi_session} (type: {type(self.vi_session)})")
-            print(byref(self.vi_session))
             name_cstr = bytes(self.name, 'utf-8')  # Convert string to bytes
             #WX218x_DLL.init(name_cstr, verify_id, reset, byref(self.vi_session))
             self._validate_response(WX218x_DLL.init(name_cstr, verify_id, reset, byref(self.vi_session)))
