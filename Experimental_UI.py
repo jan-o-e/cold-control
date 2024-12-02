@@ -383,14 +383,16 @@ class Experimental_UI(tk.LabelFrame):
                 awg = self.run_tone_awg
             
             freq = self.run_tone_freqs[i_ch]
-            print('Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6))
+            #print('Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6))
 
             #reduce amplitude so as not to saturate the AOM
 
             #channel 3 set to DC voltage
             if channel=='channel3':
-                awg.configure_standard_waveform(channel, WX218x_Waveform.DC, amplitude=freq)
+                print('Sending run tone to {0} at {1}V'.format(channel, freq))
+                awg.configure_standard_waveform(channel, WX218x_Waveform.DC, amplitude=0.1, dc_offset=freq-0.1)
             else:
+                print('Sending run tone to {0} at {1}MHz'.format(channel, freq*10**-6))
                 awg.configure_standard_waveform(channel, WX218x_Waveform.SINE, frequency=freq, amplitude=1)
             awg.configure_operation_mode(channel, WX218x_OperationMode.CONTINUOUS)
             awg.enable_channel(channel)
