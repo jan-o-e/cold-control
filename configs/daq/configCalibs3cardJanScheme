@@ -67,7 +67,7 @@ chName = Abs Imaging - freq
 chLimits = 0, 10
 [[4]]
 UIvisible = True
-calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_upper\cool_upper_amp_at_100MHz.txt
+calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_upper\cool_upper_amp_scaled_at_100MHz.txt
 chNum = 4
 default value = 0
 chName = Cool upper - amp
