@@ -103,7 +103,9 @@ class ColdControl_UI(tk.Frame):
         exitConfirmation = tkMessageBox.askquestion("Please confirm exit",\
                                                     "Are you sure you want to close Cold Control?\nThis will release all DAQ cards and exit the program - unsaved information will be lost?",
                                                     icon='warning')
-        if exitConfirmation == 'yes':
+        if exitConfirmation == 'yes':            
+            print("Disconnecting from AWG...")
+            self.experimental_UI.exit_run_tones()
             print('Closing camera connections...')
             self.camera_UI.closeCameras()
             print('...all camera connections closed.')

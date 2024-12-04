@@ -416,6 +416,32 @@ class Experimental_UI(tk.LabelFrame):
                 self.run_tone_awg = None
                 
             button.configure(bg='red', image=self.off_icon, relief=tk.RAISED)
+
+
+    def exit_run_tones(self):
+        """
+        Function to turn off all run tones and close connection to the awg when cold control is exited.
+        Failure to do this causes problems for running sequences on the awg.
+        """
+
+        if self.run_tone_awg == None:
+            # AWG not connected
+            print("No connection to AWG was opened")
+            return
+        
+        # Turns off run tones on all active channels
+        for i, channel in enumerate(Channel.values()):
+            if self.run_tone_output_states[i]:
+                print("Turning off run tone on {0}".format(channel))
+                self.run_tone_awg.disable_channel(channel)
+                self.run_tone_output_states[i] = False
+                self.run_tone_awg.configure_operation_mode(channel, WX218x_OperationMode.BURST)
+
+        # Disconnects from awg
+        self.run_tone_awg.close()
+        print('Connection to AWG closed.')
+        self.run_tone_awg = None
+
     
     def photonProductionConfigButton(self):
         config_UI = Photon_production_configuration_UI(self,
