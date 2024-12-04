@@ -7,7 +7,7 @@ class QuTau(object):
 
     def __init__(self, name):
         # Load the dll
-        self.qutools_dll = ctypes.windll.LoadLibrary('C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\quTAU\\userlib\\lib64\\tdcbase.dll')
+        self.qutools_dll = ctypes.windll.LoadLibrary('C:\\Users\\apc\\workspace\\Cold Control Heavy\\instruments\\quTAU\\userlib\\lib64\\tdcbase.dll')
         
 #         self.dev_nr = 0
 #         self.err_dict = {0 : 'No error', 

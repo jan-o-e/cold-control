@@ -4,7 +4,7 @@ Created on 10 Apr 2016
 @author: Tom Barrett
 '''
 
-import Tkinter as tk
+import tkinter as tk
 
 class ToolTip(object):
 

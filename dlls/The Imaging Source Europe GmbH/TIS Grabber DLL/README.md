@@ -52,7 +52,7 @@ A code example showing image capture with a camera using an external hardware tr
     if not cam.callback_registered:
         cam.register_frame_ready_callback() # needed to wait for frame ready callback
     
-    for i in xrange(10):                        # take 10 shots
+    for i in range(10):                        # take 10 shots
         cam.reset_frame_ready()                 # reset frame ready flag
         
         # send hardware trigger OR call cam.send_trigger() here

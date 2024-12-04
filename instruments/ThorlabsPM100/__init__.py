@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
-from ThorlabsPM100 import ThorlabsPM100
+from .ThorlabsPM100 import ThorlabsPM100
 
-from usbtmc import USBTMC
+from .usbtmc import USBTMC
 
 __version__ = '1.0'
 

@@ -7,7 +7,7 @@ Created on 22 Apr 2016
 from configobj import ConfigObj
 from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INPUT_LINE, Channel_P1A, Channel_P1B, Channel_P1C, Channel_P1CL, Channel_P1CH,\
     Channel_P2A
-from instruments.WX218x.WX218x_awg import Channel
+#from instruments.WX218x.WX218x_awg import Channel
 from Sequence import Sequence
 from ExperiementalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform, ExperimentalAutomationConfiguration, AutomatedExperimentConfiguration
 import time
@@ -97,20 +97,22 @@ class DaqReader(object):
             else: enabled_state = int(v['enabled state'])
                 
             dios.append(DAQ_dio(dio_name, dio_num, port, line, direction, enabled_state))
-                
+
         DAQ_master = DAQ_card(card_number=int(self.config['DAQ cards']['master']['card number']),
                               channels=[next(ch for ch in channels if ch.chNum==int(x)) for x in self.config['DAQ cards']['master']['channels']],
                               dios  =  [x for x in [next((dio for dio in dios if dio.dio_num==int(x)),None) for x in self.config['DAQ cards']['master']['dios']] if x!=None])
         DAQ_slaves = []
+
         for _,v in self.config['DAQ cards']['slaves'].items():
             try:
                 DAQ_slaves.append(DAQ_card(card_number=int(v['card number']),
                                            channels=[next(ch for ch in channels if ch.chNum==int(x)) for x in v['channels']],
                                            dios  =  [x for x in [next((dio for dio in dios if dio.dio_num==int(x)),None) for x in v['dios']] if x!=None]))
             except StopIteration as err:
-                print 'It looks like one of the DAQ cards has a channel expected that does not exist'
-                print [ch.chNum for ch in channels]
+                print('It looks like one of the DAQ cards has a channel expected that does not exist')
+                print([ch.chNum for ch in channels])
                 raise err
+        
             
         return DAQ_controller(DAQ_master, DAQ_slaves)
     
@@ -241,7 +243,7 @@ class PhotonProductionReader(object):
             waveforms.append(Waveform(fname = v['filename'],
                                       mod_frequency= float(v['modulation frequency']),
                                       phases = map(float, v['phases'])))
-        print self.config['waveform sequence']
+        print(self.config['waveform sequence'])
         photon_production_config = PhotonProductionConfiguration(save_location = self.config['save location'],
                                                                  mot_reload  = eval(self.config['mot reload']),
                                                                  iterations = int(self.config['iterations']),
@@ -414,13 +416,13 @@ def _makeDaqConfig():
                                   'chLimits':(-10,10),
                                   'default value':6.09035409035,
                                   'UIvisible':True,
-                                  'calibrationFname':r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool1_freq.txt'}
+                                  'calibrationFname':r'C:\Users\apc\workspace\Cold Control Heavy\calibrations\cool1_freq.txt'}
     config['DAQ channels']['1'] = {'chNum':1,
                                   'chName':'MOT cooling 1 - amp',
                                   'chLimits':(-10,10),
                                   'default value':3.66788766789,
                                   'UIvisible':True,
-                                  'calibrationFname':r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool1_amp_at_100MHz.txt'}
+                                  'calibrationFname':r'C:\Users\apc\workspace\Cold Control Heavy\calibrations\cool1_amp_at_100MHz.txt'}
     config['DAQ channels']['2'] = {'chNum':2,
                                   'chName':'MOT cooling (upper)',
                                   'chLimits':(-10,10),
@@ -572,25 +574,25 @@ def _makePhotonProductionConfig():
     config['waveform sequence'] = [0,1,2,3,4,5,6]
     
     config['waveforms'] = {}
-    config['waveforms']['0'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['0'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 60.25*10**6,
                                 'phases': []}
-    config['waveforms']['1'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['1'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 65.25*10**6,
                                 'phases': []}
-    config['waveforms']['2'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['2'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 70.25*10**6,
                                 'phases': []}
-    config['waveforms']['3'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['3'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 75.25*10**6,
                                 'phases': []}
-    config['waveforms']['4'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['4'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 80.25*10**6,
                                 'phases': []}
-    config['waveforms']['5'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['5'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 85.25*10**6,
                                 'phases': []}
-    config['waveforms']['6'] = {'filename': r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
+    config['waveforms']['6'] = {'filename': r'C:\Users\apc\workspace\Cold Control Heavy\waveforms\oli_old\sin_squared_800.csv',
                                 'modulation frequency': 90.25*10**6,
                                 'phases': []}
     
@@ -741,10 +743,10 @@ def _makeAbsorbtionImagingConfig():
     
 def _makeExperimentalAutomationConfig():
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans\-22.5 MHz offset'
+    seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans\-22.5 MHz offset'
     
     config = ConfigObj()
-    config.filename =  os.getcwd() + '/configs/experimental automation/defaultExperimentalAutomationConfig'
+    config.filename =  os.getcwd() + '/configs/experimental automation/JuanExperimentalAutomationConfig'
     
     config['save_location'] = 'Z:/Results017_New/data'
     config['summary_fname'] = 'automated_experiments_summary'
@@ -774,15 +776,22 @@ def _makeExperimentalAutomationConfig():
     
     config.write()
 
-def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channel = 10, iterations=50, mot_reload = 1000*10**3):
+def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channel = 10, iterations=500, mot_reload = 1000*10**3):
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans'
+#     seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans'
+    seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\JuanPhotonProduction'
     
     min_freq, max_freq = map(lambda x: str(x).replace('.','_'), [min(cavity_freqs), max(cavity_freqs)]) 
     
     config = ConfigObj()
-    config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/scan_cav__{0}_to_{1}'.\
+#     config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/Juan_scan_cav__{0}_to_{1}'.\
+#                                         format(min_freq, max_freq)
+
+    config.filename =  os.getcwd() + '/configs/experimental automation/Juan_scan_cav__{0}_to_{1}'.\
                                         format(min_freq, max_freq)
+                                        
+                                        
+#     config.filename =  os.getcwd() + '/configs/experimental automation/Juan_try'                                        
     
     config['save_location'] = 'Z:/Results017_New/data'
     config['summary_fname'] = 'automated_experiments_summary'
@@ -796,7 +805,7 @@ def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channe
     for freq in sorted(cavity_freqs):
         
         config['experiments'][str(i)] = {'daq_channel_static_values' : [(cav_daq_channel, freq)],
-                                      'sequence_fname' : os.path.join(seq_folder, 'cav_{0}'.format(str(freq).replace('.','_'))),
+                                      'sequence_fname' : os.path.join(seq_folder, 'CavLock_{0}'.format(str(freq).replace('.','_'))),
                                       'iterations' : iterations,
                                       'mot_reload' : mot_reload, # in us
                                       'modulation_frequencies' : []}
@@ -804,10 +813,12 @@ def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channe
         i += 1
     
     config.write()
+    
+    
 
 def _makeExperimentalAutomationConfig_xBiasScan(x_biases = [], iterations=50, mot_reload = 500*10**3,  n_repeat=1):
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\x bias scans'
+    seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F1 line\x bias scans'
     
     min_bias, max_bias = map(lambda x: str(x).replace('.','_'), [min(x_biases), max(x_biases)])
     
@@ -844,7 +855,7 @@ def _makeExperimentalAutomationConfig_xBiasScan(x_biases = [], iterations=50, mo
 
 def _makeExperimentalAutomationConfig_yBiasScan(y_biases = [], iterations=50, mot_reload = 500*10**3,  n_repeat=1):
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\y bias scans'
+    seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F1 line\y bias scans'
     
     min_bias, max_bias = map(lambda x: str(x).replace('.','_'), [min(y_biases), max(y_biases)])
     
@@ -881,7 +892,7 @@ def _makeExperimentalAutomationConfig_yBiasScan(y_biases = [], iterations=50, mo
     
 def _makeExperimentalAutomationConfig_zBiasScan(z_biases = [], iterations=500, mot_reload = 500*10**3, n_repeat=1):
      
-    seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\z bias scans'
+    seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F1 line\z bias scans'
     
     min_bias, max_bias = map(lambda x: str(x).replace('.','_'), [min(z_biases), max(z_biases)])
     
@@ -916,9 +927,9 @@ def _makeExperimentalAutomationConfig_zBiasScan(z_biases = [], iterations=500, m
     config.write()
 
 
-def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations=100, mot_reload = 750*10**3):
+def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations=100, mot_reload = 1000*10**3):
      
-    seq_loc =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\seq170704'
+    seq_loc =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\JuanPhotonProduction'
     
     config = ConfigObj()
     config.filename =  os.getcwd() + '/configs/experimental automation/resonant driving scans/scan_stirap_freqs'
@@ -932,7 +943,7 @@ def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations
     config['experiments'] = {}
     
     i = 0
-    print stirap_freqs
+    print(stirap_freqs)
     for freqs in sorted(stirap_freqs):
         
         config['experiments'][str(i)] = {'daq_channel_static_values' : [],
@@ -944,11 +955,12 @@ def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations
         i += 1
     
     config.write()
-    print 'Done'
+    print('Done')
     
 def __copy_scan_seq_params(channels_to_copy = [17],
-                           seq_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F1 line\cavity scans',
-                           base_seq_fname = r'cav_75_25'):
+                           seq_folder =  r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\JuanPhotonProduction',
+                           base_seq_fname = r'CavLock_90'):
+  
   
     base_seq_reader = SequenceReader(os.path.join(seq_folder, base_seq_fname))
     
@@ -962,7 +974,7 @@ def __copy_scan_seq_params(channels_to_copy = [17],
     from os.path import isfile, join
      
     for fname in [join(seq_folder, f) for f in listdir(seq_folder) if isfile(join(seq_folder, f))]:
-        print fname
+        print(fname)
         seq_reader = SequenceReader(fname)
         seq = seq_reader.loadSequence()
         
@@ -979,8 +991,17 @@ def __copy_scan_seq_params(channels_to_copy = [17],
                         seq_reader.get_global_timings(),
                         seq_reader.get_user_notes())
     
+    
+    
+    
 if __name__ == "__main__":
-  #  pass
+    pass
+
+    _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(87,91.1,0.2), cav_daq_channel = 10, iterations=150, mot_reload = 1000*10**3)
+
+#     __copy_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+
+
 #     _makeAbsorbtionImagingConfig()
 #     _makeSequenceConfig()
 #     _makePhotonProductionConfig()
@@ -991,9 +1012,10 @@ if __name__ == "__main__":
 
 #     _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(90.25,100.24,1))
 # #     _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[x for x in np.arange(92.75,100,0.5) if x not in (92.75, 93.25,97.75,98.25,98.75,99.25,99.75,93.75,94.25,94.75)])
-#     
-#     
-#     __copy_cav_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+#   
+#      
+#     __copy_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
+    
 #       
 #     _makeExperimentalAutomationConfig_xBiasScan()
 #     freqs=np.arange(59.5,90.5,1.75)*10**6
@@ -1002,8 +1024,8 @@ if __name__ == "__main__":
     '''
     x bias scan
     '''
-    x_biases = [3,4.5,6]
-    _makeExperimentalAutomationConfig_xBiasScan(x_biases, iterations=500, mot_reload=400*10**3, n_repeat=2)
+#     x_biases = [3,4.5,6]
+#     _makeExperimentalAutomationConfig_xBiasScan(x_biases, iterations=500, mot_reload=400*10**3, n_repeat=2)
     
     '''
     y bias scan
@@ -1013,7 +1035,7 @@ if __name__ == "__main__":
 #     _makeExperimentalAutomationConfig_yBiasScan(y_biases, iterations=333, mot_reload=500*10**3, n_repeat=3)
 #  
 #     __copy_scan_seq_params(channels_to_copy=[10,21],
-#                            seq_folder=r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\F0 line\y bias scan',
+#                            seq_folder=r'C:\Users\apc\workspace\Cold Control Heavy\configs\sequence\photon production\F0 line\y bias scan',
 #                            base_seq_fname=r'0A_yBias')
 
     '''
@@ -1027,7 +1049,7 @@ if __name__ == "__main__":
     '''
 #     freqs=np.linspace(72.25,78.25,7)*10**6
 # #     freqs=np.linspace(70.25,80.25,5)*10**6
-#     _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=zip(freqs,freqs), iterations=50, mot_reload = 500*10**3)
+#     _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=zip(freqs,freqs), iterations=50, mot_reload = 1000*10**3)
      
     
-    print 'Done'
+    print('Done')

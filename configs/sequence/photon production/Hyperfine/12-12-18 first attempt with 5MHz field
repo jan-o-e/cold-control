@@ -1,0 +1,220 @@
+date = 12/12/18
+time = 17:46:47
+[notes]
+user = '''Default user notes...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+config_ch_assignments = "(0, 'Cool upper - freq')", "(1, 'Cool lower - freq')", "(2, 'Cool center - freq')", "(3, 'ELYSA spare - freq')", "(4, 'Cool upper - amp')", "(5, 'Cool lower - amp')", "(6, 'Cool center - amp')", "(7, 'ELYSA spare - amp')", "(8, 'vSTIRAP ref Omega_g (freq)')", "(9, 'vSTIRAP ref Omega_g - amp')", "(10, 'Cavity lock - freq')", "(11, 'Cavity lock - amp')", "(12, 'ELYSA fibre branch - freq')", "(13, 'ELYSA fibre offset - amp')", "(14, 'UNUSED:Depump - freq')", "(15, 'UNUSED:Depump - amp')", "(16, 'MOT coils current')", "(17, 'Bias coils current')", "(18, 'x comp. coils current')", "(19, 'y comp. coils current (/2)')", "(20, 'MOT Repumping')", "(21, 'STIRAP offset VCO')", "(22, 'AWG trigger')", "(23, 'Cavity PID Hold')"
+[sequence]
+t_step = 10.0
+global_timings = "(15000.0, 'Cool off')", "(14000.0, 'Throw start')", "(20500.0, 'AWG start')", "(39000.0, 'AWG end')", "(15500.0, 'Depump off')", "(12000.0, 'Molasses start')", "(3000.0, 'Repump click-clack')"
+n_samples = 4001
+[sequence channels]
+[[0]]
+tV_pairs = "(0.0, 6.098919432921334)", "(12000.0, 5.346830003517509)", "(14000.0, 5.291657707872841)"
+V_interval_styles = 0, 0, 0
+chNum = 0
+[[1]]
+tV_pairs = "(0.0, 6.103347153084332)", "(12000.0, 5.348613892354194)", "(14000.0, 5.40674677349536)"
+V_interval_styles = 0, 0, 0
+chNum = 1
+[[2]]
+tV_pairs = "(0.0, 6.0491989854320405)", "(12000.0, 5.299176255211292)", "(14000.0, 5.299176255211292)"
+V_interval_styles = 0, 0, 0
+chNum = 2
+[[3]]
+tV_pairs = "(0.0, 3.8430009980311857)",
+V_interval_styles = 0,
+chNum = 3
+[[4]]
+tV_pairs = "(0.0, 2.442002442)", "(12000.0, 1.6127842737256908)", "(15000.0, 0.04884004884)"
+V_interval_styles = 0, 0, 0
+chNum = 4
+[[5]]
+tV_pairs = "(0.0, 5.51892551893)", "(12000.0, 4.483371291698714)", "(15000.0, 1.53846153846)"
+V_interval_styles = 0, 0, 0
+chNum = 5
+[[6]]
+tV_pairs = "(0.0, 2.75946275946)", "(12000.0, 1.5151750683219791)", "(15000.0, 0.02442002442)"
+V_interval_styles = 0, 0, 0
+chNum = 6
+[[7]]
+tV_pairs = "(0.0, 0.0)", "(15000.0, 0.0)", "(35000.0, 0.0)"
+V_interval_styles = 0, 0, 0
+chNum = 7
+[[8]]
+tV_pairs = "(0.0, 1.9726525766191068)",
+V_interval_styles = 0,
+chNum = 8
+[[9]]
+tV_pairs = "(0.0, 0.0)",
+V_interval_styles = 0,
+chNum = 9
+[[10]]
+tV_pairs = "(0.0, 2.973443547735634)",
+V_interval_styles = 0,
+chNum = 10
+[[11]]
+tV_pairs = "(0.0, 5.0)", "(20750.0, 5.0)", "(38000.0, 5.0)"
+V_interval_styles = 0, 0, 0
+chNum = 11
+[[12]]
+tV_pairs = "(0.0, 7.833963234840635)",
+V_interval_styles = 0,
+chNum = 12
+[[13]]
+tV_pairs = "(0.0, 1.2)",
+V_interval_styles = 0,
+chNum = 13
+[[14]]
+tV_pairs = "(0.0, 7.247268393397062)", "(14000.0, 7.247268393397062)"
+V_interval_styles = 0, 0
+chNum = 14
+[[15]]
+tV_pairs = "(0.0, 0.0)", "(15500.0, 0.0)", "(17000.0, 0.0)"
+V_interval_styles = 0, 0, 0
+chNum = 15
+[[16]]
+tV_pairs = "(0.0, 5.0)", "(12000.0, 0.0)"
+V_interval_styles = 0, 0
+chNum = 16
+[[17]]
+tV_pairs = "(0.0, 0.0)", "(15000.0, 0.0)", "(17000.0, 1.23)", "(39000.0, 0.0)"
+V_interval_styles = 0, 0, 0, 0
+chNum = 17
+[[18]]
+tV_pairs = "(0.0, 0.0)", "(12000.0, 0.0)", "(15500.0, 0.0)", "(35000.0, 0.0)"
+V_interval_styles = 0, 0, 0, 0
+chNum = 18
+[[19]]
+tV_pairs = "(0.0, 0.0)", "(22000.0, 0.0)", "(29500.0, 0.0)"
+V_interval_styles = 0, 0, 0
+chNum = 19
+[[20]]
+tV_pairs = "(0.0, 4.0)", "(15000.0, 0.0)", "(39000.0, 4.0)"
+V_interval_styles = 0, 0, 0
+chNum = 20
+[[21]]
+tV_pairs = "(0.0, 9.039522484270162)", "(15000.0, 9.039522484270162)", "(35000.0, 9.039522484270162)"
+V_interval_styles = 0, 0, 0
+chNum = 21
+[[22]]
+tV_pairs = "(0.0, 0.0)", "(20000.0, 2.5)", "(39000.0, 0.0)"
+V_interval_styles = 0, 0, 0
+chNum = 22
+[[23]]
+tV_pairs = "(0.0, 0.0)", "(22000.0, 0.0)", "(30000.0, 0.0)"
+V_interval_styles = 0, 0, 0
+chNum = 23

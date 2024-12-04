@@ -11,6 +11,7 @@ import os
 from ctypes import *
 
 def test_channels():
+    '''Test enabling and disabling channels'''
     for ch in [Channel.CHANNEL_1, Channel.CHANNEL_2, Channel.CHANNEL_3, Channel.CHANNEL_4]:
         print 'Enabling {0}...'.format(ch)
         awg.enable_channel(ch)
@@ -20,6 +21,7 @@ def test_channels():
         print '...disabled'
         
 def test_standard_waveform(channel=Channel.CHANNEL_1):
+    '''Test standard waveform output'''
     awg.set_active_channel(channel)
     awg.configure_standard_waveform(channel, WX218x_Waveform.SQUARE)
     awg.configure_output_mode(WX218x_OutputMode.FUNCTION)
@@ -29,6 +31,7 @@ def test_standard_waveform(channel=Channel.CHANNEL_1):
     awg.disable_channel(channel)
 
 def test_arbitrary_waveform():
+    '''Test arbitrary waveform output with example waveform'''
     waveform_folder = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\dlls\IVI Foundation\IVI\Drivers\wx218x\Examples\Matlab\waves'
     waveform_file = r'pulse_2048.wav'
     waveform_filename = os.path.join(waveform_folder, waveform_file)
@@ -41,6 +44,7 @@ def test_arbitrary_waveform():
     awg.disable_channel(Channel.CHANNEL_1)
     
 def test_sequence():
+    '''Test sequence output with example waveforms'''
     awg.configure_sample_rate(0.5*10**9)
     awg.set_active_channel(len(Channel.CHANNEL_1), Channel.CHANNEL_1)
     waveform_folder = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\dlls\IVI Foundation\IVI\Drivers\wx218x\Examples\Matlab\waves'
@@ -62,6 +66,7 @@ def test_sequence():
     awg.disable_channel(Channel.CHANNEL_1)
     
 def test_user_defined_arbitrary_waveform():
+    '''Test user defined arbitrary waveform which is specified in a csv file'''
     waveform_folder = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new\Sawtooth\832_long'
     waveform_file = r'sawtooth_832.csv'
     waveform_filename = os.path.join(waveform_folder, waveform_file)
@@ -76,6 +81,7 @@ def test_user_defined_arbitrary_waveform():
     awg.disable_channel(Channel.CHANNEL_1)
     
 def test_triggered_user_defined_arbitrary_waveform():
+    '''Test user defined arbitrary waveform which is specified in a csv file with a trigger'''
     waveform_folder =  r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\new\Sawtooth\832_long'
     waveform_file = r'sawtooth_832.csv'
     waveform_filename = os.path.join(waveform_folder, waveform_file)
@@ -431,7 +437,7 @@ def test_modulate_data():
         phases = map(lambda x: (x[0]/2,x[1]), phases) # Diveded phases by two for double passed AOM.
         next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
         print next_phi, next_i_flip
-        for i in xrange(len(mod_data)):
+        for i in range(len(mod_data)):
             if i==next_i_flip:
                 phi=next_phi
                 next_phi, next_i_flip = None, None if not phases else phases.pop(0)

@@ -2,6 +2,7 @@
 .project
 .DS_Store
 .settings
+*.pyc
 .idea
 
 labbook/**

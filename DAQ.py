@@ -851,14 +851,14 @@ class DAQ2502(object):
         if self.card < 0:
             raise Exception(warning_code[self.card])
         else:
-            print 'Registered card', card_number, 'as card number', self.card
+            print('Registered card', card_number, 'as card number', self.card)
         
         dll.D2K_AO_Group_Setup(self.card, DA_Group_AB, 8, da_ch)
         dll.D2K_AO_Config(self.card, DAQ2K_DA_WRSRC_Int, DAQ2K_DA_TRGSRC_SOFT | DAQ2K_DA_TRGMOD_POST, 0, 0, 0, 0)
     
     def release(self):
         dll.D2K_Release_Card(self.card)
-        print 'Released card', self.card
+        print('Released card', self.card)
     
     # Analog Output
     def write(self, digital_values):
@@ -873,7 +873,7 @@ class DAQ2502(object):
         
         n_samples, n_channels = digital_values.shape
         if n_channels != self.numChs:
-            print 'WARNING: Trying to load', n_channels, 'channels of data into a', self.numChs, 'channel DAQ.'
+            print('WARNING: Trying to load', n_channels, 'channels of data into a', self.numChs, 'channel DAQ.')
               
         dll.D2K_AO_ContBufferSetup(self.card, digital_values.ctypes.data_as(c_void_p), n_samples*n_channels, byref(buffer_id))
         
@@ -922,7 +922,7 @@ class DAQ2502(object):
     def configure_digital_port(self, port, direction):
         err =  dll.D2K_DIO_PortConfig(self.card, port, direction)
         if err != 0:
-            print err
+            print(err)
             raise Daq2502Exception('Error configuring the digital line', err)
     
     # Digital output
@@ -997,13 +997,13 @@ class DAQ_channel(object):
         if calData[0] <= calData[-1]:
             self.calibrationToVFunc = lambda x: np.interp(x, calData, vData)
         else:
-            print self.chName, ": calibration to Voltage being reversed..."
+            print(self.chName, ": calibration to Voltage being reversed...")
             self.calibrationToVFunc = lambda x: np.interp(x, [x for x in reversed(calData)], [x for x in reversed(vData)])
             
         if vData[0] <= vData[-1]:    
             self.calibrationFromVFunc = lambda x: np.interp(x, vData, calData)
         else:
-            print self.chName, ": calibration from Voltage being reversed..."
+            print(self.chName, ": calibration from Voltage being reversed...")
             self.calibrationFromVFunc = lambda x: np.interp(x, [x for x in reversed(vData)], [x for x in reversed(calData)])
         
         self.isCalibrated = True
@@ -1116,7 +1116,7 @@ class DAQ_card(DAQ2502):
             by the DAQ card.'''
         numChs, numSamps = sequenceArray.shape
         if numChs != self.numChs:
-            print 'WARNING: the sequence being loaded is for', numChs, 'but DAQ card', self.card, 'has', self.numChs, 'channels.'
+            print('WARNING: the sequence being loaded is for', numChs, 'but DAQ card', self.card, 'has', self.numChs, 'channels.')
         
         # The digital values representing the sequence that will be put to the card (note the data type is predetermined as uint16).
         digital_values = np.zeros((numChs, numSamps), dtype=np.uint16)
@@ -1171,9 +1171,9 @@ class DAQ_card(DAQ2502):
         # Sort channels by number and check that we have the expected channel numbers (e.g. 0,1,2,...) registered.
         # Note that for slaves the first channel number might be, e.g., 8 which would correspond to ch 0 on the card
         channels = sorted(channels, key= lambda ch : ch.chNum)   
-        if [ch.chNum for ch in channels] != range(channels[0].chNum , channels[0].chNum + self.numChs):
-            raise Exception("Unexpected channels registered.\nRegistered channel numbers: ", [ch.chNum for ch in channels],
-                            "\nExpected channel numbers: ", range(channels[0].chNum, self.numChs))
+        if [ch.chNum for ch in channels] != [i for i in range(channels[0].chNum , channels[0].chNum + self.numChs)]:
+            raise Exception("Unexpected channels registered.\nRegistered channel numbers: "+ str([ch.chNum for ch in channels]) +
+                            "\nExpected channel numbers: " + str([i for i in range(channels[0].chNum, self.numChs)]))
                             
         return channels
 
@@ -1203,8 +1203,8 @@ class DAQ_card(DAQ2502):
                 registered_lines.append(dio)  
                 
             except Daq2502Exception as err:
-                print 'Error configuring digital line (\'{0}\') on card {0}, port {1}, line {2}.  Not registering line.'.format(
-                        dio.dio_name, self.card, dio.port, dio.line)
+                print('Error configuring digital line (\'{0}\') on card {0}, port {1}, line {2}.  Not registering line.'.format(
+                        dio.dio_name, self.card, dio.port, dio.line))
             
         return registered_lines
             
@@ -1268,10 +1268,10 @@ class DAQ_controller(object):
         seqChs, numSamps = controlArray.shape
         totChs = sum([card.numChs for card in [self.master] + self.slaves])
         if seqChs < totChs:
-            print 'WARNING: Attempting to load an array for', seqChs, 'channels when there are', totChs, 'channels available. Extra channels will be set to zero.'
+            print('WARNING: Attempting to load an array for', seqChs, 'channels when there are', totChs, 'channels available. Extra channels will be set to zero.')
             controlArray = np.vstack([controlArray, np.zeros([totChs-seqChs, numSamps])])
         elif seqChs > totChs:
-            print 'WARNING: Attempting to load an array for', seqChs, 'channels when there are', totChs, 'channels available. Extra channels will be ignored.'       
+            print('WARNING: Attempting to load an array for', seqChs, 'channels when there are', totChs, 'channels available. Extra channels will be ignored.')       
             controlArray = controlArray[:totChs]
             
         return controlArray
@@ -1336,14 +1336,14 @@ class DAQ_controller(object):
         
     def enslave(self, slave):
         '''Enslave a card to the master'''
-        print 'Enslaved card {0} to card {1}'.format(slave.card, self.master.card)
+        print('Enslaved card {0} to card {1}'.format(slave.card, self.master.card))
 #         dll.D2K_AO_Config(slave.card, DAQ2K_DA_WRSRC_SSI, DAQ2K_DA_TRSRC_SSI | DAQ2K_DA_TRGMOD_POST, 0, 0, 0, 0) # OLD and depricated by Tom 1/9/16
         dll.D2K_AO_Config(slave.card, DAQ2K_DA_WRSRC_SSI | DA_Group_AB, DAQ2K_DA_TRSRC_SSI | DAQ2K_DA_TRGMOD_POST, 0, 0, 0, 0)
         dll.D2K_SSI_SourceConn(self.master.card, SSI_WR | SSI_DATRIG)
             
     def emancipate(self, slave):
         '''Free a card from the master'''
-        print 'Freed card {0} from card {1}'.format(slave.card, self.master.card)
+        print('Freed card {0} from card {1}'.format(slave.card, self.master.card))
         # Should the second argument be DAQ2K_DA_WRSRC_Int | DA_Group_AB for consistancy with enslave()?
         dll.D2K_AO_Config(slave.card, DAQ2K_DA_WRSRC_Int, DAQ2K_DA_TRGSRC_SOFT | DAQ2K_DA_TRGMOD_POST, 0, 0, 0, 0)
         dll.D2K_SSI_SourceClear(self.master.card)

@@ -3,7 +3,7 @@ time = 09:26:06
 save location = Z:/Results017_New/data
 mot reload = 300000
 iterations = 100
-waveform sequence = '[0, 1,2,3,4,5,6],'
+waveform sequence = '[0,1,2,3,4,5,6],'
 waveform stitch delays = '[0,0,0,0,0,0,0],'
 interleave waveforms = False
 [waveforms]
@@ -39,6 +39,7 @@ filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\ne
 sample rate = 1250000000.0
 burst count = 12500
 waveform output channels = channel1,
+waveform output channel lags = 0.478, 0.360, 0.586 
 marked channels = channel1,
 marker width = 0.1
 marker offset = 0.953

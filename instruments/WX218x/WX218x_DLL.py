@@ -8,8 +8,8 @@ Created on 26 Sep 2016
 '''
 from ctypes import *
 from pyvisa.ctwrapper.functions import get_attribute
-from jinja2._stringdefs import combine
-from DAQ import High_Hysteresis
+#from jinja2._stringdefs import combine
+#from DAQ import High_Hysteresis
 
 # #if defined(_VI_INT64_UINT64_DEFINED)
 # typedef ViUInt64    _VI_PTR ViPUInt64;
@@ -192,13 +192,13 @@ class WX218x_DigPatternDelayMode(object):
     (
      COMMON,   # Sets delay mode as Common for Digital Pattern Output.
      SEPARATE  # Sets delay mode as Separate for Digital Pattern Output.
-     ) = map(c_int, xrange(2))
+     ) = map(c_int, range(2))
 
 class WX218x_MarkerSource(object):
     (
      WAVE, # Wave marker source.
      USER  # User marker source.
-     ) = map(c_int, xrange(2))
+     ) = map(c_int, range(2))
 
 class WX218x_OperationMode(object):
     '''
@@ -210,7 +210,7 @@ class WX218x_OperationMode(object):
     BURST,      # Generate a burst of waveforms when a trigger occurs.               
     TRIGGER,    # Trigger operation mode.   NOTE: THIS SEEMS TO BE THE MODE THAT RESPECTS THE BURST COUNT SETTINGS!         
     GATE        # Gate operation mode.
-     ) = map(c_int, xrange(4))
+     ) = map(c_int, range(4))
 
 
 class WX218x_OutputMode(object):
@@ -226,7 +226,7 @@ class WX218x_OutputMode(object):
 #     MODULATION,  # Selects the modulated waveforms.
 #     PULSE,       # Selects the digital pulse function.
 #     PATTERN      # Sets pattern output mode. (Not for WX2181,WX2182)
-    ) = map(c_int, xrange(3))
+    ) = map(c_int, range(3))
 
 class WX218x_SequenceAdvanceMode(object):
     (
@@ -239,7 +239,7 @@ class WX218x_SequenceAdvanceMode(object):
      STEP  # Specifies the stepped sequence advance mode, where the generator
            # steps to the next waveform only when a valid event signal has been
            # received.
-     ) = map(c_int32, xrange(3))
+     ) = map(c_int32, range(3))
 
 class WX218x_TraceMode(object):
     (
@@ -247,13 +247,13 @@ class WX218x_TraceMode(object):
      DUPLICATE, # Selects the Duplicate trace mode for download waveforms. 
      ZERO,      # Selects the Zero trace mode for download waveforms.
      COMBINE    # Selects the Combine trace mode for download waveforms.
-     ) = map(c_int32, xrange(4))
+     ) = map(c_int32, range(4))
 
 class WX218x_TriggerImpedance(object):
     (
      LOW, # Sets the trigger impedance to 50 Ohms.
      HIGH # Sets the trigger impedance to 10k Ohms.
-     ) = map(c_int32, xrange(2))
+     ) = map(c_int32, range(2))
      
 class WX218x_TriggerMode(object):
     (
@@ -275,7 +275,7 @@ class WX218x_TriggerSlope(object):
      POSITIVE, # Selects the positive going edge.
      NEGATIVE, # Selects the negative going edge.
      EITHER    # Selects both positive and negative going edges.Not supported for WX2184.
-     ) = map(c_int32, xrange(3))
+     ) = map(c_int32, range(3))
 class WX218x_Waveform(object):
     (
      SINE,       # Configures the function generator to produce a sinusoid waveform.
@@ -288,13 +288,15 @@ class WX218x_Waveform(object):
      GAUSSIAN,   # Configures the function generator to produce a gaussian waveform.
      EXPONENTIAL,# Configures the function generator to produce a exponential waveform.
      NOISE       # Configures the function generator to produce a noise waveform.
-     ) = map(c_int32, xrange(1,11))
+     ) = map(c_int32, range(1,11))
 
 class WX218x_DLL(object):
     """
     ctypes funcs to talk to wx218x.dll.
     """
-    wx218x_dll = windll.LoadLibrary('C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\IVI Foundation\\IVI\\Bin\\wx218x_64.dll')
+    #wx218x_dll = WinDLL("C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\IVI Foundation\\IVI\\Bin\\wx218x_64.dll")
+
+    wx218x_dll = windll.LoadLibrary("C:\\Users\\apc\\Documents\\Python Scripts\\Cold Control Heavy\\dlls\\IVI Foundation\\IVI\\Bin\\wx218x_64.dll")
     
     # ///////////////////////////////////////////////////////////////////////////
     # /*!

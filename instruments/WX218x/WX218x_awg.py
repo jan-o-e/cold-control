@@ -4,14 +4,14 @@ Created on 26 Sep 2016
 @author: Tom Barrett
 '''
 from ctypes import *
-import visa
+import pyvisa as visa
 import numpy as np
 
-from WX218x_DLL import WX218x_DLL, WX218x_MarkerSource
-from WX218x_Exception import WX218x_Exception
-from WX218x_Warning import WX218x_Warning
-from esky.slaveproc import ctypes
-from docutils.utils.math.latex2mathml import functions
+from .WX218x_DLL import WX218x_DLL, WX218x_MarkerSource
+from .WX218x_Exception import WX218x_Exception
+from .WX218x_Warning import WX218x_Warning
+#from esky.slaveproc import ctypes
+#from docutils.utils.math.latex2mathml import functions
 
 class Channel(object):
     CHANNEL_1 = 'channel1'
@@ -45,7 +45,7 @@ class WX218x_awg(object):
             try:
                 self.name = next(r for r in resources if self.MANUFACTURER_ID in r)
             except StopIteration as err:
-                print 'No AWG instrument can be found. Currently connected instruments are', resources
+                print('No AWG instrument can be found. Currently connected instruments are', resources)
                 raise err
         self.vi_session = c_uint()
         
@@ -63,10 +63,12 @@ class WX218x_awg(object):
         functions.
         '''
         if not options_string:
-            self._validate_response(WX218x_DLL.init(self.name, verify_id, reset, byref(self.vi_session)))
+            name_cstr = bytes(self.name, 'utf-8')  # Convert string to bytes
+            #WX218x_DLL.init(name_cstr, verify_id, reset, byref(self.vi_session))
+            self._validate_response(WX218x_DLL.init(name_cstr, verify_id, reset, byref(self.vi_session)))
         else:
             self._validate_response(WX218x_DLL.init_with_options(self.name, verify_id, reset, options_string, byref(self.vi_session)))
-        print 'Connection opened to AWG instrument', self.name
+        print('Connection opened to AWG instrument', self.name)
         
     def close(self):
         '''
@@ -78,27 +80,27 @@ class WX218x_awg(object):
         '''
         Places the instrument in a known state.
         '''
-        print "Resetting AWG..."
+        print("Resetting AWG...")
         self._validate_response(WX218x_DLL.reset(self.vi_session))
-        print "...completed"
+        print("...completed")
         
     def enable_channel(self, channel_name):
         '''
         Enable output on channel_name.
         '''
-        self._validate_response(WX218x_DLL.configure_output_enabled(self.vi_session, channel_name, True))
+        self._validate_response(WX218x_DLL.configure_output_enabled(self.vi_session, bytes(channel_name, 'utf-8'), True))
         
     def disable_channel(self, channel_name):
         '''
         Disable output on channel_name.
         '''
-        self._validate_response(WX218x_DLL.configure_output_enabled(self.vi_session, channel_name, False))
+        self._validate_response(WX218x_DLL.configure_output_enabled(self.vi_session, bytes(channel_name, 'utf-8'), False))
         
     def configure_output_mode(self, output_mode):
         self._validate_response(WX218x_DLL.configure_output_mode(self.vi_session, output_mode))
         
     def configure_operation_mode(self, channel_name, operation_mode):
-        self._validate_response(WX218x_DLL.configure_operation_mode(self.vi_session, channel_name, operation_mode))
+        self._validate_response(WX218x_DLL.configure_operation_mode(self.vi_session, bytes(channel_name, 'utf-8'), operation_mode))
     
     def configure_standard_waveform(self,
                                     channel_name,
@@ -111,7 +113,7 @@ class WX218x_awg(object):
         self._validate_response(
             WX218x_DLL.configure(
                 self.vi_session,
-                channel_name,
+                bytes(channel_name, 'utf-8'),
                 waveform,
                 amplitude,
                 dc_offset,
@@ -130,7 +132,7 @@ class WX218x_awg(object):
         '''
         Sets the active channel for programming.
         '''
-        self._validate_response(WX218x_DLL.set_active_channel(self.vi_session, len(channel_name), channel_name))
+        self._validate_response(WX218x_DLL.set_active_channel(self.vi_session, len(channel_name), bytes(channel_name, 'utf-8')))
     
     def configure_sample_rate(self, sample_rate):
         '''
@@ -154,7 +156,7 @@ class WX218x_awg(object):
             load_function = WX218x_DLL.load_arb_wfm_from_file
         # TODO: What does the buffer size of filename argument do?
         self._validate_response(load_function(self.vi_session,
-                                              channel_name,
+                                              bytes(channel_name, 'utf-8'),
                                               len(filename),
                                               filename,
                                               byref(waveform_handle)))
@@ -176,7 +178,7 @@ class WX218x_awg(object):
 # #         print list(map(lambda x: int(x, 16), data14bit))
 # 
 #         data_p = (c_double*len(data))()
-#         for i in xrange(len(data)):
+#         for i in range(len(data)):
 #             data_p[i] = data[i]
 
         self._validate_response(WX218x_DLL.create_arbitrary_waveform(self.vi_session,
@@ -194,7 +196,7 @@ class WX218x_awg(object):
         
         def format_data(data):
             data_p = (c_short*len(data))()
-            for i in xrange(len(data)):
+            for i in range(len(data)):
                 data_p[i] = int(np.round((1+data[i])*8191))
 #             print [x for x in data_p]
             return data_p        
@@ -215,7 +217,7 @@ class WX218x_awg(object):
         
         def format_data(data):
             data_p = (c_short*len(data))()
-            for i in xrange(len(data)):
+            for i in range(len(data)):
                 data_p[i] = int(np.round((1+data[i])*8191))
 #             print [x for x in data_p]
             return data_p
@@ -242,7 +244,7 @@ class WX218x_awg(object):
         Gain must be 50E-3 to 2 for WX2184C.
         '''
         self._validate_response(WX218x_DLL.configure_arb_gain(self.vi_session,
-                                                              channel_name,
+                                                              bytes(channel_name, 'utf-8'),
                                                               gain))
     
     def create_sequence_adv(self, waveform_handles, loop_count, jump_flag=None):
@@ -255,15 +257,15 @@ class WX218x_awg(object):
 #         jump_flag_p  = np.array(jump_flag).ctypes.data_as(POINTER(c_char))
         
         waveform_handles_p = (c_int32*len(waveform_handles))()
-        for i in xrange(len(waveform_handles)):
+        for i in range(len(waveform_handles)):
             waveform_handles_p[i] = waveform_handles[i]
              
         loop_count_p = (c_int32*len(loop_count))()
-        for i in xrange(len(loop_count)):
+        for i in range(len(loop_count)):
             loop_count_p[i] = loop_count[i]
              
         jump_flag_p = (c_int32*len(jump_flag))()
-        for i in xrange(len(jump_flag)):
+        for i in range(len(jump_flag)):
             jump_flag_p[i] = jump_flag[i]
         
         self._validate_response(WX218x_DLL.create_sequence_adv1(self.vi_session,
@@ -302,7 +304,7 @@ class WX218x_awg(object):
         are different things - don't shoot the messenger.
         '''
         self._validate_response(WX218x_DLL.configure_once_count(self.vi_session,
-                                                                  channel_name,
+                                                                  bytes(channel_name, 'utf-8'),
                                                                   count))
     
     def configure_advance_mode(self, channel_name, advance_mode):
@@ -311,7 +313,7 @@ class WX218x_awg(object):
         WX218x_SequenceAdvanceMode object.
         '''
         self._validate_response(WX218x_DLL.configure_advance_mode(self.vi_session,
-                                                                  channel_name,
+                                                                  bytes(channel_name, 'utf-8'),
                                                                   advance_mode))
     
     def configure_trigger_source(self, channel_name, source):
@@ -320,7 +322,7 @@ class WX218x_awg(object):
         source parameters.
         '''
         self._validate_response(WX218x_DLL.configure_trig_source(self.vi_session,
-                                                                 channel_name,
+                                                                 bytes(channel_name, 'utf-8'),
                                                                  source))
     
     def configure_trigger_level(self, channel_name, level):
@@ -329,7 +331,7 @@ class WX218x_awg(object):
         Valid range is -5V to 5V. The default level is 1.6V.
         '''
         self._validate_response(WX218x_DLL.configure2(self.vi_session,
-                                                      channel_name,
+                                                      bytes(channel_name, 'utf-8'),
                                                       level))
         
     def configure_trigger_slope(self, channel_name, slope):
@@ -338,7 +340,7 @@ class WX218x_awg(object):
         Valid slopes are enumerated in the WX218x_TriggerSlope object.
         '''
         self._validate_response(WX218x_DLL.configure_trig_slope(self.vi_session,
-                                                                channel_name,
+                                                                bytes(channel_name, 'utf-8'),
                                                                 slope))
         
     def configure_trigger_impedance(self, trigger_impedance):
@@ -360,7 +362,7 @@ class WX218x_awg(object):
         Use this method to set the burst counter setting.
         '''
         self._validate_response(WX218x_DLL.configure_burst_count_2(self.vi_session,
-                                                                   channel_name,
+                                                                   bytes(channel_name, 'utf-8'),
                                                                    count))
 
     def configure_marker(self, 
@@ -371,6 +373,10 @@ class WX218x_awg(object):
                          levels=(0,1.2),
                          delay=0,
                          width=64):
+        
+        if position<0:
+            print('WARNING: marker position must be > 0.  Setting makrer position to zero, but this may effect timing lags.')
+            position = 0
         
         self.configure_marker_index(channel_name, index)
         self.configure_marker_source(channel_name, source)
@@ -385,7 +391,7 @@ class WX218x_awg(object):
         
     def configure_marker_enabled(self, channel_name, index, enabled):
         self._validate_response(WX218x_DLL.configure_marker_enabled(self.vi_session,
-                                                                    channel_name,
+                                                                    bytes(channel_name, 'utf-8'),
                                                                     index,
                                                                     enabled))
         
@@ -394,55 +400,55 @@ class WX218x_awg(object):
         Valid values for source are enumerated in the WX218x_MarkerSource enum.
         ''' 
         self._validate_response(WX218x_DLL.configure_marker_source(self.vi_session,
-                                                                   channel_name,
+                                                                   bytes(channel_name, 'utf-8'),
                                                                    source))
 
     def configure_marker_position(self, channel_name, index, position):
         self._validate_response(WX218x_DLL.configure_marker_position(self.vi_session,
-                                                                     channel_name,
+                                                                     bytes(channel_name, 'utf-8'),
                                                                      index,
-                                                                     position))
+                                                                    int(position)))
 
     def configure_marker_high_level(self, channel_name, level):
         self._validate_response(WX218x_DLL.configure_marker_high_level_4_ch(self.vi_session,
-                                                                            channel_name,
+                                                                            bytes(channel_name, 'utf-8'),
                                                                             level))
      
     def configure_marker_low_level(self, channel_name, level):    
         self._validate_response(WX218x_DLL.configure_marker_low_level_4_ch( self.vi_session,
-                                                                            channel_name,
+                                                                            bytes(channel_name, 'utf-8'),
                                                                             level))
     
     def configure_marker_delay(self, channel_name, index, delay):
         self._validate_response(WX218x_DLL.configure_marker_delay(self.vi_session,
-                                                                     channel_name,
+                                                                     bytes(channel_name, 'utf-8'),
                                                                      index,
                                                                      delay))
         
     def configure_marker_width(self, channel_name, index, width):
         self._validate_response(WX218x_DLL.configure_marker_width(self.vi_session,
-                                                                     channel_name,
+                                                                     bytes(channel_name, 'utf-8'),
                                                                      index,
-                                                                     width))
+                                                                     int(width)))
         
     def set_marker_width(self, channel_name, index, width):
         self._validate_response(WX218x_DLL.set_marker_width(self.vi_session,
-                                                                     channel_name,
+                                                                     bytes(channel_name, 'utf-8'),
                                                                      index,
                                                                      width))
 
     def marker_refresh(self, channel_name):
         self._validate_response(WX218x_DLL.marker_refresh_2(self.vi_session,
-                                                            channel_name))
+                                                            bytes(channel_name, 'utf-8')))
         
     def configure_marker_index(self, channel_name, index):
         self._validate_response(WX218x_DLL.configure_marker_index(self.vi_session,
-                                                                     channel_name,
+                                                                     bytes(channel_name, 'utf-8'),
                                                                      index))
         
     def configure_dig_patt_delay_mode(self, channel_name, delay_mode):
         self._validate_response(WX218x_DLL.configure_dig_patt_delay_mode(self.vi_session,
-                                                                         channel_name,
+                                                                         bytes(channel_name, 'utf-8'),
                                                                          delay_mode))
         
     def configure_couple_enabled(self, enabled):
@@ -469,6 +475,6 @@ class WX218x_awg(object):
         error_code = c_int32()
         error_message = create_string_buffer(256)
         WX218x_DLL.get_error(self.vi_session, byref(error_code), 256, error_message)
-        print 'Last retrieved error description:'.upper(), error_message.value
+        print('Last retrieved error description:'.upper(), error_message.value)
         
         raise err

@@ -4,10 +4,10 @@
 from ctypes import *
 import time
 
-from IC_GrabberDLL import IC_GrabberDLL
-from IC_Exception import IC_Exception
-from IC_Property import IC_Property
-import IC_Structures as structs
+from .IC_GrabberDLL import IC_GrabberDLL
+from .IC_Exception import IC_Exception
+from .IC_Property import IC_Property
+from . import IC_Structures as structs
 
 GrabberHandlePtr = POINTER(structs.GrabberHandle)
 
@@ -242,7 +242,7 @@ class IC_Camera(object):
         """
         """
         err = IC_GrabberDLL.set_format(self._handle, c_int(color_format))
-        print 'set format err:', err
+        print('set format err:', err)
         if err != 1:
             raise IC_Exception(err)
             
@@ -283,7 +283,7 @@ class IC_Camera(object):
         actual = not enable
         #print actual, enable, c_int(int(actual))
         err = IC_GrabberDLL.set_continuous_mode(self._handle, c_int(int(actual)))
-        print 'enable_continuous_mode:', err
+        print('enable_continuous_mode:', err)
         if err != 1:
             #raise IC_Exception(err)
             pass # todo, always raises false error for some reason...?
@@ -293,7 +293,7 @@ class IC_Camera(object):
         Send a software trigger to fire the device when in triggered mode.
         """
         err = IC_GrabberDLL.software_trigger(self._handle)
-        print 'send err code:', err
+        print('send err code:', err)
         if err != 1:
             raise IC_Exception(err)
         
@@ -355,7 +355,7 @@ class IC_Camera(object):
         :param timeout: int -- time out in milliseconds.
         """
         err = IC_GrabberDLL.snap_image(self._handle, c_int(timeout))
-        print 'snap_image err:', err
+        print('snap_image err:', err)
         if err != 1:
             raise IC_Exception(err)
     
@@ -468,7 +468,7 @@ class IC_Camera(object):
         if self._frame['ready']:
             return self._frame['num']
         else:
-            print 'Timed-out'
+            print('Timed-out')
 #             return self._frame['num']
             raise IC_Exception(-100)
     

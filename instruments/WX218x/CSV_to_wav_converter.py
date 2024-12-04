@@ -29,7 +29,7 @@ def write_wav(data, filename, framerate, amplitude):
         frames.append(struct.pack('h', mul))
     # frames = (struct.pack('h', int(s*self.amp)) for s in sine_list)
     frames = ''.join(frames)
-    for x in xrange(0, 7200):
+    for x in range(0, 7200):
         wavfile.writeframes(frames)
     wavfile.close()
     print("%s written" %(filename))

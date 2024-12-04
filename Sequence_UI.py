@@ -3,18 +3,19 @@ Created on 25 Mar 2016
 
 @author: tombarrett
 '''
-import Tkinter as tk
-import ttk
-import tkFont
+import tkinter as tk
+from tkinter import ttk
+from tkinter import font as tkFont
 
-import tkFileDialog
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from tkinter import filedialog as tkFileDialog
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
 import matplotlib.pyplot as plt
 from Config import SequenceReader, SequenceWriter
 from Sequence import IntervalStyle, MultipleInvalidSequenceChannelException, InvalidSequenceChannelException
-import tkMessageBox
+from tkinter import messagebox as tkMessageBox
 from IPython.core.display import display
-from Tkconstants import ANCHOR
+from tkinter.constants import ANCHOR
 from PIL import Image, ImageTk
 import ToolTip_UI as tooltip
 import numpy as np
@@ -274,7 +275,7 @@ class Sequence_UI(tk.Toplevel):
             errMsg = mulErr.message + "\n"
             for i in range(0,len(mulErr.errors)):
                 errMsg += '\nChannel {0} - {1}'.format(mulErr.errorChannels[i], mulErr.errors[i].message)
-                print mulErr.errorChannels[i], mulErr.errors[i].message
+                print(mulErr.errorChannels[i], mulErr.errors[i].message)
             
             tkMessageBox.showwarning('Unable to applySamplingConfiguration changes', errMsg)
             # Seems to be a tkinter bug that the parent is shown on top after this message dialog
@@ -661,15 +662,16 @@ class _InteractiveLegend(object):
         self.update()
 
     def _setup_connections(self):
-        for artist in self.legend.texts + self.legend.legendHandles:
+        handles, labels = self.legend.axes.get_legend_handles_labels()
+        for artist in self.legend.texts + handles:
             artist.set_picker(10) # 10 points tolerance
 
         self.canvas.mpl_connect('pick_event', self.on_pick)
         self.canvas.mpl_connect('button_press_event', self.on_click)
 
     def _build_lookups(self, legend):
-        labels = [t.get_text() for t in legend.texts]
-        handles = legend.legendHandles
+        #labels = [t.get_text() for t in legend.texts]
+        handles, labels = legend.axes.get_legend_handles_labels()
         label2handle = dict(zip(labels, handles))
         handle2text = dict(zip(handles, legend.texts))
 
@@ -718,7 +720,7 @@ class _InteractiveLegend(object):
         self.fig.canvas.draw()
 
     def show(self):    
-        self.canvas.show()
+        self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
         
     def destroy(self):
