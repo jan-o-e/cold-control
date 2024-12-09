@@ -19,8 +19,8 @@ MARKER_WF_LOW = 0.0
 MARKER_WF_HIGH = 1
 MARKER_WIDTH_FACTOR = 10**-6
 ABSOLUTE_OFFSET_FACTOR = 10**-6
-# Increasing DEFAULT_MARKER_OFFSET makes the first (channel 1) marker pulse happen later.
-DEFAULT_MARKER_OFFSET = 500  # In AWG units
+# Increasing DEFAULT_MARKER_OFFSET makes the marker pulses happen later.
+DEFAULT_MARKER_OFFSET = 500  # TO DO: MAKE A LIST TO VARY MARKER DELAYS INDEPENDENTLY
 
 
 
@@ -193,7 +193,7 @@ def write_markers(marker_data, awg:WX218x_awg, awg_chs, marker_width):
         marker_starts = marker_starts[:2]
 
     print('Writing markers to marker channels at {0}'.format(marker_starts))
-    marker_channel_index = 1
+    #marker_channel_index = 1
     #for i, marker_pos in enumerate(marker_starts):
         #this writes different markers to different channels
     #    print(awg_chs[i])
@@ -211,7 +211,7 @@ def write_markers(marker_data, awg:WX218x_awg, awg_chs, marker_width):
                                 position = marker_starts[0] - marker_width/4,
                                 levels = MARKER_LEVS,
                                 width = marker_width/2)
-    awg.configure_marker(awg_chs[2], 
+    awg.configure_marker(awg_chs[1], # changed to channel 2 to investigate pulses
                                 index = 2, 
                                 position = marker_starts[1] - marker_width/4,
                                 levels = MARKER_LEVS,
@@ -276,11 +276,7 @@ def configure_awg(awg_config: AwgConfiguration, photon_config: PhotonProductionC
     # Process waveforms and markers
     marker_wid  = int(awg_config.marker_width*10**-6 * awg_config.sample_rate)
 
-    """
-    waveform_data, marker_data = process_waveforms(
-        awg_config.waveform_output_channels, photon_config.waveforms,
-        awg_config.waveform_output_channel_lags, abs_offsets, awg_config.sample_rate
-    )"""
+
 
     wf_list, wf_data, wf_stitched_delays, seq_marker_data, queud_markers= create_waveform_lists(photon_config.waveforms,\
                                     photon_config.waveform_sequence, awg_config.waveform_output_channels)
