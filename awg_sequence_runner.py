@@ -5,7 +5,7 @@ import time
 from Config import ConfigReader, DaqReader
 from ExperiementalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
 from configobj import ConfigObj
-from awg_functions.process_awg_config import run_awg
+from lab_control_functions.awg_control_functions import run_awg
 
 
 path_to_config = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\photon production\newPhotonProductionConfigJan'

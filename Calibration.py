@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 import re
 from instruments.TF930 import TF930
 from instruments.ThorlabsPM100 import ThorlabsPM100
-import visa
+import pyvisa as visa
 # from sympy.physics.quantum.circuitplot import matplotlib
 '''
 Load required classes for awg driven AOM calibration
@@ -163,7 +163,7 @@ def frequency_timeseries_mx(t_max,
     t_data, calData = [], []
     print ('Running through the measurements...')
     for t_step in np.arange(0,t_max, writeToQueryDelay+queryToReadDelay):
-        print t_step
+        print(t_step)
         time.sleep(writeToQueryDelay)
         t_data.append(t_step)
         calData.append(counter.query('N?', delay=queryToReadDelay))
