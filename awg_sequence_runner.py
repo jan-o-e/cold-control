@@ -5,22 +5,10 @@ import time
 from Config import ConfigReader, DaqReader
 from ExperiementalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
 from configobj import ConfigObj
-from awg_functions.awg_code_refactor import configure_awg
-
-
-
-
-#   ######  ########  #######  ##     ## ######## ##    ##  ######  ########    ########  ##     ## ##    ## ##    ## ######## ########  
-#  ##    ## ##       ##     ## ##     ## ##       ###   ## ##    ## ##          ##     ## ##     ## ###   ## ###   ## ##       ##     ## 
-#  ##       ##       ##     ## ##     ## ##       ####  ## ##       ##          ##     ## ##     ## ####  ## ####  ## ##       ##     ## 
-#   ######  ######   ##     ## ##     ## ######   ## ## ## ##       ######      ########  ##     ## ## ## ## ## ## ## ######   ########  
-#        ## ##       ##  ## ## ##     ## ##       ##  #### ##       ##          ##   ##   ##     ## ##  #### ##  #### ##       ##   ##   
-#  ##    ## ##       ##    ##  ##     ## ##       ##   ### ##    ## ##          ##    ##  ##     ## ##   ### ##   ### ##       ##    ##  
-#   ######  ########  ##### ##  #######  ######## ##    ##  ######  ########    ##     ##  #######  ##    ## ##    ## ######## ##     ## 
+from awg_functions.process_awg_config import run_awg
 
 
 path_to_config = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\photon production\newPhotonProductionConfigJan'
-
 
 
 
@@ -67,7 +55,8 @@ if __name__ == '__main__':
     
 
     # Calls the configure_awg function with the values extracted from the config object
-    awg_test=configure_awg(awg_config, photon_production_config)
+    # This function used to be called "configure_awg"
+    awg_test=run_awg(awg_config, photon_production_config)
 
 
     # Opens a new config file as a "config reader" object.
