@@ -855,21 +855,21 @@ class Absorbtion_imaging_configuration_UI(object):
         
         labels.append('Camera trigger channel:')
         self.c.camera_trig_ch_var = var = tk.StringVar()
-        var.set((key for key,value in channel_opts_dict.items() if value==self.c.camera_trig_ch).next())
+        var.set(next(key for key,value in channel_opts_dict.items() if value==self.c.camera_trig_ch))
         camera_trig_ch_dropdown = tk.OptionMenu(frame, var, *channel_opts, 
                                                            command=lambda x=var: self.update_camera_trig_ch(camera_trig_levs_wid,
                                                                                                             n_bkg_wid,
-                                                                                                            (ch for ch in controller_channels if ch.chNum == channel_opts_dict[x]).next()))
+                                                                                                            next(ch for ch in controller_channels if ch.chNum == channel_opts_dict[x])))
         widgets.append(camera_trig_ch_dropdown)
         fns_to_bind.append(None)
         
         labels.append('Imaging power channel:')
         self.c.imag_power_ch_var = var = tk.StringVar()
-        var.set((key for key,value in channel_opts_dict.items() if value==self.c.imag_power_ch).next())
+        var.set(next(key for key,value in channel_opts_dict.items() if value==self.c.imag_power_ch))
         imag_power_ch_dropdown = tk.OptionMenu(frame, var, *channel_opts, 
                                                            command=lambda x=var: self.update_imag_power_ch(imag_power_levs_wid,
                                                                                                             n_bkg_wid,
-                                                                                                            (ch for ch in controller_channels if ch.chNum == channel_opts_dict[x]).next()))
+                                                                                                            next(ch for ch in controller_channels if ch.chNum == channel_opts_dict[x])))
         widgets.append(imag_power_ch_dropdown)
         fns_to_bind.append(None)
         
@@ -880,7 +880,7 @@ class Absorbtion_imaging_configuration_UI(object):
         
         def update_cam_trigger_levs(new_levs):
             self.c.camera_trig_levs = new_levs
-        fns_to_bind.append(lambda event: self.trig_levs_focus_out(event.widget, (ch for ch in controller_channels if ch.chNum == self.c.camera_trig_ch).next(),
+        fns_to_bind.append(lambda event: self.trig_levs_focus_out(event.widget, next(ch for ch in controller_channels if ch.chNum == self.c.camera_trig_ch),
                                                                   lambda new_levs, f=update_cam_trigger_levs: f(new_levs)))
         
         labels.append('Imaging power levels:')
@@ -890,7 +890,7 @@ class Absorbtion_imaging_configuration_UI(object):
         
         def update_imag_power_levs(new_levs):
             self.c.imag_power_levs = new_levs
-        fns_to_bind.append(lambda event: self.trig_levs_focus_out(event.widget, (ch for ch in controller_channels if ch.chNum == self.c.imag_power_ch).next(),
+        fns_to_bind.append(lambda event: self.trig_levs_focus_out(event.widget, next(ch for ch in controller_channels if ch.chNum == self.c.imag_power_ch),
                                                                   lambda new_levs, f=update_imag_power_levs: f(new_levs)))
                 
         labels.append(u'Camera pulse width (\u03bcs):')
@@ -1020,10 +1020,10 @@ class Absorbtion_imaging_configuration_UI(object):
     
         labels.append('Imaging freq. channel:')
         self.c.abs_img_freq_ch_var = var = tk.StringVar()
-        var.set((key for key,value in channel_opts_dict.items() if value==self.c.abs_img_freq_ch).next())
+        var.set(next(key for key,value in channel_opts_dict.items() if value==self.c.abs_img_freq_ch))
         abs_img_freq_ch_dropdown = tk.OptionMenu(frame, var, *channel_opts, 
                                                            command=lambda x=var: self.update_imaging_freq_ch(abs_img_freqs_entry_wid,
-                                                                                                             (ch for ch in controller_channels if ch.chNum == channel_opts_dict[x]).next()))
+                                                                                                             next(ch for ch in controller_channels if ch.chNum == channel_opts_dict[x])))
         fns_to_bind.append(None)
         widgets.append(abs_img_freq_ch_dropdown)
         
@@ -1036,7 +1036,7 @@ class Absorbtion_imaging_configuration_UI(object):
         abs_img_freqs_entry_wid = e = tk.Entry(frame)
         e.insert(0, [fromVFunc(freq) for freq in self.c.abs_img_freqs])
         widgets.append(e)
-        fns_to_bind.append(lambda event: self.imaging_freqs_focus_out(event.widget, (ch for ch in controller_channels if ch.chNum == self.c.abs_img_freq_ch).next()))
+        fns_to_bind.append(lambda event: self.imaging_freqs_focus_out(event.widget, next(ch for ch in controller_channels if ch.chNum == self.c.abs_img_freq_ch)))
         
         scan_img_freqs_checkbutton.configure(command = lambda var=scan_img_freqs_var: self.scan_imaging_freqs_checkbutton(var, [abs_img_freq_ch_dropdown, abs_img_freqs_entry_wid]))
         
