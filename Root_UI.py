@@ -15,7 +15,7 @@ from Config import ConfigReader
 class ColdControl_UI(tk.Frame):
     '''
     The ColdControl_UI is the main tkinter frame into which assorted UI's are inset.
-    Each if these UI's is responsible for creating, running and closing there own
+    Each if these UI's is responsible for creating, running and closing their own
     element of experimental control.  Namely:
     
         DAQ_UI: Interfaces with the DAQ cards that control static voltages to

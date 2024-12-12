@@ -389,6 +389,10 @@ class IC_Camera(object):
         buffer_size = img_width * img_height * img_depth * sizeof(c_uint8)
 
         img_ptr = self.get_image_ptr()
+        print(c_ubyte)
+        print(buffer_size)
+        buffer_size = int(buffer_size)
+        print("WARNING: buffer_size converted to integer")
         data = cast(img_ptr, POINTER(c_ubyte * buffer_size))
         
         return (data.contents, img_width, img_height, img_depth)
@@ -456,11 +460,11 @@ class IC_Camera(object):
         :returns: int -- frame number that was announced as ready.
         """
         if timeout:        
-            start = time.clock()
-            elapsed = (time.clock() - start) * 1000
+            start = time.perf_counter()# should maybe use time.time() here?
+            elapsed = (time.perf_counter() - start) * 1000
             while not self._frame['ready'] and elapsed < timeout:
                 time.sleep(0.001)
-                elapsed = (time.clock() - start) * 1000
+                elapsed = (time.perf_counter() - start) * 1000
         else:
             while not self._frame['ready']:
                 time.sleep(0.001)

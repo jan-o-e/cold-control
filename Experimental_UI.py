@@ -86,8 +86,12 @@ class Experimental_UI(tk.LabelFrame):
         
         icon = Image.open("icons/play_icon.png").resize((30,30))
         icon = ImageTk.PhotoImage(icon)
-        self.run_abs_img_button = tk.Button(self, image=icon, text="Run abs. imaging", command=self.runAbsorbtionImaging, background='deep sky blue', **butt_opts)
+        self.run_abs_img_button = tk.Button(self, image=icon, text="Run abs. imaging", command=lambda:self.runAbsorbtionImaging,
+                                             background='deep sky blue', **butt_opts)
+        self.run_abs_img_button.image = icon 
         self.test_bkg_button = tk.Button(self, image=icon, text="Test background", command=lambda: self.runAbsorbtionImaging(bkg_test=True), background='light sky blue', **butt_opts)
+        self.test_bkg_button.image = icon 
+
         
         icon = Image.open("icons/config_icon.png").resize((30,30))
         icon = ImageTk.PhotoImage(icon)
@@ -104,7 +108,7 @@ class Experimental_UI(tk.LabelFrame):
         
         self.test_bkg_button.grid(row=0,column=2, **grid_opts)
         self.run_abs_img_button.grid(row=1,column=2, **grid_opts)
-        self.configure_abs_img_button.grid(row=1,column=3)
+        self.configure_abs_img_button.grid(row=1,column=3, **grid_opts)
         
         self.grid_columnconfigure(0, weight=1, uniform='button_col')
         self.grid_columnconfigure(1, weight=1)

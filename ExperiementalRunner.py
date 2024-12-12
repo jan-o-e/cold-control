@@ -1187,10 +1187,165 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         else:
             print("Reverting DAQ output to off.")
             self.daq_controller.toggleContinuousOutput()    
+
+
+
+class AbsorbtionImagingConfiguration(object):
+    '''
+    This object stores and presents for editing the settings for absorbtion imaging experiments.
+        
+        scan_abs_img_freq - TODO
+        abs_img_freq_ch - TODO
+        abs_img_freqs - TODO
+        camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
+        camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
+        t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
+        mot_reload_time - The MOT reload time in us
+        bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
+        n_backgrounds - The number of background images to take for each absorbtion image.
+        cam_gain - The gain setting for the camera when taking the picture.
+        cam_exposure - How long the camera exposure should be.  Passes as an integer x which corresponds to an exposure time of 1/x seconds.
+        save_location - The folder to save images to as 'save_location/{date}/{time}/'
+        save_raw_images - Boolean determining whether the raw images (i.e. processed absorbtion images and all background contributing to 
+                          the background average) are saved.
+        save_processed_images - Boolean determining whether the processed images (i.e. absorbtion images after background subtraction and
+                                average backgrounds) are automatically saved.
+        review_processed_images - Boolean determining whether the Absorbtion_imaging_review_UI is launched after the images are processed
+                                  to allow the user to review the images, add notes and decide whether to save or not. Note that since the
+                                  user is given the chance to review the processed images, the option to automatically save them is disabled
+                                  when review_processed_images=True.
+    '''
+        
+    def __init__(self,
+                 scan_abs_img_freq, abs_img_freq_ch, abs_img_freqs,
+                 camera_trig_ch, imag_power_ch, 
+                 camera_trig_levs, imag_power_levs, 
+                 camera_pulse_width, imag_pulse_width,
+                 t_imgs, 
+                 mot_reload_time, 
+                 n_backgrounds, bkg_off_channels, 
+                 cam_gain, cam_exposure, 
+                 cam_gain_lims, cam_exposure_lims,
+                 save_location,
+                 save_raw_images, save_processed_images, review_processed_images):
+        
+        self.scan_abs_img_freq = scan_abs_img_freq
+        self.abs_img_freq_ch = abs_img_freq_ch
+        self.abs_img_freqs = abs_img_freqs
+        self.camera_trig_ch = camera_trig_ch
+        self.imag_power_ch = imag_power_ch
+        self.camera_trig_levs = camera_trig_levs
+        self.imag_power_levs = imag_power_levs
+        self.camera_pulse_width = camera_pulse_width
+        self.imag_pulse_width = imag_pulse_width
+        self.t_imgs = t_imgs
+        self.mot_reload_time = mot_reload_time
+        self.n_backgrounds = n_backgrounds
+        self.bkg_off_channels = bkg_off_channels
+        self.cam_gain = cam_gain
+        self.cam_exposure = cam_exposure
+        self.cam_gain_lims = cam_gain_lims
+        self.cam_exposure_lims = cam_exposure_lims
+        self.save_location = save_location
+        self.save_raw_images = save_raw_images
+        self.save_processed_images = save_processed_images
+        self.review_processed_images = review_processed_images
              
+
+
+
+class PhotonProductionConfiguration(object):
+    
+    def __init__(self,
+                 save_location,
+                 mot_reload,
+                 iterations,
+                 waveform_sequence,
+                 waveforms,
+                 interleave_waveforms,
+                 waveform_stitch_delays,
+                 awg_configuration,
+                 tdc_configuration):
+        self.save_location = save_location
+        self.mot_reload = mot_reload
+        self.iterations = iterations
+
+        self.waveform_sequence = waveform_sequence
+        self.waveforms = waveforms
+        self.interleave_waveforms = interleave_waveforms
+        self.waveform_stitch_delays = waveform_stitch_delays
+        
+        self.awg_configuration = awg_configuration
+        self.tdc_configuration = tdc_configuration
+
+    def get_waveform_sequence(self):
+        return self.__waveform_sequence
+
+    def set_waveform_sequence(self, value):
+        print('Setting waveform sequence to', value, [type(x) for x in value])
+        self.__waveform_sequence = value
+
+    def del_waveform_sequence(self):
+        del self.__waveform_sequence
+
+    def get_save_location(self):
+        return self.__save_location
+
+    def get_mot_reload(self):
+        return self.__mot_reload
+
+    def get_iterations(self):
+        return self.__iterations
+
+    def get_awg_configuration(self):
+        return self.__awg_configuration
+
+    def get_tdc_configuration(self):
+        return self.__tdc_configuration
+
+    def set_save_location(self, value):
+        self.__save_location = value
+
+    def set_mot_reload(self, value):
+        self.__mot_reload = value
+
+    def set_iterations(self, value):
+        self.__iterations = value
+
+    def set_awg_configuration(self, value):
+        self.__awg_configuration = value
+
+    def set_tdc_configuration(self, value):
+        self.__tdc_configuration = value
+
+    def del_save_location(self):
+        del self.__save_location
+
+    def del_mot_reload(self):
+        del self.__mot_reload
+
+    def del_iterations(self):
+        del self.__iterations
+
+    def del_awg_configuration(self):
+        del self.__awg_configuration
+
+    def del_tdc_configuration(self):
+        del self.__tdc_configuration
+
+    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
+    mot_reload = property(get_mot_reload, set_mot_reload, del_mot_reload, "mot_reload's docstring")
+    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
+    awg_configuration = property(get_awg_configuration, set_awg_configuration, del_awg_configuration, "awg_configuration's docstring")
+    tdc_configuration = property(get_tdc_configuration, set_tdc_configuration, del_tdc_configuration, "tdc_configuration's docstring")
+    waveform_sequence = property(get_waveform_sequence, set_waveform_sequence, del_waveform_sequence, "waveform_sequence's docstring")
+
+
+
+
 class ExperimentalAutomationRunner(object):
      
-    def __init__(self, daq_controller, experimental_automation_configuration, photon_production_configuration):
+    def __init__(self, daq_controller:DAQ_controller, experimental_automation_configuration:AbsorbtionImagingConfiguration, photon_production_configuration:PhotonProductionConfiguration):
          
         self.daq_controller = daq_controller
         self.experimental_automation_configuration = c = experimental_automation_configuration
@@ -1317,66 +1472,7 @@ class ExperimentalAutomationRunner(object):
     def close(self):
         self._reset_daq_channel_static_values()
              
-class AbsorbtionImagingConfiguration(object):
-    '''
-    This object stores and presents for editing the settings for absorbtion imaging experiments.
-        
-        scan_abs_img_freq - TODO
-        abs_img_freq_ch - TODO
-        abs_img_freqs - TODO
-        camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
-        camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
-        t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
-        mot_reload_time - The MOT reload time in us
-        bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
-        n_backgrounds - The number of background images to take for each absorbtion image.
-        cam_gain - The gain setting for the camera when taking the picture.
-        cam_exposure - How long the camera exposure should be.  Passes as an integer x which corresponds to an exposure time of 1/x seconds.
-        save_location - The folder to save images to as 'save_location/{date}/{time}/'
-        save_raw_images - Boolean determining whether the raw images (i.e. processed absorbtion images and all background contributing to 
-                          the background average) are saved.
-        save_processed_images - Boolean determining whether the processed images (i.e. absorbtion images after background subtraction and
-                                average backgrounds) are automatically saved.
-        review_processed_images - Boolean determining whether the Absorbtion_imaging_review_UI is launched after the images are processed
-                                  to allow the user to review the images, add notes and decide whether to save or not. Note that since the
-                                  user is given the chance to review the processed images, the option to automatically save them is disabled
-                                  when review_processed_images=True.
-    '''
-        
-    def __init__(self,
-                 scan_abs_img_freq, abs_img_freq_ch, abs_img_freqs,
-                 camera_trig_ch, imag_power_ch, 
-                 camera_trig_levs, imag_power_levs, 
-                 camera_pulse_width, imag_pulse_width,
-                 t_imgs, 
-                 mot_reload_time, 
-                 n_backgrounds, bkg_off_channels, 
-                 cam_gain, cam_exposure, 
-                 cam_gain_lims, cam_exposure_lims,
-                 save_location,
-                 save_raw_images, save_processed_images, review_processed_images):
-        
-        self.scan_abs_img_freq = scan_abs_img_freq
-        self.abs_img_freq_ch = abs_img_freq_ch
-        self.abs_img_freqs = abs_img_freqs
-        self.camera_trig_ch = camera_trig_ch
-        self.imag_power_ch = imag_power_ch
-        self.camera_trig_levs = camera_trig_levs
-        self.imag_power_levs = imag_power_levs
-        self.camera_pulse_width = camera_pulse_width
-        self.imag_pulse_width = imag_pulse_width
-        self.t_imgs = t_imgs
-        self.mot_reload_time = mot_reload_time
-        self.n_backgrounds = n_backgrounds
-        self.bkg_off_channels = bkg_off_channels
-        self.cam_gain = cam_gain
-        self.cam_exposure = cam_exposure
-        self.cam_gain_lims = cam_gain_lims
-        self.cam_exposure_lims = cam_exposure_lims
-        self.save_location = save_location
-        self.save_raw_images = save_raw_images
-        self.save_processed_images = save_processed_images
-        self.review_processed_images = review_processed_images
+
 
 
 # self.config['save location'] = photon_producion_config.save_location
@@ -1478,91 +1574,7 @@ class Waveform(object):
     mod_frequency = property(get_mod_frequency, set_mod_frequency, None, None)
     phases = property(get_phases, set_phases, None, None)
         
-class PhotonProductionConfiguration(object):
-    
-    def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
-                 waveform_sequence,
-                 waveforms,
-                 interleave_waveforms,
-                 waveform_stitch_delays,
-                 awg_configuration,
-                 tdc_configuration):
-        self.save_location = save_location
-        self.mot_reload = mot_reload
-        self.iterations = iterations
 
-        self.waveform_sequence = waveform_sequence
-        self.waveforms = waveforms
-        self.interleave_waveforms = interleave_waveforms
-        self.waveform_stitch_delays = waveform_stitch_delays
-        
-        self.awg_configuration = awg_configuration
-        self.tdc_configuration = tdc_configuration
-
-    def get_waveform_sequence(self):
-        return self.__waveform_sequence
-
-    def set_waveform_sequence(self, value):
-        print('Setting waveform sequence to', value, [type(x) for x in value])
-        self.__waveform_sequence = value
-
-    def del_waveform_sequence(self):
-        del self.__waveform_sequence
-
-    def get_save_location(self):
-        return self.__save_location
-
-    def get_mot_reload(self):
-        return self.__mot_reload
-
-    def get_iterations(self):
-        return self.__iterations
-
-    def get_awg_configuration(self):
-        return self.__awg_configuration
-
-    def get_tdc_configuration(self):
-        return self.__tdc_configuration
-
-    def set_save_location(self, value):
-        self.__save_location = value
-
-    def set_mot_reload(self, value):
-        self.__mot_reload = value
-
-    def set_iterations(self, value):
-        self.__iterations = value
-
-    def set_awg_configuration(self, value):
-        self.__awg_configuration = value
-
-    def set_tdc_configuration(self, value):
-        self.__tdc_configuration = value
-
-    def del_save_location(self):
-        del self.__save_location
-
-    def del_mot_reload(self):
-        del self.__mot_reload
-
-    def del_iterations(self):
-        del self.__iterations
-
-    def del_awg_configuration(self):
-        del self.__awg_configuration
-
-    def del_tdc_configuration(self):
-        del self.__tdc_configuration
-
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    mot_reload = property(get_mot_reload, set_mot_reload, del_mot_reload, "mot_reload's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    awg_configuration = property(get_awg_configuration, set_awg_configuration, del_awg_configuration, "awg_configuration's docstring")
-    tdc_configuration = property(get_tdc_configuration, set_tdc_configuration, del_tdc_configuration, "tdc_configuration's docstring")
-    waveform_sequence = property(get_waveform_sequence, set_waveform_sequence, del_waveform_sequence, "waveform_sequence's docstring")
 
 class AwgConfiguration(object):
     def __init__(self, 
