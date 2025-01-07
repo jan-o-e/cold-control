@@ -11,7 +11,7 @@ import time
 from Config import ConfigReader, DaqReader
 from instruments.WX218x.WX218x_awg import Channel
 
-import awg_functions.calibration_runner as calibrate
+import lab_control_functions.calibration_functions as calibrate
 
 
 # Select the type of calibration script to run.

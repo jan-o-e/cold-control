@@ -55,9 +55,6 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
 
     # Find and configure a power meter connected to the computer
     power_meter = get_power_meter()
-    if power_meter == None:
-        print ('Calibration failed - power meter could not be found')
-        raise CalibrationException('Calibration failed - power meter could not be found')
     configure_power_meter(power_meter, nMeasurmentCounts=repeats)
 
     for freq, v in zip(aom_frequencies, voltage_frequencies):
@@ -77,7 +74,7 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
         print ('...finished!')
 
         units = str( power_meter.sense.power.dc.unit.split('\n')[0] )
-        print (type(units), repr(units))
+        #print(type(units), repr(units))
         # Just a hack to convert W to uW as it's nicer.    
         if units == 'W':
             calData = map(lambda x: float(x) * 10**6, calData)
@@ -88,11 +85,7 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
         create_file(os.path.join(file_path, calib_name), vData, calData, units)
         save_plot(os.path.join(file_path, calib_name, "_plot.png"), vData, calData, units, 'freq = {0}MHz'.format(freq))
 
-    
-    '''Deleting the power_meter allows the garbage collector to delete the pyvisa connection.
-    This way if we call get_power_meter() again (e.g. if we are recursivley creating calibration
-    files) we don't throw an error due to an already open connection.'''    
-    del power_meter
+    power_meter.close()
         
 
 
@@ -135,9 +128,6 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
     awg.configure_arb_gain(awg_channel, 2)
     
     power_meter = get_power_meter()
-    if power_meter == None:
-        print ('Calibration failed - power meter could not be found')
-        raise CalibrationException('Calibration failed - power meter could not be found')
     configure_power_meter(power_meter, nMeasurmentCounts=repeats)
     
     for freq in freqs:
@@ -204,11 +194,7 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
     print ('calibration finished.')
     awg.close()
 
-    '''Deleting the power_meter allows the garbage collector to delete the pyvisa connection.
-    This way if we call get_power_meter() again (e.g. if we are recursivley creating calibration
-    files) we don't throw an error due to an already open conneciton.'''    
-    del power_meter
- 
+    power_meter.close()
  
 
 
@@ -374,9 +360,6 @@ def percentage_power(daq_controller, chNum_to_calibrate, calibration_V_range = (
     '''
     # Find and configure a power meter connected to the computer
     power_meter = get_power_meter()
-    if power_meter == None:
-        print ('Calibration failed - power meter could not be found')
-        raise CalibrationException('Calibration failed - power meter could not be found')
     configure_power_meter(power_meter, nMeasurmentCounts=nMeasurmentCounts)
     
     # Run through the voltages and record the TF930 output
@@ -408,10 +391,7 @@ def percentage_power(daq_controller, chNum_to_calibrate, calibration_V_range = (
 
     units = '%'
     
-    '''Deleting the power_meter allows the garbage collector to delete the pyvisa connection.
-    This way if we call get_power_meter() again (e.g. if we are recursivley creating calibration
-    files) we don't throw an error due to an already open conneciton.'''    
-    del power_meter
+    power_meter.close()
         
     return vData, calData, units
     
@@ -442,9 +422,6 @@ def test_stirap_aom_freq_response(level=0.5,
     awg.configure_arb_gain(Channel.CHANNEL_2, 2)
     
     power_meter = get_power_meter()
-    if power_meter == None:
-        print ('Calibration failed - power meter could not be found')
-        raise CalibrationException('Calibration failed - power meter could not be found')
     configure_power_meter(power_meter, nMeasurmentCounts=nMeasurmentCounts)
     
     calData = []
@@ -468,10 +445,7 @@ def test_stirap_aom_freq_response(level=0.5,
     awg.reset()
     awg.close()
 
-    '''Deleting the power_meter allows the garbage collector to delete the pyvisa connection.
-    This way if we call get_power_meter() again (e.g. if we are recursivley creating calibration
-    files) we don't throw an error due to an already open conneciton.'''    
-    del power_meter
+    power_meter.close()
    
     fig = plt.figure()
     

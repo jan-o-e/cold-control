@@ -14,6 +14,7 @@ import re
 from instruments.TF930 import TF930
 from instruments.ThorlabsPM100 import ThorlabsPM100
 import pyvisa as visa
+import pandas as pd
 '''
 Load required classes for awg driven AOM calibration
 '''
@@ -67,21 +68,44 @@ def default_v_step():
     return f(1) - f(0)
 
 
-def get_power_meter():
-    '''Finds a Thor Labs PM100A power_meter if one is connected and returns a ThorlabsPM100 instance
-    for it.  If no power meter is found the function returns None'''
+def get_power_meter(debug_mode = False):
+    '''
+    Finds a Thor Labs PM100A power_meter if one is connected and returns a ThorlabsPM100 instance
+    for it.  If no power meter is found the function raises an exception
+    Inputs:
+     - debug_mode (bool): If True then all available resources will be listed
+    '''
+
     rm = visa.ResourceManager()
+    all_res = rm.list_resources()
     power_meter = None
-    for resource in rm.list_resources():
+    # the VISA addresses of the 3 thorlabs powermeters we have are in the list below:
+    pm_addresses = ["USB0::0x1313::0x8079::P1002563::0::INSTR","USB0::0x1313::0x8079::P1000416::0::INSTR", "USB0::0x1313::0x8079::P1002564::0::INSTR"]
+    # THIS WILL NEED TO BE CHANGED IF A DIFFERENT POWERMETER IS USED!
+
+    if debug_mode:
+        print(all_res)
+        pm_addresses = all_res
+
+
+    for resource in pm_addresses:
         try:
-            inst = rm.get_instrument(resource)
-            print (inst.query("*IDN?").split(','))
+            inst = rm.open_resource(resource)
+            #inst = rm.get_instrument(resource)
+            print(inst.query("*IDN?").split(','))
             if inst.query("*IDN?").split(',')[1] == 'PM100A':
                 power_meter = ThorlabsPM100(inst)
                 break # --> Thorlabs,PM100A,P1002563,2.3.0
-        except:
-            pass
+        except visa.errors.VisaIOError as e:
+            print(f"powermeter with address {resource} is not available.")
+            if debug_mode:
+                print(f"error message: {e}")
 
+    
+    if power_meter == None:
+        print('Calibration failed - power meter could not be found')
+        raise CalibrationException('Calibration failed - power meter could not be found')
+    
     return power_meter
 
 
@@ -117,6 +141,27 @@ def create_file(fname, levelData, parsedData, units):
         f.write('{0}\t{1}\n'.format(*args))
     f.close()
     print('written: ', fname)
+
+
+def create_file_pandas(fname, levelData, parsedData, units):
+    """
+    Saves data to a CSV file using pandas.
+
+    Args:
+        fname (str): The base filename for the output file.
+        levelData (list): A list of voltage levels.
+        parsedData (list): A list of corresponding calibration data.
+        units (str): The units of the voltage levels (e.g., "V", "mV").
+
+    Returns:
+        None
+    """
+
+    df = pd.DataFrame({'Voltage ({})'.format(units): levelData, 
+                       'Calibration Data': parsedData})
+    df.to_csv(f"{fname}.csv", index=False) 
+    print(f"created: {fname}.csv") 
+
     
 
 
