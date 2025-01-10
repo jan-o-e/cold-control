@@ -58,7 +58,7 @@ if __name__ == "__main__" and CALIB_TYPE == "absolute_power":
 
     calibrate.daq_driven_aom_response(daq_controller, AOM_FREQS, FREQ_V, FREQ_CHAN, AMP_CHAN,\
                               (0.2, 1.75),v_step = calibrate.default_v_step()*5, \
-                              delay = 0.5, save_folder = "jan/{AOM_NAME}")
+                              delay = 0.5, save_folder = f"jan/{AOM_NAME}")
 
 
 
@@ -80,7 +80,7 @@ elif __name__ == "__main__" and CALIB_TYPE == "stirap_aom_response":
     calibrate.awg_driven_aom_response(AWG_CHAN_2_FREQS, 'stirap_dl_pro', Channel.CHANNEL_2, repeats=5,\
                                        delay=0.3, save_folder = "jan/awg_driven")
 
-    #need to write new calibration routine for opical pumping where I am only producing a square pulse
+    #need to write new calibration routine for optical pumping where I am only producing a square pulse
 
 
 elif __name__ == "__main__" and CALIB_TYPE == "another one":

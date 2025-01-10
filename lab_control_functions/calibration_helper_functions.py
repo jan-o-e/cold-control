@@ -68,11 +68,12 @@ def default_v_step():
     return f(1) - f(0)
 
 
-def get_power_meter(debug_mode = False):
+def get_power_meter(return_inst = True, debug_mode = False):
     '''
     Finds a Thor Labs PM100A power_meter if one is connected and returns a ThorlabsPM100 instance
     for it.  If no power meter is found the function raises an exception
     Inputs:
+     - return_inst (bool): If true then the visa resource will be returned along with the power_meter. *This allows the instrument to be closed*
      - debug_mode (bool): If True then all available resources will be listed
     '''
 
@@ -80,7 +81,8 @@ def get_power_meter(debug_mode = False):
     all_res = rm.list_resources()
     power_meter = None
     # the VISA addresses of the 3 thorlabs powermeters we have are in the list below:
-    pm_addresses = ["USB0::0x1313::0x8079::P1002563::0::INSTR","USB0::0x1313::0x8079::P1000416::0::INSTR", "USB0::0x1313::0x8079::P1002564::0::INSTR"]
+    pm_addresses = ["USB0::0x1313::0x8079::P1002563::0::INSTR","USB0::0x1313::0x8079::P1000416::0::INSTR",\
+                     "USB0::0x1313::0x8079::P1002564::0::INSTR", "USB0::0x1313::0x8079::P1002347::0::INSTR"]
     # THIS WILL NEED TO BE CHANGED IF A DIFFERENT POWERMETER IS USED!
 
     if debug_mode:
@@ -105,8 +107,10 @@ def get_power_meter(debug_mode = False):
     if power_meter == None:
         print('Calibration failed - power meter could not be found')
         raise CalibrationException('Calibration failed - power meter could not be found')
-    
-    return power_meter
+    if return_inst:
+        return inst, power_meter
+    else:
+        return power_meter
 
 
 def configure_power_meter(power_meter:ThorlabsPM100, nMeasurmentCounts = 1):
@@ -127,9 +131,9 @@ def configure_power_meter(power_meter:ThorlabsPM100, nMeasurmentCounts = 1):
 
 
 
-def create_file(fname, levelData, parsedData, units):
+def create_file_txt(fname, levelData, parsedData, units):
     """
-    Saves a .txt file containing the voltage levels and the calibration data
+    Saves a .txt file containing the voltage levels and the calibration data. DEPRECATED.
     """
     fname = '{0}.txt'.format(fname)
     
@@ -143,7 +147,7 @@ def create_file(fname, levelData, parsedData, units):
     print('written: ', fname)
 
 
-def create_file_pandas(fname, levelData, parsedData, units):
+def create_file(fname, levelData, parsedData, units):
     """
     Saves data to a CSV file using pandas.
 
@@ -151,14 +155,21 @@ def create_file_pandas(fname, levelData, parsedData, units):
         fname (str): The base filename for the output file.
         levelData (list): A list of voltage levels.
         parsedData (list): A list of corresponding calibration data.
-        units (str): The units of the voltage levels (e.g., "V", "mV").
+        units (str): The units of the calibration levels (e.g., "W", "uW").
 
     Returns:
         None
     """
 
-    df = pd.DataFrame({'Voltage ({})'.format(units): levelData, 
-                       'Calibration Data': parsedData})
+    df = pd.DataFrame({"Voltage (V)": levelData, 
+                       f"Calibration Data ({units})": parsedData})
+    
+    # Get the directory path from the filename
+    directory = os.path.dirname(fname) 
+
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)  # Create directory if it doesn't exist
+
     df.to_csv(f"{fname}.csv", index=False) 
     print(f"created: {fname}.csv") 
 
@@ -175,10 +186,17 @@ def save_plot(fname, vData, calData, units, title):
     fig.subplots_adjust(top=0.85)
     ax.set_title(title)
     
-    ax.set_xlabel('V')
-    ax.set_ylabel(units)
+    ax.set_xlabel('Voltage (V)')
+    ax.set_ylabel(f"Calibration data ({units})")
+    #ax.set_ylabel("test")
     
     ax.plot(vData, calData)
+
+    # Get the directory path from the filename
+    directory = os.path.dirname(fname) 
+
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)  # Create directory if it doesn't exist
     
     plt.savefig(fname)
     print ('saved img: ', fname)

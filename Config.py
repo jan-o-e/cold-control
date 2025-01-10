@@ -70,6 +70,7 @@ class DaqReader(object):
         
         channels = []
         for _,v in self.config['DAQ channels'].items():
+            #This line uses the map() function to apply a series of type conversions to the configuration data.
             channelArgs = map(lambda x,y:x(y), [int, str, lambda x: (float(x[0]), float(x[1])), float, eval, str],
                                  [v['chNum'],v['chName'],v['chLimits'],v['default value'],v['UIvisible'],v['calibrationFname']])
             channels.append(DAQ_channel(*channelArgs))

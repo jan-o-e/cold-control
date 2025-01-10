@@ -54,38 +54,39 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
     file_path = os.path.join(os.getcwd(), 'calibrations', save_folder)
 
     # Find and configure a power meter connected to the computer
-    power_meter = get_power_meter()
+    inst, power_meter = get_power_meter()
+    power_meter:ThorlabsPM100 = power_meter #declare the type for easier editing
     configure_power_meter(power_meter, nMeasurmentCounts=repeats)
 
     for freq, v in zip(aom_frequencies, voltage_frequencies):
-        calib_name = 'amp_at_{freq}MHz'
+        calib_name = f"amp_at_{freq}MHz"
         daq_controller.updateChannelValue(frequency_channel, v)
         time.sleep(3)
 
         # Run through the voltages and record the TF930 output
-        vData, calData = [], []
+        vData = np.arange(v_range[0], v_range[1]+v_step, v_step)
+        calData = np.empty(len(vData))
         print ('Running through voltages...might take a while...')
-        for v in np.arange(v_range[0], v_range[1]+v_step, v_step):
-            print(v)
+        for i in range(len(vData)):
+            print(vData[i])
             daq_controller.updateChannelValue(calib_channel, v)
             time.sleep(delay)
-            vData.append(v)
-            calData.append(power_meter.read)
+            calData[i] = float(power_meter.read)
         print ('...finished!')
 
         units = str( power_meter.sense.power.dc.unit.split('\n')[0] )
         #print(type(units), repr(units))
         # Just a hack to convert W to uW as it's nicer.    
         if units == 'W':
-            calData = map(lambda x: float(x) * 10**6, calData)
-            units = 'muW'
+            calData = calData * 10**6
+            units = 'uW'
 
 
         # save the data and the plot
         create_file(os.path.join(file_path, calib_name), vData, calData, units)
-        save_plot(os.path.join(file_path, calib_name, "_plot.png"), vData, calData, units, 'freq = {0}MHz'.format(freq))
+        save_plot(os.path.join(file_path, f"{calib_name}_plot.png"), vData, calData, units, f"freq = {freq}MHz")
 
-    power_meter.close()
+    inst.close()
         
 
 
@@ -159,8 +160,8 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
 
         #save microWatts
         calData = [x*10**6 for x in calData]
-        save_plot(os.path.join(save_plot_location,'{0}MHz_abs_power.png'.format(freq)), levelData, calData, "muW", "{0}MHz: Power vs level".format(freq))
-        create_file(os.path.join(save_location,'{0}_{1}_{2}MHz_abs'.format(name,awg_channel,freq)), levelData, calData, units='muW', level_units='level')
+        save_plot(os.path.join(save_plot_location,f"{freq}MHz_abs_power.png"), levelData, calData, "uW", f"{freq}MHz: Power vs level")
+        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_abs"), levelData, calData, units='uW', level_units='level')
 
         
         
@@ -186,8 +187,8 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
          
         calData = [100*x for x in normalise(calData)]
 
-        save_plot(os.path.join(save_location,'{0}_{1}_{2}MHz_rel_power_plot.png'.format(name,awg_channel,freq)), levelData, calData, "%", "{0}MHz: Rel Power vs level".format(freq))
-        create_file(os.path.join(save_location,'{0}_{1}_{2}MHz_rel'.format(name,awg_channel,freq)), levelData, calData, units='%', level_units='level')
+        save_plot(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_rel_power_plot.png"), levelData, calData, "%", f"{freq}MHz: Rel Power vs level")
+        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_rel"), levelData, calData, units='%', level_units='level')
     
     print ('Resetting awg...',)
     awg.reset()

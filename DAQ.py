@@ -1,7 +1,7 @@
 '''
 Module containing low-level DAQ objects.
 
-Created on 2 Apr 2016
+Created on 2 Apr 2016. Revised 8 Jan 2025.
 
 @author: tombarrett
 '''
@@ -11,6 +11,7 @@ from ctypes import *
 import re
 from mock.mock import MagicMock
 import time
+import pandas as pd
 
 # Windows API data types
 BOOLEAN = c_ubyte
@@ -982,9 +983,15 @@ class DAQ_channel(object):
         self.calibrationToVFunc, self.calibrationFromVFunc = None, None
         self.calibrationUnits = ''
         if calibrationFname.strip() != '':
-            self.calibrate(calibrationFname)
+            self.calibrate(calibrationFname, from_csv=False)
         
-    def calibrate(self, calibrationFname, reReadIn = r'([\+|\-]?[\d|\.]+)[ \t]*([\+|\-]?[\d|\.]+)'):
+    def calibrate_from_txt(self, calibrationFname, reReadIn = r'([\+|\-]?[\d|\.]+)[ \t]*([\+|\-]?[\d|\.]+)'):
+        """
+        WARNING: THIS METHOD IS DEPRECATED. USE CALIBRATE (WHICH TAKES A CSV FILE AS INPUT) INSTEAD.
+        """
+
+        print("WARNING: calibrate_from_txt() METHOD IS DEPRECATED. USE CALIBRATE WITH CSV FILES INSTEAD.")
+
         vData, calData = [], []
         with open(calibrationFname) as f:
             self.calibrationUnits = re.split(r'[ \t]*', f.readline())[-1].strip()
@@ -1008,6 +1015,52 @@ class DAQ_channel(object):
         
         self.isCalibrated = True
         self.calibrationFname = calibrationFname
+
+    def calibrate(self, calibrationFname, from_csv=True):
+        """
+        Calibrates the channel using a calibration file.
+
+        Args:
+            calibrationFname (str): The name of the calibration file.
+            from_csv (bool): If this is false, the old calibrate method is used instead.
+
+        Returns:
+            None
+        """
+
+        if not from_csv:
+            self.calibrate_from_txt(calibrationFname)
+            return
+
+        try:
+            df = pd.read_csv(calibrationFname)
+        except FileNotFoundError:
+            print(f"Calibration file not found: {calibrationFname}")
+            return
+
+        try:
+            voltage_col = df.columns[0]  # Get the voltage column name (e.g., "Voltage (V)")
+            data_col = df.columns[1] # get the column containing the calibration data
+            units = data_col.split(' ')[1].strip('()')  # Extract units
+        except IndexError:
+            print(f"Invalid calibration file format: {calibrationFname}")
+            return
+
+        self.calibrationUnits = units
+        vData = df[voltage_col].values
+        calData = df[data_col].values
+
+        # Sort data by voltage for consistent interpolation
+        sorted_idx = np.argsort(vData)
+        vData = vData[sorted_idx]
+        calData = calData[sorted_idx]
+
+        self.calibrationToVFunc = lambda x: np.interp(x, calData, vData)
+        self.calibrationFromVFunc = lambda x: np.interp(x, vData, calData)
+
+        self.isCalibrated = True
+        self.calibrationFname = calibrationFname
+
         
     def removeCalibration(self):
         self.isCalibrated = False
