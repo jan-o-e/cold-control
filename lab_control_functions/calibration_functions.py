@@ -31,20 +31,20 @@ from lab_control_functions.calibration_helper_functions import *
 
 
 
-def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_frequencies, frequency_channel,\
-                    calib_channel, v_range, v_step = default_v_step(),\
+def daq_driven_aom_response(daq_controller:DaqReader, frequency_channel:int,\
+                    amp_channel:int, frequency_voltage_pairs:dict, v_range, v_step = default_v_step(),\
                     delay=0.1, repeats = 3, save_folder="unfiled_data"):
     '''
     Creates a calibration file between the voltage given to an AOM and absolute power output.
 
     Inputs:
         daq_controller (DaqReader) - a DAQ_controller object to un the DAQ cards.
-        aom_frequencies (list) - list of aom frequencies
-        voltage_frequencies (list) - list of voltages to supply from the DAQ cards
         frequency_channel (int) - DAQ channel number corresponding to AOM frequency
-        calib_channel (int) - The channel number which is corresponds to the AOM amplitude
+        amp_channel (int) - The channel number which is corresponds to the AOM amplitude
+        frequency_voltage_pairs (dict) - dictionary with keys corresponding to AOM frequencies and values corresponding
+                                         to the voltages required to drive the AOM at those frequencies
         v_range (tuple) - A voltage range to calibrate between of the form (V_min, V_max).
-        v_step  - The voltage step over between taking calibration measurements. The default is calculated to be
+        v_step (float) - The voltage step over between taking calibration measurements. The default is calculated to be
                           equivilent to increasing the digital output on a 4096-bit channel with a -10 to 10V output range.
         delay (float) - How long to wait between writing a new voltage and querying the frequency counter.
         repeats (int)  - How many measurements to take and average over when reading a value from the power meter
@@ -54,37 +54,38 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
     file_path = os.path.join(os.getcwd(), 'calibrations', save_folder)
 
     # Find and configure a power meter connected to the computer
-    inst, power_meter = get_power_meter()
+    inst, power_meter = get_power_meter(return_inst=True)
     power_meter:ThorlabsPM100 = power_meter #declare the type for easier editing
     configure_power_meter(power_meter, nMeasurmentCounts=repeats)
 
-    for freq, v in zip(aom_frequencies, voltage_frequencies):
+    # loop through the different frequencies (and their associated voltages)
+    for freq, v in frequency_voltage_pairs.items():
         calib_name = f"amp_at_{freq}MHz"
         daq_controller.updateChannelValue(frequency_channel, v)
         time.sleep(3)
 
-        # Run through the voltages and record the TF930 output
-        vData = np.arange(v_range[0], v_range[1]+v_step, v_step)
-        calData = np.empty(len(vData))
+        # apply a range of voltages to the daq card and measure the output amplitudes
+        voltage_data = np.arange(v_range[0], v_range[1]+v_step, v_step)
+        amp_data = np.empty(len(voltage_data))
         print ('Running through voltages...might take a while...')
-        for i in range(len(vData)):
-            print(vData[i])
-            daq_controller.updateChannelValue(calib_channel, v)
+        for i in range(len(voltage_data)):
+            print(voltage_data[i])
+            daq_controller.updateChannelValue(amp_channel, voltage_data[i])
             time.sleep(delay)
-            calData[i] = float(power_meter.read)
+            amp_data[i] = float(power_meter.read)
         print ('...finished!')
 
-        units = str( power_meter.sense.power.dc.unit.split('\n')[0] )
+        units = str(power_meter.sense.power.dc.unit.split('\n')[0])
         #print(type(units), repr(units))
         # Just a hack to convert W to uW as it's nicer.    
         if units == 'W':
-            calData = calData * 10**6
+            amp_data = amp_data * 10**6
             units = 'uW'
 
 
         # save the data and the plot
-        create_file(os.path.join(file_path, calib_name), vData, calData, units)
-        save_plot(os.path.join(file_path, f"{calib_name}_plot.png"), vData, calData, units, f"freq = {freq}MHz")
+        create_file(os.path.join(file_path, calib_name), voltage_data, amp_data, units)
+        save_plot(os.path.join(file_path, f"{calib_name}_plot.png"), voltage_data, amp_data, units, f"freq = {freq}MHz")
 
     inst.close()
         
@@ -93,7 +94,7 @@ def daq_driven_aom_response(daq_controller:DaqReader, aom_frequencies, voltage_f
 
 
     
-def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3, delay=0.2,\
+def awg_driven_aom_response(freqs, name, awg_channel, n_steps = 20, repeats=3, delay=0.2,\
                             calibration_lims = (0,1), save_folder = "unfiled_data"):
     
     """Creates a calibration file detailing the dependence of the power through the aom depending on the
@@ -103,7 +104,7 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
         freqs (list) - frequencies at which the awg should drive the aom
         name (str) - name of the laser producing the beam
         awg_channel (Channel) - awg channel that drives the aom
-        level_step (float) - the step size between different amplitudes of awg waveforms
+        n_steps (int) - 
         repeats (int) - How many measurements to take and average over when reading a value from the power meter
                           (note 1 measurement is about 3ms).
         delay (float) - How long to wait between writing a new voltage and querying the frequency counter
@@ -127,16 +128,18 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
     awg.configure_output_mode(WX218x_OutputMode.ARBITRARY)
     awg.configure_sample_rate(sample_rate)
     awg.configure_arb_gain(awg_channel, 2)
-    
-    power_meter = get_power_meter()
+
+    inst, power_meter = get_power_meter(return_inst=True)
+    power_meter:ThorlabsPM100 = power_meter #declare the type for easier editing
     configure_power_meter(power_meter, nMeasurmentCounts=repeats)
     
     for freq in freqs:
         # Run through the voltages and record the TF930 output
-        level = 0
-        levelData, calData = [], []
+        levelData = np.linspace(*calibration_lims, n_steps)
+        calData = np.empty(n_steps)
         print ('Running through awg levels...might take a while...')
-        while level <=1:
+
+        for i, level in enumerate(levelData):
             print ('Level:', level)
 
             wf = testWaveform(sample_rate, level=level, mod_freq=freq*10**6)
@@ -144,13 +147,11 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
              
             awg.enable_channel(awg_channel)
             time.sleep(delay)
-            levelData.append(level)
-            calData.append(power_meter.read)
+            calData[i] = (power_meter.read)
             
-            print(calData[-1])
+            print(calData[i])
             
             awg.disable_channel(awg_channel)
-            level+=level_step
             
         print ('...finished taking data')
         
@@ -159,9 +160,9 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
             os.makedirs(save_plot_location)
 
         #save microWatts
-        calData = [x*10**6 for x in calData]
+        calData = calData*10**6 #[x*10**6 for x in calData]
         save_plot(os.path.join(save_plot_location,f"{freq}MHz_abs_power.png"), levelData, calData, "uW", f"{freq}MHz: Power vs level")
-        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_abs"), levelData, calData, units='uW', level_units='level')
+        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_abs"), levelData, calData, 'uW', level_units='level')
 
         
         
@@ -178,24 +179,23 @@ def awg_driven_aom_response(freqs, name, awg_channel, level_step=0.05, repeats=3
             else:
                 end_on_max = True
         
-        print('Calibration limits set to ', calibration_lims, 'to avoid a maximum in the middle of the calibration range.')
+        print(f'Calibration limits set to {calibration_lims} to avoid a maximum in the middle of the calibration range.')
      
         def normalise(values):
-            mi, ma = min(values),max(values)
-            ran = ma - mi
-            return [(l-mi)/ran for l in values]
+            mi, ma = np.min(values),np.max(values)
+            return (values - mi)/(ma - mi)
          
-        calData = [100*x for x in normalise(calData)]
+        calData = 100 * normalise(calData)
 
         save_plot(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_rel_power_plot.png"), levelData, calData, "%", f"{freq}MHz: Rel Power vs level")
-        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_rel"), levelData, calData, units='%', level_units='level')
+        create_file(os.path.join(save_location,f"{name}_{awg_channel}_{freq}MHz_rel"), levelData, calData, '%', level_units='level')
     
     print ('Resetting awg...',)
     awg.reset()
     print ('calibration finished.')
     awg.close()
 
-    power_meter.close()
+    inst.close()
  
 
 

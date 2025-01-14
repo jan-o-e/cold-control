@@ -15,7 +15,7 @@ import lab_control_functions.calibration_functions as calibrate
 
 
 # Select the type of calibration script to run.
-CALIB_TYPE = "absolute_power" # options are "absolute_power", "stirap_aom_response", "another one"
+CALIB_TYPE = "stirap_aom_response" # options are "absolute_power", "stirap_aom_response", "another one"
 
 
     
@@ -29,8 +29,10 @@ if __name__ == "__main__" and CALIB_TYPE == "absolute_power":
     AOM_NAME = 'cool_upper'
     FREQ_CHAN = 0
     AMP_CHAN = 4
-    FREQ_V = [4.141,5.089,6.017,6.383]
-    AOM_FREQS = [90,95,100,102]
+    # Dictionary of frequencies (in MHz) and the voltages required to drive the frequency controlling DAQ card
+    # with to ensure the AOM is working at that frequency.
+    FREQ_VOLTAGES = {"90":4.19, "95": 5.15, "100": 6.09, "102": 6.45}
+    VOLT_RANGE = (0.2, 1.75)
 
     # AOM_NAME = 'vStirap_ref'
     # AMP_CHAN = 9
@@ -56,8 +58,8 @@ if __name__ == "__main__" and CALIB_TYPE == "absolute_power":
     daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
     daq_controller.continuousOutput=True
 
-    calibrate.daq_driven_aom_response(daq_controller, AOM_FREQS, FREQ_V, FREQ_CHAN, AMP_CHAN,\
-                              (0.2, 1.75),v_step = calibrate.default_v_step()*5, \
+    calibrate.daq_driven_aom_response(daq_controller, FREQ_CHAN, AMP_CHAN, FREQ_VOLTAGES,\
+                              VOLT_RANGE, v_step = calibrate.default_v_step()*5, \
                               delay = 0.5, save_folder = f"jan/{AOM_NAME}")
 
 
@@ -72,13 +74,17 @@ elif __name__ == "__main__" and CALIB_TYPE == "stirap_aom_response":
     """
 
     AWG_CHAN_1_FREQS = [105, 107, 109]
-    AWG_CHAN_2_FREQS = [76, 78.5, 80]
+    AWG_CHAN = 1
+    #AWG_CHAN_2_FREQS = [76, 78.5, 80]
 
-    calibrate.awg_driven_aom_response(AWG_CHAN_1_FREQS, 'stirap_elysa', Channel.CHANNEL_1, repeats=5,\
+
+
+    awg_channels_dict = {1:Channel.CHANNEL_1, 2:Channel.CHANNEL_2, 3:Channel.CHANNEL_3, 4:Channel.CHANNEL_4}
+    calibrate.awg_driven_aom_response(AWG_CHAN_1_FREQS, 'stirap_elysa', awg_channels_dict[AWG_CHAN], n_steps=50,\
                                        delay=0.3, save_folder = "jan/awg_driven")
 
-    calibrate.awg_driven_aom_response(AWG_CHAN_2_FREQS, 'stirap_dl_pro', Channel.CHANNEL_2, repeats=5,\
-                                       delay=0.3, save_folder = "jan/awg_driven")
+    #calibrate.awg_driven_aom_response(AWG_CHAN_2_FREQS, 'stirap_dl_pro', Channel.CHANNEL_2, repeats=5,\
+                                       #delay=0.3, save_folder = "jan/awg_driven")
 
     #need to write new calibration routine for optical pumping where I am only producing a square pulse
 

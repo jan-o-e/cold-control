@@ -1348,7 +1348,8 @@ class ExperimentalAutomationRunner(object):
     def __init__(self, daq_controller:DAQ_controller, experimental_automation_configuration:AbsorbtionImagingConfiguration, photon_production_configuration:PhotonProductionConfiguration):
          
         self.daq_controller = daq_controller
-        self.experimental_automation_configuration = c = experimental_automation_configuration
+        self.experimental_automation_configuration:AbsorbtionImagingConfiguration = experimental_automation_configuration
+        c:AbsorbtionImagingConfiguration = experimental_automation_configuration
         self.photon_production_configuration = photon_production_configuration
          
         self.experiements_to_run = len(c.automated_experiment_configurations)

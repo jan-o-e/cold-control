@@ -68,7 +68,7 @@ def default_v_step():
     return f(1) - f(0)
 
 
-def get_power_meter(return_inst = True, debug_mode = False):
+def get_power_meter(return_inst = False, debug_mode = False):
     '''
     Finds a Thor Labs PM100A power_meter if one is connected and returns a ThorlabsPM100 instance
     for it.  If no power meter is found the function raises an exception
@@ -147,7 +147,7 @@ def create_file_txt(fname, levelData, parsedData, units):
     print('written: ', fname)
 
 
-def create_file(fname, levelData, parsedData, units):
+def create_file(fname, levelData, parsedData, calib_units, level_units = "Voltage (V)"):
     """
     Saves data to a CSV file using pandas.
 
@@ -155,15 +155,18 @@ def create_file(fname, levelData, parsedData, units):
         fname (str): The base filename for the output file.
         levelData (list): A list of voltage levels.
         parsedData (list): A list of corresponding calibration data.
-        units (str): The units of the calibration levels (e.g., "W", "uW").
-
+        calib_units (str): The units of the calibration levels (e.g., "W", "uW").
+        level_units (str): The title to give the column containing the independent variable data from the calibration run
     Returns:
         None
     """
-
-    df = pd.DataFrame({"Voltage (V)": levelData, 
-                       f"Calibration Data ({units})": parsedData})
-    
+    if level_units == "Voltage (V)":
+        df = pd.DataFrame({"Voltage (V)": levelData, 
+                       f"Calibration Data ({calib_units})": parsedData})
+    else:
+        df = pd.DataFrame({f"{level_units}": levelData, 
+                       f"Calibration Data ({calib_units})": parsedData})
+        
     # Get the directory path from the filename
     directory = os.path.dirname(fname) 
 
@@ -176,7 +179,7 @@ def create_file(fname, levelData, parsedData, units):
     
 
 
-def save_plot(fname, vData, calData, units, title):
+def save_plot(fname, vData, calData, units, title, level_units = "Voltage (V)"):
     """
     Saves a plot of voltage against calibration data.
     """
@@ -186,7 +189,7 @@ def save_plot(fname, vData, calData, units, title):
     fig.subplots_adjust(top=0.85)
     ax.set_title(title)
     
-    ax.set_xlabel('Voltage (V)')
+    ax.set_xlabel(f'{level_units}')
     ax.set_ylabel(f"Calibration data ({units})")
     #ax.set_ylabel("test")
     
