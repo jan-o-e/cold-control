@@ -5,6 +5,7 @@ Created on 10 Apr 2016
 '''
 
 import numpy as np
+from typing import Dict
 
 class Sequence(object):
     '''
@@ -14,6 +15,7 @@ class Sequence(object):
     '''
     def __init__(self, n_samples, t_step=1):
         self.n_samples = n_samples
+        self.chSeqs = Dict[int, _ChannelSequence]
         self.chSeqs = {}
         self.t_step = t_step
         
@@ -58,7 +60,7 @@ class Sequence(object):
         return self.chSeqs[chNum].V_interval_styles
         
     def updateChannel(self, chNum, tV_pairs, V_interval_styles):
-        channel = self.chSeqs[chNum]
+        channel:_ChannelSequence = self.chSeqs[chNum]
         old_tV_pairs, old_V_interval_styles = channel.tV_pairs, channel.V_interval_styles
         try:
             channel.tV_pairs, channel.V_interval_styles = zip(*sorted(zip(tV_pairs,V_interval_styles), key=lambda x: x[0][0]))

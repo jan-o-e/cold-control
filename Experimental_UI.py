@@ -20,9 +20,11 @@ import matplotlib.pyplot as plt
 
 from Config import AbsorbtionImagingReader, PhotonProductionReader, ExperimentalAutomationReader
 from ToolTip_UI import ToolTip
+from Sequence_UI import Sequence_UI
+from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
-from ExperiementalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner
+from ExperiementalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration
 from abcoll import Sequence
 from atom.event import Event
 from win32inetcon import STICKY_CACHE_ENTRY
@@ -44,7 +46,7 @@ from tkinter import filedialog as tkFileDialog
 
 class Experimental_UI(tk.LabelFrame):
 
-    def __init__(self, parent, daq_ui, sequence_ui, photon_produciton_configuration_fname, absorbtion_imaging_config_fname,
+    def __init__(self, parent, daq_ui:DAQ_UI, sequence_ui:Sequence_UI, photon_produciton_configuration_fname, absorbtion_imaging_config_fname,
                  ic_imaging_control=None, text="Experimental Actions", font=("Helvetica", 16), development_mode=False, **kwargs):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
         
@@ -86,7 +88,7 @@ class Experimental_UI(tk.LabelFrame):
         
         icon = Image.open("icons/play_icon.png").resize((30,30))
         icon = ImageTk.PhotoImage(icon)
-        self.run_abs_img_button = tk.Button(self, image=icon, text="Run abs. imaging", command=lambda:self.runAbsorbtionImaging,
+        self.run_abs_img_button = tk.Button(self, image=icon, text="Run abs. imaging", command=lambda:self.runAbsorbtionImaging(),
                                              background='deep sky blue', **butt_opts)
         self.run_abs_img_button.image = icon 
         self.test_bkg_button = tk.Button(self, image=icon, text="Test background", command=lambda: self.runAbsorbtionImaging(bkg_test=True), background='light sky blue', **butt_opts)
@@ -184,7 +186,7 @@ class Experimental_UI(tk.LabelFrame):
             self.sequence_ui.configureForNewChannelCalibrations(self.daq_ui.daq_controller.getChannelCalibrationDict())
         self.sequence_ui.openWindow()
         
-    def runExperiment(self, photon_production_experiment, liveUI=True, autoCloseLiveUI=False):
+    def runExperiment(self, photon_production_experiment: PhotonProductionExperiment, liveUI=True, autoCloseLiveUI=False):
         '''
         Run a photon production experiment. There is a some layered architecture here to be aware of if you
         change code (threading can cause very confused computers if done wrong...).  Basically we create two
@@ -279,14 +281,15 @@ class Experimental_UI(tk.LabelFrame):
             elif start_automated_experiment:
                 # If run tone is on, turn it off!
                 if self.run_tone_awg:
-                    self.toggle_run_tone_button()
+                    self.exit_run_tones()
                     
                 automated_experiment.write_to_summary_file('\nStarting automated experiment at {0}\n\n'.format(time.strftime("%H-%M-%S")))
                 
                 run_next_experiment = True
                 # Run all the queued experiements until we are done or one is manually stopped
                 while automated_experiment.has_next_experiment() and run_next_experiment:
-                     
+
+                    experiment:PhotonProductionExperiment = None 
                     # Get and run next experiment                       
                     experiment, seq_fname, modulation_frequencies = automated_experiment.get_next_experiment()
                     self.runExperiment(experiment, liveUI, autoCloseLiveUI=True)
@@ -345,8 +348,8 @@ class Experimental_UI(tk.LabelFrame):
                 bkgs.append(np.array(Image.open(filename).convert('L')))
             bkg_arrs.append(bkgs)
         
-        bkg_aves = [sum([b.astype(np.float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
-        unscaled_corr_imgs = [np.clip(np.round(bkg.astype(np.float) - img.astype(np.float)),0,255) for img, bkg in zip(img_arrs, bkg_aves)]
+        bkg_aves = [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
+        unscaled_corr_imgs = [np.clip(np.round(bkg.astype(float) - img.astype(float)),0,255) for img, bkg in zip(img_arrs, bkg_aves)]# should maybe be np.float64
         corr_imgs = [(arr * 255.0/arr.max()).astype(np.uint8) for arr in unscaled_corr_imgs]
             
         class MockAbsImgExperiment(object):
@@ -371,7 +374,7 @@ class Experimental_UI(tk.LabelFrame):
         absorbtion_imaging_review_UI = Absorbtion_imaging_review_UI(self, mock)
         self.winfo_toplevel().wait_window(absorbtion_imaging_review_UI)
 
-    def toggleRunTone(self, button, i_ch):
+    def toggleRunTone(self, button:tk.Button, i_ch):
         # No run_tone_awg configured, so make one and start the run tone
         channel = Channel.values()[i_ch]
 
@@ -593,7 +596,7 @@ class Frame_ExperimentalParam(tk.Frame):
              
 class Photon_production_configuration_UI(object):
 
-    def __init__(self, parent, photon_production_configuration):
+    def __init__(self, parent, photon_production_configuration:PhotonProductionConfiguration):
         '''This object presents for editing the settings for photon production experiments.  It takes and edits a
         copy of the Photon Production Configuration.  A flag then exists to indicate whether the user wants these
         edits to be applied or not when the window is closed.'''
@@ -612,7 +615,7 @@ class Photon_production_configuration_UI(object):
         self.top.wm_title("Photon production configuration")
         self.top.grab_set()     
         # Changes the close button to call my close function.
-        self.top.protocol('WM_DELETE_WINDOW', self.closeWindow);
+        self.top.protocol('WM_DELETE_WINDOW', self.closeWindow)
         
     def configureWindow(self, parent):
         '''
@@ -841,7 +844,7 @@ class Absorbtion_imaging_configuration_UI(object):
         self.top.wm_title("Absorbtion imaging configuration")
         self.top.grab_set()     
         # Changes the close button to call my close function.
-        self.top.protocol('WM_DELETE_WINDOW', self.closeWindow);
+        self.top.protocol('WM_DELETE_WINDOW', self.closeWindow)
         
     def configureWindow(self, parent):
         '''
@@ -1844,7 +1847,7 @@ class Absorbtion_imaging_review_UI(tk.Toplevel):
         Get a dropdown of all available images frames.
         '''
         self.image_type_var = var = tk.StringVar()
-        var.set(self.images_frames_dict.keys()[0])
+        var.set(list(self.images_frames_dict.keys())[0])
         
         return tk.OptionMenu(self, var, *self.images_frames_dict.keys(), command=lambda x=var: self.__image_type_dropdown_selected(x))
     

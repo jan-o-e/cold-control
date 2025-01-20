@@ -16,20 +16,24 @@ from PIL import Image
 import csv
 import glob
 import re
+import collections
+import _tkinter
+from typing import List
 
-from DAQ import DAQ_controller, DaqPlayException
+from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode, WX218x_OperationMode, WX218x_SequenceAdvanceMode, WX218x_TraceMode, WX218x_TriggerImpedance, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_Waveform 
 from instruments.quTAU.TDC_quTAU import TDC_quTAU
 from instruments.quTAU.TDC_BaseDLL import TDC_SimType, TDC_DevType, TDC_SignalCond
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
 from instruments.pyicic.IC_Exception import IC_Exception
+from instruments.pyicic.IC_Camera import IC_Camera
 from instruments.TF930 import TF930
-from Sequence import IntervalStyle
+from Sequence import IntervalStyle, Sequence
 from sympy.physics.units import frequency
 from serial.serialutil import SerialException
-import collections
-import _tkinter
+
+
 
 class ExperimentalRunner(object):
     '''
@@ -52,6 +56,227 @@ class ExperimentalRunner(object):
     
     def close(self):
         raise NotImplementedError()
+    
+
+
+
+class AbsorbtionImagingConfiguration(object):
+    '''
+    This object stores and presents for editing the settings for absorbtion imaging experiments.
+        
+        scan_abs_img_freq - TODO
+        abs_img_freq_ch - TODO
+        abs_img_freqs - TODO
+        camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
+        camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
+        t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
+        mot_reload_time - The MOT reload time in us
+        bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
+        n_backgrounds - The number of background images to take for each absorbtion image.
+        cam_gain - The gain setting for the camera when taking the picture.
+        cam_exposure - How long the camera exposure should be.  Passes as an integer x which corresponds to an exposure time of 1/x seconds.
+        save_location - The folder to save images to as 'save_location/{date}/{time}/'
+        save_raw_images - Boolean determining whether the raw images (i.e. processed absorbtion images and all background contributing to 
+                          the background average) are saved.
+        save_processed_images - Boolean determining whether the processed images (i.e. absorbtion images after background subtraction and
+                                average backgrounds) are automatically saved.
+        review_processed_images - Boolean determining whether the Absorbtion_imaging_review_UI is launched after the images are processed
+                                  to allow the user to review the images, add notes and decide whether to save or not. Note that since the
+                                  user is given the chance to review the processed images, the option to automatically save them is disabled
+                                  when review_processed_images=True.
+    '''
+        
+    def __init__(self,
+                 scan_abs_img_freq, abs_img_freq_ch, abs_img_freqs,
+                 camera_trig_ch, imag_power_ch, 
+                 camera_trig_levs, imag_power_levs, 
+                 camera_pulse_width, imag_pulse_width,
+                 t_imgs, 
+                 mot_reload_time, 
+                 n_backgrounds, bkg_off_channels, 
+                 cam_gain, cam_exposure, 
+                 cam_gain_lims, cam_exposure_lims,
+                 save_location,
+                 save_raw_images, save_processed_images, review_processed_images):
+        
+        self.scan_abs_img_freq = scan_abs_img_freq
+        self.abs_img_freq_ch = abs_img_freq_ch
+        self.abs_img_freqs = abs_img_freqs
+        self.camera_trig_ch = camera_trig_ch
+        self.imag_power_ch = imag_power_ch
+        self.camera_trig_levs = camera_trig_levs
+        self.imag_power_levs = imag_power_levs
+        self.camera_pulse_width = camera_pulse_width
+        self.imag_pulse_width = imag_pulse_width
+        self.t_imgs = t_imgs
+        self.mot_reload_time = mot_reload_time
+        self.n_backgrounds = n_backgrounds
+        self.bkg_off_channels = bkg_off_channels
+        self.cam_gain = cam_gain
+        self.cam_exposure = cam_exposure
+        self.cam_gain_lims = cam_gain_lims
+        self.cam_exposure_lims = cam_exposure_lims
+        self.save_location = save_location
+        self.save_raw_images = save_raw_images
+        self.save_processed_images = save_processed_images
+        self.review_processed_images = review_processed_images
+
+
+
+class ExperimentalAutomationConfiguration(object):
+    
+    def __init__(self,
+                 save_location,
+                 summary_fname,
+                 automated_experiment_configurations,
+                 daq_channel_update_steps,
+                 daq_channel_update_delay):
+        
+        self.save_location = save_location
+        self.summary_fname = summary_fname
+        self.automated_experiment_configurations = automated_experiment_configurations
+        self.daq_channel_update_steps = daq_channel_update_steps
+        self.daq_channel_update_delay = daq_channel_update_delay
+
+    def get_summary_fname(self):
+        return self.__summary_fname
+
+
+    def set_summary_fname(self, value):
+        self.__summary_fname = value
+
+
+    def del_summary_fname(self):
+        del self.__summary_fname
+
+
+    def get_daq_channel_update_steps(self):
+        return self.__daq_channel_update_steps
+
+
+    def get_daq_channel_update_delay(self):
+        return self.__daq_channel_update_delay
+
+
+    def set_daq_channel_update_steps(self, value):
+        self.__daq_channel_update_steps = value
+
+
+    def set_daq_channel_update_delay(self, value):
+        self.__daq_channel_update_delay = value
+
+
+    def del_daq_channel_update_steps(self):
+        del self.__daq_channel_update_steps
+
+
+    def del_daq_channel_update_delay(self):
+        del self.__daq_channel_update_delay
+
+
+    def get_save_location(self):
+        return self.__save_location
+
+
+    def get_automated_experiment_configurations(self):
+        return self.__automated_experiment_configurations
+
+
+    def set_save_location(self, value):
+        self.__save_location = value
+
+
+    def set_automated_experiment_configurations(self, value):
+        self.__automated_experiment_configurations = value
+
+
+    def del_save_location(self):
+        del self.__save_location
+
+
+    def del_automated_experiment_configurations(self):
+        del self.__automated_experiment_configurations
+
+    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
+    automated_experiment_configurations = property(get_automated_experiment_configurations, set_automated_experiment_configurations, del_automated_experiment_configurations, "automated_experiment_configurations's docstring")
+    daq_channel_update_steps = property(get_daq_channel_update_steps, set_daq_channel_update_steps, del_daq_channel_update_steps, "daq_channel_update_steps's docstring")
+    daq_channel_update_delay = property(get_daq_channel_update_delay, set_daq_channel_update_delay, del_daq_channel_update_delay, "daq_channel_update_delay's docstring")
+    summary_fname = property(get_summary_fname, set_summary_fname, del_summary_fname, "summary_fname's docstring")
+
+
+
+
+
+class AutomatedExperimentConfiguration(object):
+    
+    def __init__(self,
+                 daq_channel_static_values,
+                 sequence_fname,
+                 sequence,
+                 iterations,
+                 mot_reload,
+                 modulation_frequencies
+                 ):
+        self.daq_channel_static_values = daq_channel_static_values
+        self.sequence_fname = sequence_fname
+        self.sequence = sequence
+        self.iterations = iterations
+        self.mot_reload = mot_reload
+        self.modulation_frequencies = modulation_frequencies
+
+    def get_daq_channel_static_values(self):
+        return self.__daq_channel_static_values
+
+
+    def get_sequence_fname(self):
+        return self.__sequence_fname
+
+
+    def get_iterations(self):
+        return self.__iterations
+
+
+    def get_mot_reload_time(self):
+        return self.__mot_reload_time
+
+
+    def set_daq_channel_static_values(self, value):
+        self.__daq_channel_static_values = value
+
+
+    def set_sequence_fname(self, value):
+        self.__sequence_fname = value
+
+
+    def set_iterations(self, value):
+        self.__iterations = value
+
+
+    def set_mot_reload_time(self, value):
+        self.__mot_reload_time = value
+
+
+    def del_daq_channel_static_values(self):
+        del self.__daq_channel_static_values
+
+
+    def del_sequence_fname(self):
+        del self.__sequence_fname
+
+
+    def del_iterations(self):
+        del self.__iterations
+
+
+    def del_mot_reload_time(self):
+        del self.__mot_reload_time
+
+    daq_channel_static_values = property(get_daq_channel_static_values, set_daq_channel_static_values, del_daq_channel_static_values, "daq_channel_static_values's docstring")
+    sequence_fname = property(get_sequence_fname, set_sequence_fname, del_sequence_fname, "sequence_fname's docstring")
+    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
+    mot_reload_time = property(get_mot_reload_time, set_mot_reload_time, del_mot_reload_time, "mot_reload_time's docstring")
+
+
     
 class PhotonProductionExperiment(ExperimentalRunner):
     
@@ -855,7 +1080,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         
     shutter_lag = 4.8 #The camera response time to the trigger.  Hard coded as it is a physical camera property.
      
-    def __init__(self, daq_controller, sequence, absorbtion_imaging_configuration, ic_imaging_control):
+    def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, absorbtion_imaging_configuration:AbsorbtionImagingConfiguration, ic_imaging_control:IC_ImagingControl):
         '''
         Runs an absorbtion imaging experiment. Takes a number of parameters, namely:
             daq_controller - The DAQ Controller object for running the daq channels
@@ -922,8 +1147,8 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         Perform and configuration that has to occur before the experiment can be safely run.
         '''
         # Make a list of sequences (in time order) to run in order to take the imaging pictures
-        self.sequences = []
-        self.bkg_sequences = []
+        self.sequences: List[Sequence] = []
+        self.bkg_sequences: List[Sequence] = []
 
         c = self.config
 
@@ -963,7 +1188,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.bkg_sequences.append(sequenceBackground)
         
         # Make a list of labels for the sequences - this is what the images will be saved as.
-        self.sequence_labels = map(int,c.t_imgs)
+        self.sequence_labels = list(map(int,c.t_imgs))
             
         if c.scan_abs_img_freq:
             new_seqs = []
@@ -989,7 +1214,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             print("DAQ output must be on to run a sequence - turning it on.")
             self.daq_controller.toggleContinuousOutput()
     
-    def run(self, analayse=True, bkg_test=False):
+    def run(self, analyse=True, bkg_test=False):
         '''
         Run the absorbtion imaging.  This first generates a series of sequences to run, then
         opens and configures the camera, takes the images, saves them and closes the camera.
@@ -1002,8 +1227,8 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.__configureCamera()
             img_arrs, bkg_arrs = self.__takeImages(save_raw_images=self.config.save_raw_images)
             if bkg_test:
-                self.corr_img_arrs, self.ave_bkg_arrs = None, [sum([b.astype(np.float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
-            elif analayse:
+                self.corr_img_arrs, self.ave_bkg_arrs = None, [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]# rather than b.astype(float), this line should maybe be b.astype(np.float64)
+            elif analyse:
                 self.corr_img_arrs, self.ave_bkg_arrs = self.__analyseImages(img_arrs, bkg_arrs, save_processed_images=self.config.save_processed_images)
             else:
                 self.corr_img_arrs, self.ave_bkg_arrs = None, None
@@ -1018,6 +1243,8 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
     def __configureCamera(self):
         # open first available camera device
         cam_names = self.ic_ic.get_unique_device_names()
+        self.cam:IC_Camera = None
+        cam:IC_Camera = None
         self.cam = cam = self.ic_ic.get_device(cam_names[0])
 #         self.cam_frame_timeout = int(self.sequences[0].getLength()*10**-3 + (1./self.config.cam_exposure)*10**3)
         self.cam_frame_timeout = 5000
@@ -1054,6 +1281,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
     def __takeImages(self, save_raw_images):
             img_arrs = []
             bkg_arrs = []
+            
                  
             for seq, bkg_seq, label in zip(self.sequences, self.bkg_sequences, self.sequence_labels):
                 # Write the persistance values and wait for the MOT to reload
@@ -1089,7 +1317,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 bkgs = []
                 self.daq_controller.load(bkg_seq.getArray())
                 for i in range(self.config.n_backgrounds):
-                    # Load and play background sequenc
+                    # Load and play background sequence
                     sleep(0.5)   
                     self.daq_controller.play(float(bkg_seq.t_step), clearCards=False)
                     self.cam.wait_til_frame_ready(self.cam_frame_timeout) 
@@ -1128,9 +1356,9 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             wider ranges.
             4. Rescale the pixel values from to span 0-255 for maximum visibility.  Finally convert the images back to unit8 arrays as PIL expects. 
         '''
-        bkg_aves_float = [sum([b.astype(np.float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
-        unscaled_corr_imgs = [np.clip(np.round(bkg.astype(np.float) - img.astype(np.float)),0,255) for img, bkg in zip(img_arrs, bkg_aves_float)]
-#         unscaled_corr_imgs = [np.round(bkg.astype(np.float) - img.astype(np.float)) for img, bkg in zip(img_arrs, bkg_aves_float)]
+        bkg_aves_float = [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
+        unscaled_corr_imgs = [np.clip(np.round(bkg.astype(float) - img.astype(float)),0,255) for img, bkg in zip(img_arrs, bkg_aves_float)]# maybe this should be np.float64?
+#         unscaled_corr_imgs = [np.round(bkg.astype(float) - img.astype(float)) for img, bkg in zip(img_arrs, bkg_aves_float)]
         bkg_aves = [bkg.astype(np.uint8) for bkg in bkg_aves_float]
         corr_images = [(arr * 255.0/arr.max()).astype(np.uint8) for arr in unscaled_corr_imgs]
 #         corr_images = [arr.astype(np.uint8) for arr in unscaled_corr_imgs]
@@ -1151,9 +1379,25 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             raise Exception('The abosrbtion imaging experiment has not been run yet. There are no results to save.')
         bkg_dir = os.path.join(self.save_location,'backgrounds')
         os.makedirs(bkg_dir)
-        for img, bkg_img, label in zip(self.corr_img_arrs, self.ave_bkg_arrs, self.sequence_labels):
-            Image.fromarray(img).save("{0}/{1}.bmp".format(self.save_location, label), "bmp")
-            Image.fromarray(bkg_img).save("{0}/{1}.bmp".format(bkg_dir, label), "bmp")
+
+        if self.corr_img_arrs == None and self.ave_bkg_arrs == None:
+            print("No images to save.")
+        elif self.corr_img_arrs == None:
+            # this code runs when only a background experiment has been run
+            for bkg_img, label in zip(self.ave_bkg_arrs, self.sequence_labels):
+                # Normalize the floating-point image to the range 0-255
+                if bkg_img.dtype == float:
+                    bkg_img = (255 * (bkg_img - np.min(bkg_img)) / (np.ptp(bkg_img) + 1e-10)).astype(np.uint8)
+                Image.fromarray(bkg_img).save(f"{bkg_dir}/{label}.bmp", "bmp")
+        else:
+            for img, bkg_img, label in zip(self.corr_img_arrs, self.ave_bkg_arrs, self.sequence_labels):
+                # Normalize the floating-point image to the range 0-255
+                if bkg_img.dtype == float:
+                    bkg_img = (255 * (bkg_img - np.min(bkg_img)) / (np.ptp(bkg_img) + 1e-10)).astype(np.uint8)
+                if img.dtype == float:
+                    img = (255 * (img - np.min(img)) / (np.ptp(img) + 1e-10)).astype(np.uint8)
+                Image.fromarray(img).save("{0}/{1}.bmp".format(self.save_location, label), "bmp")
+                Image.fromarray(bkg_img).save("{0}/{1}.bmp".format(bkg_dir, label), "bmp")
             
         if notes:
             fname = os.path.join(self.save_location,'notes.txt')
@@ -1189,67 +1433,6 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.daq_controller.toggleContinuousOutput()    
 
 
-
-class AbsorbtionImagingConfiguration(object):
-    '''
-    This object stores and presents for editing the settings for absorbtion imaging experiments.
-        
-        scan_abs_img_freq - TODO
-        abs_img_freq_ch - TODO
-        abs_img_freqs - TODO
-        camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
-        camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
-        t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
-        mot_reload_time - The MOT reload time in us
-        bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
-        n_backgrounds - The number of background images to take for each absorbtion image.
-        cam_gain - The gain setting for the camera when taking the picture.
-        cam_exposure - How long the camera exposure should be.  Passes as an integer x which corresponds to an exposure time of 1/x seconds.
-        save_location - The folder to save images to as 'save_location/{date}/{time}/'
-        save_raw_images - Boolean determining whether the raw images (i.e. processed absorbtion images and all background contributing to 
-                          the background average) are saved.
-        save_processed_images - Boolean determining whether the processed images (i.e. absorbtion images after background subtraction and
-                                average backgrounds) are automatically saved.
-        review_processed_images - Boolean determining whether the Absorbtion_imaging_review_UI is launched after the images are processed
-                                  to allow the user to review the images, add notes and decide whether to save or not. Note that since the
-                                  user is given the chance to review the processed images, the option to automatically save them is disabled
-                                  when review_processed_images=True.
-    '''
-        
-    def __init__(self,
-                 scan_abs_img_freq, abs_img_freq_ch, abs_img_freqs,
-                 camera_trig_ch, imag_power_ch, 
-                 camera_trig_levs, imag_power_levs, 
-                 camera_pulse_width, imag_pulse_width,
-                 t_imgs, 
-                 mot_reload_time, 
-                 n_backgrounds, bkg_off_channels, 
-                 cam_gain, cam_exposure, 
-                 cam_gain_lims, cam_exposure_lims,
-                 save_location,
-                 save_raw_images, save_processed_images, review_processed_images):
-        
-        self.scan_abs_img_freq = scan_abs_img_freq
-        self.abs_img_freq_ch = abs_img_freq_ch
-        self.abs_img_freqs = abs_img_freqs
-        self.camera_trig_ch = camera_trig_ch
-        self.imag_power_ch = imag_power_ch
-        self.camera_trig_levs = camera_trig_levs
-        self.imag_power_levs = imag_power_levs
-        self.camera_pulse_width = camera_pulse_width
-        self.imag_pulse_width = imag_pulse_width
-        self.t_imgs = t_imgs
-        self.mot_reload_time = mot_reload_time
-        self.n_backgrounds = n_backgrounds
-        self.bkg_off_channels = bkg_off_channels
-        self.cam_gain = cam_gain
-        self.cam_exposure = cam_exposure
-        self.cam_gain_lims = cam_gain_lims
-        self.cam_exposure_lims = cam_exposure_lims
-        self.save_location = save_location
-        self.save_raw_images = save_raw_images
-        self.save_processed_images = save_processed_images
-        self.review_processed_images = review_processed_images
              
 
 
@@ -1271,12 +1454,12 @@ class PhotonProductionConfiguration(object):
         self.iterations = iterations
 
         self.waveform_sequence = waveform_sequence
-        self.waveforms = waveforms
-        self.interleave_waveforms = interleave_waveforms
+        self.waveforms:List[Waveform] = waveforms
+        self.interleave_waveforms:bool = interleave_waveforms
         self.waveform_stitch_delays = waveform_stitch_delays
         
-        self.awg_configuration = awg_configuration
-        self.tdc_configuration = tdc_configuration
+        self.awg_configuration: AwgConfiguration = awg_configuration
+        self.tdc_configuration: TdcConfiguration = tdc_configuration
 
     def get_waveform_sequence(self):
         return self.__waveform_sequence
@@ -1345,11 +1528,12 @@ class PhotonProductionConfiguration(object):
 
 class ExperimentalAutomationRunner(object):
      
-    def __init__(self, daq_controller:DAQ_controller, experimental_automation_configuration:AbsorbtionImagingConfiguration, photon_production_configuration:PhotonProductionConfiguration):
+    def __init__(self, daq_controller:DAQ_controller, experimental_automation_configuration:ExperimentalAutomationConfiguration, photon_production_configuration:PhotonProductionConfiguration):
          
         self.daq_controller = daq_controller
-        self.experimental_automation_configuration:AbsorbtionImagingConfiguration = experimental_automation_configuration
-        c:AbsorbtionImagingConfiguration = experimental_automation_configuration
+        self.experimental_automation_configuration:ExperimentalAutomationConfiguration = None
+        c:ExperimentalAutomationConfiguration = None
+        self.experimental_automation_configuration = c = experimental_automation_configuration
         self.photon_production_configuration = photon_production_configuration
          
         self.experiements_to_run = len(c.automated_experiment_configurations)
@@ -1374,7 +1558,7 @@ class ExperimentalAutomationRunner(object):
          
         print('Configuring experiment {0} of {1}'.format(self.experiements_iter+1, self.experiements_to_run))
          
-        config = self.experimental_automation_configuration.automated_experiment_configurations[self.experiements_iter]
+        config:AutomatedExperimentConfiguration = self.experimental_automation_configuration.automated_experiment_configurations[self.experiements_iter]
         self.experiements_to_run = len(self.experimental_automation_configuration.automated_experiment_configurations)
         self.experiements_iter += 1
          
@@ -1384,6 +1568,7 @@ class ExperimentalAutomationRunner(object):
         
         if config.modulation_frequencies != []:
             j=0
+            waveform:Waveform = None
             for waveform in [self.photon_production_configuration.waveforms[i] for i in self.photon_production_configuration.waveform_sequence[0]]:
                 try:
                     waveform.mod_frequency = config.modulation_frequencies[j]
@@ -1425,7 +1610,7 @@ class ExperimentalAutomationRunner(object):
     def _update_daq_channel_static_values(self, channel_number, new_val):
          
         try:
-            channel = next(ch for ch in self.daq_controller.getChannels() if ch.chNum==channel_number)
+            channel:DAQ_channel = next(ch for ch in self.daq_controller.getChannels() if ch.chNum==channel_number)
         except StopIteration:
             print('Channel {0} not found, ignoring this channel.'.format(channel_number))
             return
@@ -1458,7 +1643,7 @@ class ExperimentalAutomationRunner(object):
                 if self.original_daq_channel_values[chNum] != current_daq_channel_values[chNum]:
                     
                     try:
-                        channel = next(ch for ch in self.daq_controller.getChannels() if ch.chNum==chNum)
+                        channel:DAQ_channel = next(ch for ch in self.daq_controller.getChannels() if ch.chNum==chNum)
                     except StopIteration:
                         print('Channel {0} not found, ignoring this channel.'.format(chNum))
                         return
@@ -1665,151 +1850,5 @@ class TdcConfiguration(object):
     marker_channel = property(get_marker_channel, set_marker_channel, del_marker_channel, "marker_channel's docstring")
     timestamp_buffer_size = property(get_timestamp_buffer_size, set_timestamp_buffer_size, del_timestamp_buffer_size, "timestamp_buffer_size's docstring")
 
-class ExperimentalAutomationConfiguration(object):
-    
-    def __init__(self,
-                 save_location,
-                 summary_fname,
-                 automated_experiment_configurations,
-                 daq_channel_update_steps,
-                 daq_channel_update_delay):
-        
-        self.save_location = save_location
-        self.summary_fname = summary_fname
-        self.automated_experiment_configurations = automated_experiment_configurations
-        self.daq_channel_update_steps = daq_channel_update_steps
-        self.daq_channel_update_delay = daq_channel_update_delay
-
-    def get_summary_fname(self):
-        return self.__summary_fname
 
 
-    def set_summary_fname(self, value):
-        self.__summary_fname = value
-
-
-    def del_summary_fname(self):
-        del self.__summary_fname
-
-
-    def get_daq_channel_update_steps(self):
-        return self.__daq_channel_update_steps
-
-
-    def get_daq_channel_update_delay(self):
-        return self.__daq_channel_update_delay
-
-
-    def set_daq_channel_update_steps(self, value):
-        self.__daq_channel_update_steps = value
-
-
-    def set_daq_channel_update_delay(self, value):
-        self.__daq_channel_update_delay = value
-
-
-    def del_daq_channel_update_steps(self):
-        del self.__daq_channel_update_steps
-
-
-    def del_daq_channel_update_delay(self):
-        del self.__daq_channel_update_delay
-
-
-    def get_save_location(self):
-        return self.__save_location
-
-
-    def get_automated_experiment_configurations(self):
-        return self.__automated_experiment_configurations
-
-
-    def set_save_location(self, value):
-        self.__save_location = value
-
-
-    def set_automated_experiment_configurations(self, value):
-        self.__automated_experiment_configurations = value
-
-
-    def del_save_location(self):
-        del self.__save_location
-
-
-    def del_automated_experiment_configurations(self):
-        del self.__automated_experiment_configurations
-
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    automated_experiment_configurations = property(get_automated_experiment_configurations, set_automated_experiment_configurations, del_automated_experiment_configurations, "automated_experiment_configurations's docstring")
-    daq_channel_update_steps = property(get_daq_channel_update_steps, set_daq_channel_update_steps, del_daq_channel_update_steps, "daq_channel_update_steps's docstring")
-    daq_channel_update_delay = property(get_daq_channel_update_delay, set_daq_channel_update_delay, del_daq_channel_update_delay, "daq_channel_update_delay's docstring")
-    summary_fname = property(get_summary_fname, set_summary_fname, del_summary_fname, "summary_fname's docstring")
-
-class AutomatedExperimentConfiguration(object):
-    
-    def __init__(self,
-                 daq_channel_static_values,
-                 sequence_fname,
-                 sequence,
-                 iterations,
-                 mot_reload,
-                 modulation_frequencies
-                 ):
-        self.daq_channel_static_values = daq_channel_static_values
-        self.sequence_fname = sequence_fname
-        self.sequence = sequence
-        self.iterations = iterations
-        self.mot_reload = mot_reload
-        self.modulation_frequencies = modulation_frequencies
-
-    def get_daq_channel_static_values(self):
-        return self.__daq_channel_static_values
-
-
-    def get_sequence_fname(self):
-        return self.__sequence_fname
-
-
-    def get_iterations(self):
-        return self.__iterations
-
-
-    def get_mot_reload_time(self):
-        return self.__mot_reload_time
-
-
-    def set_daq_channel_static_values(self, value):
-        self.__daq_channel_static_values = value
-
-
-    def set_sequence_fname(self, value):
-        self.__sequence_fname = value
-
-
-    def set_iterations(self, value):
-        self.__iterations = value
-
-
-    def set_mot_reload_time(self, value):
-        self.__mot_reload_time = value
-
-
-    def del_daq_channel_static_values(self):
-        del self.__daq_channel_static_values
-
-
-    def del_sequence_fname(self):
-        del self.__sequence_fname
-
-
-    def del_iterations(self):
-        del self.__iterations
-
-
-    def del_mot_reload_time(self):
-        del self.__mot_reload_time
-
-    daq_channel_static_values = property(get_daq_channel_static_values, set_daq_channel_static_values, del_daq_channel_static_values, "daq_channel_static_values's docstring")
-    sequence_fname = property(get_sequence_fname, set_sequence_fname, del_sequence_fname, "sequence_fname's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    mot_reload_time = property(get_mot_reload_time, set_mot_reload_time, del_mot_reload_time, "mot_reload_time's docstring")

@@ -194,7 +194,7 @@ class Camera_configuration_UI(tk.Toplevel):
         self.wm_title('Camera configuration')
         self.grab_set()     
         # Changes the close button to call my close function.
-        self.protocol('WM_DELETE_WINDOW', self.closeWindow);
+        self.protocol('WM_DELETE_WINDOW', self.closeWindow)
         
     def __get_property_wids(self, label, property, inverse = False):
         '''
