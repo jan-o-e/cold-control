@@ -5,7 +5,7 @@ from Config import ConfigReader, DaqReader
 import matplotlib.pyplot as plt
 import re
 from instruments.TF930 import TF930
-import visa
+import pyvisa as visa
 # from sympy.physics.quantum.circuitplot import matplotlib
 
 

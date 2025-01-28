@@ -1,8 +1,9 @@
 #sequence filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\defaultPhotonProduction
 #sequence filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\jan_photon_production\default
-sequence filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\jan_photon_production\abs_img_sequence
+sequence filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\jan_photon_production\abs_img_sequence_jan2024
 #daq config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/configs/daq/configCalibs3cardHyperfineScheme_Nov11
-daq config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/configs/daq/configCalibs3cardJanScheme
+#daq config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/configs/daq/configCalibs3cardJanScheme
+daq config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\daq\daq_config_jan2024
 #absorbtion images config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\absorbtion imaging\defaultAbsImgConfig
 absorbtion images config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\absorbtion imaging\defaultAbsImgConfigJan
 photon production config filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\photon production\freqScanPhotonProductionConfigCopy22
