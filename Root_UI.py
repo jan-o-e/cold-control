@@ -51,6 +51,7 @@ class ColdControl_UI(tk.Frame):
         
         '''Start up the camera UI.'''
         self.camera_UI = Camera_UI(self, ic_imaging_control = None)
+        self.camera_live = self.camera_UI.is_live # monitors status of camera to prevent taking photos while camera is live
         
         '''Set up the experimental UI with pre-configured defaults from the appropriate config files.'''
         self.absorbtion_imaging_config_fname = self.config_reader.get_absorbtion_imaging_config_fname()

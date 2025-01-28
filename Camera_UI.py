@@ -47,8 +47,10 @@ class Camera_UI(tk.LabelFrame):
         self.img.pack(fill=tk.BOTH, expand=1)
         
         self.button_frame = tk.Frame(self)
-        self.startCameraButton = tk.Button(self.button_frame, text="Start camera", command=self.startCamera).pack(side=tk.LEFT)
-        self.stopCameraButton = tk.Button(self.button_frame, text="Stop camera", command=self.stopCamera).pack(side=tk.RIGHT)
+        self.startCameraButton = tk.Button(self.button_frame, text="Start camera", command=self.startCamera)
+        self.startCameraButton.pack(side=tk.LEFT)
+        self.stopCameraButton = tk.Button(self.button_frame, text="Stop camera", command=self.stopCamera)
+        self.stopCameraButton.pack(side=tk.RIGHT)
         icon = ImageTk.PhotoImage(Image.open("icons/config_icon.png").resize((30,30)))
         self.configure_camera_button = tk.Button(self.button_frame, image=icon, width=25, height=25, command=self.cameraConfigButton)
         self.configure_camera_button.pack(side=tk.RIGHT)
@@ -84,8 +86,11 @@ class Camera_UI(tk.LabelFrame):
                 self.cam.register_frame_ready_callback()
         self.cam.start_live(show_display=False)
         self.is_live = True
+        self.parent.camera_live = True # set the variable for the parent
                   
         self.takeFrame(1000)
+        self.startCameraButton.config(bg="SystemButtonFace")
+        self.stopCameraButton.config(bg="red")
         
     def prepareCamera(self, cam):
         '''
@@ -110,7 +115,10 @@ class Camera_UI(tk.LabelFrame):
         
     def stopCamera(self):
         self.is_live = False
+        self.parent.camera_live = False
         self.after(self.cam_fpms, self.cam.stop_live())
+        self.startCameraButton.config(bg="green")
+        self.stopCameraButton.config(bg="SystemButtonFace")
         
     def takeFrame(self, cam_frame_timeout):        
         '''

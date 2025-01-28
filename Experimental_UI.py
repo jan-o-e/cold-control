@@ -316,6 +316,10 @@ class Experimental_UI(tk.LabelFrame):
         
             
     def runAbsorbtionImaging(self, bkg_test=False):
+        if self.parent.camera_live:
+            tkMessageBox.showwarning("Error", "Can't run an absorption imaging experiment\n while the camera is running.")
+            return
+
         experiment = AbsorbtionImagingExperiment(daq_controller = self.daq_ui.daq_controller, 
                                                 sequence = self.sequence_ui.sequence,
                                                 absorbtion_imaging_configuration=self.absorbtion_imaging_config,
