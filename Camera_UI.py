@@ -91,6 +91,7 @@ class Camera_UI(tk.LabelFrame):
         self.takeFrame(1000)
         self.startCameraButton.config(bg="SystemButtonFace")
         self.stopCameraButton.config(bg="red")
+        print("Camera is live")
         
     def prepareCamera(self, cam):
         '''
@@ -119,6 +120,7 @@ class Camera_UI(tk.LabelFrame):
         self.after(self.cam_fpms, self.cam.stop_live())
         self.startCameraButton.config(bg="green")
         self.stopCameraButton.config(bg="SystemButtonFace")
+        print("Camera is stopped")
         
     def takeFrame(self, cam_frame_timeout):        
         '''

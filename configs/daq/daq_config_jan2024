@@ -41,21 +41,21 @@ enabled state = Low
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_upper_freq.txt
 chNum = 0
-default value = 6.233925836831212
+default value = 6.270792665753371
 chName = Cool upper - freq
 chLimits = 0, 10
 [[1]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_lower_freq.txt
 chNum = 1
-default value = 6.203662413004379
+default value = 6.256222413885866
 chName = Cool lower - freq
 chLimits = 0, 10
 [[2]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\cool_centre_freq.txt
 chNum = 2
-default value = 6.139215894101636
+default value = 6.211045430761255
 chName = Cool center - freq
 chLimits = 0, 10
 [[3]]
@@ -69,21 +69,21 @@ chLimits = 0, 10
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_upper\cool_upper_amp_scaled_at_100MHz.txt
 chNum = 4
-default value = 0
+default value = 1.39194139194
 chName = Cool upper - amp
 chLimits = 0, 10
 [[5]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_lower\cool_lower_amp_at_100MHz.txt
 chNum = 5
-default value = 0
+default value = 2.9304029304
 chName = Cool lower - amp
 chLimits = 0, 10
 [[6]]
 UIvisible = True
 calibrationFname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\cool_center\cool_center_amp_at_100MHz.txt
 chNum = 6
-default value = 0
+default value = 2.39316239316
 chName = Cool center - amp
 chLimits = 0, 2.5
 [[7]]
@@ -153,7 +153,7 @@ chLimits = 0, 2
 UIvisible = True
 calibrationFname = ""
 chNum = 16
-default value = 0
+default value = 7.0
 chName = MOT coils current
 chLimits = 0, 10
 [[17]]
@@ -181,7 +181,7 @@ chLimits = 0, 2.5
 UIvisible = True
 calibrationFname = ""
 chNum = 20
-default value = 0
+default value = 5
 chName = MOT Repumping
 chLimits =0,5
 [[21]]

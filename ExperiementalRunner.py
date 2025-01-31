@@ -1141,7 +1141,36 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             print('WARNING: No channels are turned off when taking background images - this means the images will be taken \n' +\
                    'using an identical sequence to the absorption images.  Please consider turning the MOT repump off to remove \n' +\
                    'atoms from the background images.' )
+
     
+    def run(self, analyse=True, bkg_test=False):
+        '''
+        Run the absorbtion imaging.  This first generates a series of sequences to run, then
+        opens and configures the camera, takes the images, saves them and closes the camera.
+        '''
+        print('Running absorbtion imaging experiment')
+        
+        self.__configureExperiment()
+        
+        try:
+            self.__configureCamera()
+            img_arrs, bkg_arrs = self.__takeImages(save_raw_images=self.config.save_raw_images)
+            if bkg_test:
+                self.corr_img_arrs, self.ave_bkg_arrs = None, [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]# rather than b.astype(float), this line should maybe be b.astype(np.float64)
+            elif analyse:
+                self.corr_img_arrs, self.ave_bkg_arrs = self.__analyseImages(img_arrs, bkg_arrs, save_processed_images=self.config.save_processed_images)
+            else:
+                self.corr_img_arrs, self.ave_bkg_arrs = None, None
+            self.results_ready = True
+                
+        # It is important to properly close the camera before exiting, otherwise the computer can be crashed.
+        finally:
+            self.__close()
+            
+        return self.getResults()
+    
+
+        
     def __configureExperiment(self):
         '''
         Perform and configuration that has to occur before the experiment can be safely run.
@@ -1213,32 +1242,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         if not self.isDaqContinuousOutput:
             print("DAQ output must be on to run a sequence - turning it on.")
             self.daq_controller.toggleContinuousOutput()
-    
-    def run(self, analyse=True, bkg_test=False):
-        '''
-        Run the absorbtion imaging.  This first generates a series of sequences to run, then
-        opens and configures the camera, takes the images, saves them and closes the camera.
-        '''
-        print('Running absorbtion imaging experiment')
-        
-        self.__configureExperiment()
-        
-        try:
-            self.__configureCamera()
-            img_arrs, bkg_arrs = self.__takeImages(save_raw_images=self.config.save_raw_images)
-            if bkg_test:
-                self.corr_img_arrs, self.ave_bkg_arrs = None, [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]# rather than b.astype(float), this line should maybe be b.astype(np.float64)
-            elif analyse:
-                self.corr_img_arrs, self.ave_bkg_arrs = self.__analyseImages(img_arrs, bkg_arrs, save_processed_images=self.config.save_processed_images)
-            else:
-                self.corr_img_arrs, self.ave_bkg_arrs = None, None
-            self.results_ready = True
-                
-        # It is important to properly close the camera before exiting, otherwise the computer can be crashed.
-        finally:
-            self.__close()
-            
-        return self.getResults()
+
      
     def __configureCamera(self):
         # open first available camera device
@@ -1336,7 +1340,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 
             return img_arrs, bkg_arrs
         
-    def __analyseImages(self, img_arrs, bkg_arrs, save_processed_images):
+    def __analyseImages(self, img_arrs: List[np.ndarray], bkg_arrs: List[np.ndarray], save_processed_images:bool, process_type=2):
         '''
         Takes images and backgrounds as lists of np.arrays containing there pixel values, averages the backgrounds for each time step
         and corrects the raw image for this background.
@@ -1348,7 +1352,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         
         So a bit of jiggery-pokery here to analyse the image:
             1. Average the background together, converting them to arrays of floats before doing so.
-            2. Convert the raw images to floats and subract them from the backgrounds.  This means light int he background absorbed by the MOT will now appear as
+            2. Convert the raw images to floats and subract them from the backgrounds.  This means light in the background absorbed by the MOT will now appear as
             high pixel values (i.e. bright in the final image).
             3. Clip the corrected array between 0 and 255 as these are valid pixel values.  If the is not done we get excess noise from points where the corrected
             image was negative or greater than 255.  This also means that extra light present in the raw image when compared to the background (e.g. MOT beams
@@ -1356,9 +1360,17 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             wider ranges.
             4. Rescale the pixel values from to span 0-255 for maximum visibility.  Finally convert the images back to unit8 arrays as PIL expects. 
         '''
-        bkg_aves_float = [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
-        unscaled_corr_imgs = [np.clip(np.round(bkg.astype(float) - img.astype(float)),0,255) for img, bkg in zip(img_arrs, bkg_aves_float)]# maybe this should be np.float64?
-#         unscaled_corr_imgs = [np.round(bkg.astype(float) - img.astype(float)) for img, bkg in zip(img_arrs, bkg_aves_float)]
+        bkg_aves_float = [np.mean(bkgs, axis=0, dtype=float) for bkgs in bkg_arrs]
+
+        if process_type == 1:
+            print("processing images by subtracting the image from the background and clipping to be between 0 and 255")# This was Tom's original method
+            unscaled_corr_imgs = [np.clip(np.round(bkg - img), 0, 255) for img, bkg in zip(img_arrs, bkg_aves_float)]
+        elif process_type == 2:
+            print("processing images by subtracting the background from the image and clipping to be between 0 and 255")
+            unscaled_corr_imgs = [np.clip(np.round(img - bkg), 0, 255) for img, bkg in zip(img_arrs, bkg_aves_float)]
+        else:
+            raise ValueError(f"process_type cannot take the value {process_type}")
+        
         bkg_aves = [bkg.astype(np.uint8) for bkg in bkg_aves_float]
         corr_images = [(arr * 255.0/arr.max()).astype(np.uint8) for arr in unscaled_corr_imgs]
 #         corr_images = [arr.astype(np.uint8) for arr in unscaled_corr_imgs]

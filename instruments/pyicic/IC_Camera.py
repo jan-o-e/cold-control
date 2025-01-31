@@ -392,7 +392,7 @@ class IC_Camera(object):
         #print(c_ubyte)
         #print(buffer_size)
         buffer_size = int(buffer_size)
-        print("WARNING: buffer_size converted to integer")
+        #print("WARNING: buffer_size converted to integer")
         data = cast(img_ptr, POINTER(c_ubyte * buffer_size))
         
         return (data.contents, img_width, img_height, img_depth)
