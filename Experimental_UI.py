@@ -1665,7 +1665,7 @@ class Photon_production_buffered_data_handler(object):
     
     def __init__(self, n_hist_bins=30, t_stirap_length=800):
         
-        self.data_queue = Queue.Queue()      # A buffer for data to be added to waiting to be analysed.
+        self.data_queue = queue.Queue()      # A buffer for data to be added to waiting to be analysed.
         self.analysis_buffer = []  # A buffer for the next analysis loop to analyse.
         self.data_analysis_thread = threading.Thread()
         
@@ -1692,7 +1692,7 @@ class Photon_production_buffered_data_handler(object):
             if not self.data_queue.empty():
                 try:
                     self.analysis_buffer.append(self.data_queue.get_nowait())
-                except Queue.Empty:
+                except queue.Empty:
                     pass
                 self.data_analysis_thread = threading.Thread(name='Photon_production_buffered_data_handler.__analyse_buffer',
                                                              target=self.__analyse_buffer())
