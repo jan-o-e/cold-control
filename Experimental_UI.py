@@ -1742,7 +1742,7 @@ class Photon_production_buffered_data_handler(object):
    
 class Absorbtion_imaging_review_UI(tk.Toplevel):
       
-    def __init__(self, parent, absorbtion_imaging_experiment, **kwargs):
+    def __init__(self, parent, absorbtion_imaging_experiment: AbsorbtionImagingExperiment, **kwargs):
         '''
         This object the abosrbtion images taken and offers the user the chance to save them with notes or discard them.
         '''
@@ -1758,7 +1758,7 @@ class Absorbtion_imaging_review_UI(tk.Toplevel):
         # Changes the close button to call my close function.
         self.protocol('WM_DELETE_WINDOW', self.closeWindow)
         
-        img_arrs, bkg_arrs, labels = self.absorbtion_imaging_experiment.getResults()
+        img_arrs, bkg_arrs, raw_images, labels = self.absorbtion_imaging_experiment.getResults()
         
         if img_arrs == None and bkg_arrs == None:
             raise Exception('There are no images to review')
@@ -1772,6 +1772,9 @@ class Absorbtion_imaging_review_UI(tk.Toplevel):
         if bkg_arrs != None:
             self.image_types.append("Average backrounds")
             self.images_frames_dict[self.image_types[-1]] = self.__get_images_frame(bkg_arrs, labels, text=self.image_types[-1], **self.image_frame_opts)
+        if raw_images != None:
+            self.image_types.append("Raw images")
+            self.images_frames_dict[self.image_types[-1]] = self.__get_images_frame(raw_images, labels, text=self.image_types[-1], **self.image_frame_opts)
 
 #         for image_type in self.image_types:
 #             print image_type

@@ -32,7 +32,7 @@ class ColdControl_UI(tk.Frame):
     def __init__(self, parent):
         tk.Frame.__init__(self, parent)
         
-        self.config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
+        self.config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
         self.development_mode = self.config_reader.is_development_mode()
         
         self.master.wm_title("Cold Control Heavy")

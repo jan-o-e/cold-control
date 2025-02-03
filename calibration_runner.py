@@ -53,7 +53,7 @@ if __name__ == "__main__" and CALIB_TYPE == "absolute_power":
     # FREQ_V = [4.141,5.089,6.017,6.383]
     # AOM_FREQS = [90,95,100,102]
 
-    config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
+    config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
     daq_config_fname = config_reader.get_daq_config_fname()
     daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
     daq_controller.continuousOutput=True
@@ -94,7 +94,7 @@ elif __name__ == "__main__" and CALIB_TYPE == "another one":
     """
         aom_name = 'Optical Pump 2'
         freq_ch = 14
-        config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
+        config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
         daq_config_fname = config_reader.get_daq_config_fname()
         daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()
         daq_controller.continuousOutput=True

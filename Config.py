@@ -27,19 +27,20 @@ class ConfigReader(object):
         self.config = ConfigObj(fname)
         
     def get_sequence_fname(self):
-        return self.config['sequence filename']
+        return self.config['sequence_filename']
     
     def get_daq_config_fname(self):
-        return self.config['daq config filename']
+        return self.config['daq_config_filename']
     
     def get_absorbtion_imaging_config_fname(self):
-        return self.config['absorbtion images config filename']
+        return self.config['absorbtion_images_config_filename']
     
     def get_photon_production_config_fname(self):
-        return self.config['photon production config filename']
+        return self.config['photon_production_config_filename']
     
     def is_development_mode(self):
-        return toBool(self.config['development mode'])
+        print("Config keys:", self.config.keys())
+        return toBool(self.config['development_mode'])
     
 class ConfigWriter(object):
     
@@ -52,10 +53,10 @@ class ConfigWriter(object):
         self.config['date'] = time.strftime("%d/%m/%y")
         self.config['time'] = time.strftime("%H:%M:%S")
         
-        self.config['sequence filename'] = sequence_fname
-        self.config['daq config filename'] = daq_config_fname
-        self.config['absorbtion images config filename'] = absorbtion_imaging_config_fname
-        self.config['photon production config filename'] = photon_production_config_fname
+        self.config['sequence_filename'] = sequence_fname
+        self.config['daq_config_filename'] = daq_config_fname
+        self.config['absorbtion_images_config_filename'] = absorbtion_imaging_config_fname
+        self.config['photon_production_config_filename'] = photon_production_config_fname
 
         self.config.write()   
 
@@ -389,13 +390,13 @@ class ExperimentalAutomationWriter(object):
 
 def _makeRootConfig():
     config = ConfigObj()
-    config.filename =  os.getcwd() + '/configs/rootConfig'
+    config.filename =  os.getcwd() + '/configs/rootConfig.ini'
     
-    config['sequence filename'] = os.getcwd() + '/configs/sequence/sequenceConfig2DAQ'
-    config['daq config filename'] = os.getcwd() + '/configs/daq/configCalibs'
-    config['absorbtion images config filename']= os.getcwd() + '/configs/absorbtion imaging/defaultAbsImgConfig'
-    config['photon production config filename']= os.getcwd() + '/configs/photon production/defaultPhotonProductionConfig'
-    config['development mode'] = False
+    config['sequence_filename'] = os.getcwd() + '/configs/sequence/sequenceConfig2DAQ'
+    config['daq_config_filename'] = os.getcwd() + '/configs/daq/configCalibs'
+    config['absorbtion_images_config_filename']= os.getcwd() + '/configs/absorbtion imaging/defaultAbsImgConfig'
+    config['photon_production_config_filename']= os.getcwd() + '/configs/photon production/defaultPhotonProductionConfig'
+    config['development_mode'] = False
     
     config.write()
 

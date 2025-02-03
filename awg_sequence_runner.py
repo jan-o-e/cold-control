@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
 
     # Opens a new config file as a "config reader" object.
-    config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig')
+    config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
     for i in range(1,10000):
         daq_config_fname = config_reader.get_daq_config_fname()# gets the name of the config file for the DAQ cards
         daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()# reads the config file to create a "daq reader" object

@@ -1156,11 +1156,13 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.__configureCamera()
             img_arrs, bkg_arrs = self.__takeImages(save_raw_images=self.config.save_raw_images)
             if bkg_test:
-                self.corr_img_arrs, self.ave_bkg_arrs = None, [sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]# rather than b.astype(float), this line should maybe be b.astype(np.float64)
+                self.corr_img_arrs, self.ave_bkg_arrs, self.raw_images\
+                      = None, [np.mean(bkgs, axis=0, dtype=float) for bkgs in bkg_arrs], None#[sum([b.astype(float)/len(bkgs) for b in bkgs]) for bkgs in bkg_arrs]
             elif analyse:
-                self.corr_img_arrs, self.ave_bkg_arrs = self.__analyseImages(img_arrs, bkg_arrs, save_processed_images=self.config.save_processed_images)
+                self.corr_img_arrs, self.ave_bkg_arrs, self.raw_images\
+                      = self.__analyseImages(img_arrs, bkg_arrs, save_processed_images=self.config.save_processed_images)
             else:
-                self.corr_img_arrs, self.ave_bkg_arrs = None, None
+                self.corr_img_arrs, self.ave_bkg_arrs = None, None, None
             self.results_ready = True
                 
         # It is important to properly close the camera before exiting, otherwise the computer can be crashed.
@@ -1340,7 +1342,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 
             return img_arrs, bkg_arrs
         
-    def __analyseImages(self, img_arrs: List[np.ndarray], bkg_arrs: List[np.ndarray], save_processed_images:bool, process_type=2):
+    def __analyseImages(self, img_arrs: List[np.ndarray], bkg_arrs: List[np.ndarray], save_processed_images:bool, process_type=1):
         '''
         Takes images and backgrounds as lists of np.arrays containing there pixel values, averages the backgrounds for each time step
         and corrects the raw image for this background.
@@ -1368,6 +1370,9 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         elif process_type == 2:
             print("processing images by subtracting the background from the image and clipping to be between 0 and 255")
             unscaled_corr_imgs = [np.clip(np.round(img - bkg), 0, 255) for img, bkg in zip(img_arrs, bkg_aves_float)]
+        elif process_type == 3:
+            print("images aren't being processed.")
+            unscaled_corr_imgs = img_arrs
         else:
             raise ValueError(f"process_type cannot take the value {process_type}")
         
@@ -1383,8 +1388,10 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 Image.fromarray(img).save("{0}/{1}.bmp".format(self.save_location, label), "bmp")
                 Image.fromarray(bkg_img).save("{0}/{1}.bmp".format(bkg_dir, label), "bmp")
             print('Processed images saved')
+
+        raw_images = img_arrs
         
-        return corr_images, bkg_aves
+        return corr_images, bkg_aves, raw_images
     
     def saveProcessedImages(self, notes=None):
         if not self.results_ready:
@@ -1422,7 +1429,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         if not self.results_ready:
             raise Exception('The abosrbtion imaging experiment has not been run yet.')
         print('Returning absorbtion imaging results.', len(self.ave_bkg_arrs))
-        return self.corr_img_arrs, self.ave_bkg_arrs, self.sequence_labels
+        return self.corr_img_arrs, self.ave_bkg_arrs, self.raw_images, self.sequence_labels
     
     def __close(self):
         '''
