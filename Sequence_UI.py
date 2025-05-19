@@ -3,24 +3,25 @@ Created on 25 Mar 2016
 
 @author: tombarrett
 '''
+from typing import Dict, Tuple, List
 import tkinter as tk
 from tkinter import ttk
-from tkinter import font as tkFont
-
+#from tkinter import font as tkFont
 from tkinter import filedialog as tkFileDialog
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
-import matplotlib.pyplot as plt
-from Config import SequenceReader, SequenceWriter
-from Sequence import IntervalStyle, MultipleInvalidSequenceChannelException, InvalidSequenceChannelException
 from tkinter import messagebox as tkMessageBox
-from IPython.core.display import display
-from tkinter.constants import ANCHOR
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk
+import matplotlib.pyplot as plt
+#from IPython.core.display import display
+#from tkinter.constants import ANCHOR
 from PIL import Image, ImageTk
 import ToolTip_UI as tooltip
 import numpy as np
+#import wx
 
-import wx
+from Config import SequenceReader, SequenceWriter
+from Sequence import Sequence, IntervalStyle, MultipleInvalidSequenceChannelException, InvalidSequenceChannelException
+
 
 '''
 TODO - 
@@ -48,18 +49,18 @@ class Sequence_UI(tk.Toplevel):
             self.withdraw()
         
         self.parent=parent
-        self.sequence_fname = sequence_fname
+        self.sequence_fname:str = sequence_fname
         self.sequence_reader = SequenceReader(self.sequence_fname)
-        self.sequence = self.sequence_reader.loadSequence()
-        self.configured_channel_labels = configured_channel_labels
-        self.configured_channel_calibrations = configured_channel_calibrations
+        self.sequence:Sequence = self.sequence_reader.loadSequence()
+        self.configured_channel_labels:Dict = configured_channel_labels
+        self.configured_channel_calibrations:Dict = configured_channel_calibrations
                 
         self.wm_title("Set sequence")
         
         self.configureForCurrentSequence()
         
         # Changes the close button to call my close function.
-        self.protocol('WM_DELETE_WINDOW', self.closeWindow);
+        self.protocol('WM_DELETE_WINDOW', self.closeWindow)
         
     def configureForCurrentSequence(self):
         '''This method creates, configures and draws all the elements of the UI that are dependent on the currently loaded sequence (as
@@ -149,7 +150,7 @@ class Sequence_UI(tk.Toplevel):
         # Check for empty filenames (i.e. when the user cancelled the action)
         if fname!= '':
             self.sequence_reader = SequenceReader(fname)
-            self.sequence = self.sequence_reader.loadSequence()
+            self.sequence:Sequence = self.sequence_reader.loadSequence()
             
             self.configureForCurrentSequence()
             
@@ -294,7 +295,7 @@ class Notes_UI(tk.Frame):
     
     def __init__(self, parent, sequence_reader):
         tk.Frame.__init__(self, parent)
-        self.sequence_reader = sequence_reader
+        self.sequence_reader:SequenceReader = sequence_reader
         
         self.seqNotes,  self.seqNotesFrame  = self.createSeqNotes()
         self.userNotes, self.userNotesFrame = self.createUserNotes()
@@ -572,10 +573,10 @@ class PopupEntry(object):
         
 class SequencePlot_UI(tk.LabelFrame):
     
-    def __init__(self, parent, sequence, sequence_channel_labels, text="Sequence preview", font=("Helvetica", 16), **kwargs):
+    def __init__(self, parent, sequence:Sequence, sequence_channel_labels:Dict, text="Sequence preview", font=("Helvetica", 16), **kwargs):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
 
-        self.sequence=sequence
+        self.sequence:Sequence=sequence
 
         self.fig, self.ax = plt.subplots()
         self.t = self.sequence.getTimeSteps()
@@ -637,40 +638,40 @@ class SequencePlot_UI(tk.LabelFrame):
         self.ax.legend(loc='upper left', bbox_to_anchor=(1.05, 1), ncol=1, borderaxespad=0, fontsize=12)
         self.fig.subplots_adjust(left=0.05, bottom=0.06, right=0.68, top=0.96)    
         return _InteractiveLegend(self, self.ax.legend_)
+    
+
+
 
 class _InteractiveLegend(object):
     def __init__(self, master, legend):
         self.master = master
         self.legend = legend
         self.fig = legend.axes.figure
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
 
-        '''Probably owe an explanation for this one...  Basically it's a monkey patch to overwrite the release
-        method for the Navigation Toolbar.  Every time a button is released when navigating we need to deselect
-        the toolbar action in order to still be able to click on the interactive legend.'''
-        def release(toolbar, event):
-            if toolbar._active == 'PAN': toolbar.pan()
-            elif toolbar._active == 'ZOOM': toolbar.zoom()
-        NavigationToolbar2TkAgg.release = release
-        
-        self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.master)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
+        self.toolbar = NavigationToolbar2Tk(self.canvas, self.master)
         self.toolbar.update()
 
         self.lookup_artist, self.lookup_handle = self._build_lookups(legend)
         self._setup_connections()
-
         self.update()
+
+        self._dragging_legend = False
+        self._drag_offset_y = 0
+        self._drag_anchor_x = 1.0
 
     def _setup_connections(self):
         handles, labels = self.legend.axes.get_legend_handles_labels()
         for artist in self.legend.texts + handles:
-            artist.set_picker(10) # 10 points tolerance
+            artist.set_picker(10)
 
         self.canvas.mpl_connect('pick_event', self.on_pick)
         self.canvas.mpl_connect('button_press_event', self.on_click)
+        self.canvas.mpl_connect('button_press_event', self.on_legend_press)
+        self.canvas.mpl_connect('motion_notify_event', self.on_legend_motion)
+        self.canvas.mpl_connect('button_release_event', self.on_legend_release)
 
     def _build_lookups(self, legend):
-        #labels = [t.get_text() for t in legend.texts]
         handles, labels = legend.axes.get_legend_handles_labels()
         label2handle = dict(zip(labels, handles))
         handle2text = dict(zip(handles, legend.texts))
@@ -690,8 +691,6 @@ class _InteractiveLegend(object):
         return lookup_artist, lookup_handle
 
     def on_pick(self, event):
-        if self.toolbar._active == 'PAN': self.toolbar.pan()
-        elif self.toolbar._active == 'ZOOM': self.toolbar.zoom()
         handle = event.artist
         if handle in self.lookup_artist:
             artist = self.lookup_artist[handle]
@@ -710,53 +709,54 @@ class _InteractiveLegend(object):
             artist.set_visible(visible)
         self.update()
 
+    def on_legend_press(self, event):
+        if self.legend.contains(event)[0]:
+            self._dragging_legend = True
+            bbox = self.legend.get_window_extent()
+            self._drag_offset_y = bbox.y0 - event.y
+            #fig_width = self.fig.get_size_inches()[0] * self.fig.dpi
+            #x_anchor = self.legend.get_bbox_to_anchor()._bbox.get_points()[-1][-1]
+            #self._drag_anchor_x = x_anchor
+
+    def on_legend_motion(self, event):
+        if self._dragging_legend and event.y is not None:
+            fig_width, fig_height = self.fig.get_size_inches()
+            fig_dpi = self.fig.dpi
+            fig_px = fig_width * fig_dpi, fig_height * fig_dpi
+
+            y = ((event.y - self._drag_offset_y) / fig_px[1])
+            y = max(0, min(2, y))  # clamp y between 0 and 1
+
+            x = self._drag_anchor_x
+
+            self.legend.set_bbox_to_anchor((x, y))
+            self.update()
+
+    def on_legend_release(self, event):
+        self._dragging_legend = False
+
     def update(self):
         for artist in self.lookup_artist.values():
             handle = self.lookup_handle[artist]
-            if artist.get_visible():
-                handle.set_visible(True)
-            else:
-                handle.set_visible(False)
+            handle.set_visible(artist.get_visible())
         self.fig.canvas.draw()
 
-    def show(self):    
+    def show(self):
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        
+
     def destroy(self):
         self.canvas.get_tk_widget().destroy()
         self.toolbar.destroy()
-         
-#     def refresh(self):
-#         '''So we destroy the canvases of the plot and get new ones.  Then we re-set up thr interactive legend
-#         connections.  The tol bar will still be synced to the old canvas so we destroy and resfesh that too.
-#         However in order to keep navigation history we make the _views and _positions stacks persist from the
-#         old toolbar to the new one.'''
-# #         self.canvas.get_tk_widget().destroy()
-# #         
-# #         self.canvas = FigureCanvasTkAgg(self.fig, master=self.master)
-# # 
-# #         self.lookup_artist, self.lookup_handle = self._build_lookups(self.legend)
-# #         self._setup_connections()
-# # 
-# #         views, positions, active = self.toolbar._views,  self.toolbar._positions, self.toolbar._active
-# #         self.toolbar.destroy()
-# #         self.toolbar = NavigationToolbar2TkAgg(self.canvas, self.master)
-# #         if active == 'PAN': self.toolbar.pan()
-# #         elif active == 'ZOOM': self.toolbar.zoom()
-# #         self.toolbar.update()
-# #         self.toolbar._views, self.toolbar._positions = views, positions
-# #             
-# #         self.update()
-# #         self.show()
+
          
 class ChannelEditor_UI(tk.Frame):
     
-    def __init__(self, parent, sequence, sequence_reader, sequence_channel_labels, configured_channel_calibrations, **kwargs):
+    def __init__(self, parent, sequence:Sequence, sequence_reader:SequenceReader, sequence_channel_labels:Dict, configured_channel_calibrations, **kwargs):
         tk.Frame.__init__(self, parent, **kwargs)
         
         self.parent=parent
-        self.sequence = sequence
+        self.sequence:Sequence = sequence
         self.sequence_channel_labels = sequence_channel_labels
         self.configured_channel_calibrations = configured_channel_calibrations
         

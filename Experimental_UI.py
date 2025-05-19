@@ -24,7 +24,7 @@ from Sequence_UI import Sequence_UI
 from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
-from ExperiementalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration
+from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration
 from abcoll import Sequence
 from atom.event import Event
 from win32inetcon import STICKY_CACHE_ENTRY
@@ -99,6 +99,18 @@ class Experimental_UI(tk.LabelFrame):
         icon = ImageTk.PhotoImage(icon)
         self.configure_abs_img_button = tk.Button(self, image=icon, width=25, height=25, command=self.absorbtionImagingConfigButton, background='deep sky blue')
         self.configure_abs_img_button.image = icon
+
+        # Flash channel button and settings
+        with Image.open("icons/play_icon.png") as img:
+            icon = ImageTk.PhotoImage(img.resize((30,30)))
+            self.flash_channel_button = tk.Button(self, image=icon, text="Flash channel", command=self.flash_channel, background='light salmon', **butt_opts)
+            self.flash_channel_button.image = icon # store the image as a variable in the widget to prevent garbage collection.
+        with Image.open("icons/config_icon.png") as img:
+            icon = ImageTk.PhotoImage(img.resize((30,30)))
+            self.configure_flash_channel_button = tk.Button(self, image=icon, width=25, height=25, command=self.configure_flash_channel, background='light salmon')
+            self.configure_flash_channel_button.image = icon
+        self.flash_channel_config = {"channel":-1, "duration":1, "low_val":0, "high_val":10, "repeats":10}
+        
         
         self.set_seq_button.grid(row=0,column=0,**grid_opts)
         self.run_seq_button.grid(row=1,column=0,**grid_opts)
@@ -111,6 +123,8 @@ class Experimental_UI(tk.LabelFrame):
         self.test_bkg_button.grid(row=0,column=2, **grid_opts)
         self.run_abs_img_button.grid(row=1,column=2, **grid_opts)
         self.configure_abs_img_button.grid(row=1,column=3, **grid_opts)
+        self.flash_channel_button.grid(row=2,column=2, **grid_opts)
+        self.configure_flash_channel_button.grid(row=2,column=3, **grid_opts)
         
         self.grid_columnconfigure(0, weight=1, uniform='button_col')
         self.grid_columnconfigure(1, weight=1)
@@ -142,8 +156,8 @@ class Experimental_UI(tk.LabelFrame):
         
         self.run_tone_awg = None
         #set channel 3 to DC Voltage
-        self.run_tone_freqs = [107.65*10**6, 78.5*10**6,1, 82.5*10**6]
-        self.run_tone_output_states= [False, False, False, False]
+        self.run_tone_freqs = [107.65*10**6, 78.5*10**6,1, 82.5*10**6, 2.6]
+        self.run_tone_output_states= [False, False, False, False, False]
         self.run_tone_buttons = []
         
         self.on_icon = ImageTk.PhotoImage(Image.open("icons/toggle_on_icon.png").resize((25,20)))
@@ -152,16 +166,23 @@ class Experimental_UI(tk.LabelFrame):
         def set_run_tone_freq(ch, freq):
             if ch==2:
                 self.run_tone_freqs[ch]=freq
+            elif ch == 4:
+                self.run_tone_freqs[ch] = freq
             else:
                 self.run_tone_freqs[ch]=freq*10**6
         
-        for i in range(4):
+        for i in range(5):
 
             #ch3 is set to DC voltage
             if i==2:
                 run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} Amplitude (V)'.format(i+1), initVal=self.run_tone_freqs[i], dataType=float,
                                                                helpText='The run tone amplitude in V.',
                                                                action = lambda entry_value, ch=i, f=set_run_tone_freq: f(ch, entry_value))
+            elif i==4:
+                run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'AWG trig. Amplitude (V)', initVal=self.run_tone_freqs[i], dataType=float,
+                                                               helpText='The AWG trigger amplitude in V.',
+                                                               action = lambda entry_value, ch=i, f=set_run_tone_freq: f(ch, entry_value))
+
             else:
                 run_tone_freq_frame = Frame_ExperimentalParam(rtf, 'channel{0} freq (MHz)'.format(i+1), initVal=self.run_tone_freqs[i]*10**-6, dataType=float,
                                                                helpText='The run tone frequency in MHz.',
@@ -233,25 +254,17 @@ class Experimental_UI(tk.LabelFrame):
     def runSeq(self, liveUI=True, autoCloseLiveUI=False):
         """
         Function to run experimental sequences when the "Run sequence" button is pressed.
-        DISABLED DUE TO INCORRECT DIRECTORY NAMING. NOW JUST DISPLAYS A WARNING.
         """
-
-        tkMessageBox.showwarning("Error", "This functionality has been disabled due to issues"\
-                                  " with directory naming.\nReenable with the runSeq function"\
-                                  " in Experimental_UI.py")
-        
-
-        # OLD CODE, CAN BE REENABLED BY UNCOMMENTING
-        # # If run tone is on, turn it off!
-        # for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
-        #     if state:
-        #         button.invoke()
+        # If run tone is on, turn it off!
+        for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
+            if state:
+                button.invoke()
                         
-        # experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
-        #                                         sequence=self.sequence_ui.sequence,
-        #                                         photon_production_configuration=self.photon_production_config)
+        experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
+                                                sequence=self.sequence_ui.sequence,
+                                                photon_production_configuration=self.photon_production_config)
         
-        # self.runExperiment(experiment, liveUI, autoCloseLiveUI)
+        self.runExperiment(experiment, liveUI, autoCloseLiveUI)
         
     def runAutomatedExp(self, liveUI=True):
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an Experimental Automation Configuration",
@@ -379,6 +392,18 @@ class Experimental_UI(tk.LabelFrame):
         self.winfo_toplevel().wait_window(absorbtion_imaging_review_UI)
 
     def toggleRunTone(self, button:tk.Button, i_ch):
+        if i_ch == 4:
+            daq_controller = self.daq_ui.daq_controller
+            daq_controller.updateChannelValue(14, 2.485)
+            daq_controller.updateChannelValue(8, 0.0048)
+            for i in range(100):
+                daq_controller.continuousOutput=True
+                daq_controller.updateChannelValue(22, 2.6) # for manual control of amplitude input (in V)
+                daq_controller.updateChannelValue(22, 0)
+                time.sleep(1)
+            return
+
+
         # No run_tone_awg configured, so make one and start the run tone
         channel = Channel.values()[i_ch]
 
@@ -485,6 +510,54 @@ class Experimental_UI(tk.LabelFrame):
 #         eng.addpath(eng.genpath(r'externals'), nargout=0)
 #         eng.motTempGUI()
 #         eng.quit()
+
+    def flash_channel(self):
+        channel = self.flash_channel_config['channel']
+        if channel == -1:
+            tkMessageBox.showwarning("Error", "No channel to flash configured.")
+            return
+        
+        num_name_dict = self.daq_ui.daq_controller.getChannelNumberNameDict()
+
+
+        print(f"Flashing channel {channel}, {num_name_dict[channel]}")
+
+        low_val = self.flash_channel_config['low_val']
+        high_val = self.flash_channel_config['high_val']
+        duration = self.flash_channel_config['duration']
+        repeats = self.flash_channel_config['repeats']
+
+        for i in range(repeats):
+            self.daq_ui.daq_controller.updateChannelValue(channel, low_val)
+            time.sleep(duration)
+            self.daq_ui.daq_controller.updateChannelValue(channel, high_val)
+            time.sleep(duration)
+            print(f"Flash number {i+1} complete")
+
+    def configure_flash_channel(self):
+        print("Configuring flash channel")
+        inputs = tk.simpledialog.askstring("Flash channel configuration", "Enter channel, duration (s), low value, high value, repeats (comma separated):")
+        if inputs:
+            inputs = inputs.split(',')
+            if len(inputs) != 5:
+                tkMessageBox.showwarning("Error", "Invalid number of inputs.")
+                return
+            try:
+                channel = int(inputs[0])
+                duration = float(inputs[1])
+                low_val = float(inputs[2])
+                high_val = float(inputs[3])
+                repeats = int(inputs[4])
+            except ValueError:
+                tkMessageBox.showwarning("Error", "Invalid input format.")
+                return
+            
+            self.flash_channel_config['channel'] = channel
+            self.flash_channel_config['duration'] = duration
+            self.flash_channel_config['low_val'] = low_val
+            self.flash_channel_config['high_val'] = high_val
+            self.flash_channel_config['repeats'] = repeats
+        
         
 class Frame_ExperimentalParam(tk.Frame):
     '''
@@ -2016,4 +2089,3 @@ class Count_rate_plot_live(tk.LabelFrame):
 #             self.canvas.update()
 #             self.canvas.flush_events()
         
-

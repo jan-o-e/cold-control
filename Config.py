@@ -7,9 +7,9 @@ Created on 22 Apr 2016
 from configobj import ConfigObj
 from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INPUT_LINE, Channel_P1A, Channel_P1B, Channel_P1C, Channel_P1CL, Channel_P1CH,\
     Channel_P2A
-#from instruments.WX218x.WX218x_awg import Channel
+from instruments.WX218x.WX218x_awg import Channel
 from Sequence import Sequence
-from ExperiementalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform, ExperimentalAutomationConfiguration, AutomatedExperimentConfiguration
+from ExperimentalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform, ExperimentSessionConfig , SingleExperimentConfig
 import time
 import os
 from mock import patch
@@ -225,6 +225,17 @@ class PhotonProductionReader(object):
     def __init__(self, fname):
         self.fname = fname
         self.config = ConfigObj(fname)
+
+    
+    def get_instruments(self):
+        """Method to return the instruments used for this automtated experiment.
+        """
+
+        try: instruments = self.config['instruments']
+        except KeyError:
+            raise KeyError("No instruments specified in the config file.")
+
+        return instruments
     
     def get_photon_production_configuration(self):
         
@@ -359,7 +370,7 @@ class ExperimentalAutomationReader(object):
         
         for _,v in sorted(self.config['experiments'].items()):
             automated_experiment_configurations.append(
-                AutomatedExperimentConfiguration(
+                SingleExperimentConfig(
                     daq_channel_static_values =  map(lambda x: (int(eval(x)[0]), float(eval(x)[1])), v['daq_channel_static_values']
                                                                 if v['daq_channel_static_values'] != []
                                                                 else []),
@@ -369,7 +380,7 @@ class ExperimentalAutomationReader(object):
                     mot_reload =  eval(v['mot_reload']),
                     modulation_frequencies =  map(float, v['modulation_frequencies'] if v['modulation_frequencies'] != [] else [])))
             
-        return ExperimentalAutomationConfiguration(
+        return ExperimentSessionConfig (
                     save_location = self.config['save_location'],
                     summary_fname = self.config['summary_fname'],
                     automated_experiment_configurations = automated_experiment_configurations,
@@ -618,7 +629,7 @@ def _makePhotonProductionConfig():
     
 def _makeSequenceConfig():
     config = ConfigObj()
-    config.filename = os.getcwd() + '/configs/sequence/sequenceConfig3DAQ'
+    config.filename = os.getcwd() + '/configs/sequence/abs_img/feb24_just_flash.ini'
     
     config['date'] = time.strftime("%d/%m/%y")
     config['time'] = time.strftime("%H:%M:%S")
@@ -998,8 +1009,8 @@ def __copy_scan_seq_params(channels_to_copy = [17],
     
 if __name__ == "__main__":
     pass
-
-    _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(87,91.1,0.2), cav_daq_channel = 10, iterations=150, mot_reload = 1000*10**3)
+    _makeSequenceConfig()
+    #_makeExperimentalAutomationConfig_cavityScan(cavity_freqs=np.arange(87,91.1,0.2), cav_daq_channel = 10, iterations=150, mot_reload = 1000*10**3)
 
 #     __copy_scan_seq_params(channels_to_copy=[17,21], base_seq_fname = r'cav_99_25')
 

@@ -3,7 +3,7 @@ import os
 import time
 
 from Config import ConfigReader, DaqReader
-from ExperiementalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
+from ExperimentalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
 from configobj import ConfigObj
 from lab_control_functions.awg_control_functions import run_awg
 
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     # Opens a new config file as a "config reader" object.
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
-    for i in range(1,10000):
+    for i in range(1,1000):
         daq_config_fname = config_reader.get_daq_config_fname()# gets the name of the config file for the DAQ cards
         daq_controller = DaqReader(daq_config_fname).load_DAQ_controller()# reads the config file to create a "daq reader" object
 
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         daq_controller.updateChannelValue(14, 2.485)
         daq_controller.updateChannelValue(8, 0.0048)
         daq_controller.releaseAll()
-        time.sleep(0.2)
+        time.sleep(1)
 
 '''waveform sequence = '[0,1,0,1],[2,5,2], [3], [4]'
 waveform stitch delays = '[-1,[3]],[-1,[3,0]],[1,[0,1,0,1]], [1,[0,1,0,1]]'
