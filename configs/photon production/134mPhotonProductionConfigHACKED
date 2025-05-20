@@ -6,6 +6,10 @@ iterations = 100
 waveform sequence = '[0,1,0,1,0,1,0,1,0,1],[2,2,2,2,2,2,2,2,2,3],[4,5,4,5,4,5,4,5,4,5]'
 waveform stitch delays = '[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]'
 interleave waveforms = True
+
+[metadata]
+experiment_type = "normal"
+
 [waveforms]
 [[0]]
 modulation frequency = 75250000
