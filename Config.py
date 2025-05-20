@@ -286,14 +286,14 @@ class PhotonProductionWriter(object):
         self.config = ConfigObj(fname)
     
 #     writer.save(self.sequence, self.sequence_channel_labels, self.seqEditor.global_timings, self.notesFrame.getUserNotes())
-    def save(self, photon_producion_config):
+    def save(self, photon_producion_config:PhotonProductionConfiguration):
             
         self.config['date'] = time.strftime("%d/%m/%y")
         self.config['time'] = time.strftime("%H:%M:%S")
         
         self.config['save location'] = photon_producion_config.save_location
-        self.config['mot reload'] = photon_producion_config.mot_reload_time
-        self.config['iterations'] = photon_producion_config.iteration
+        self.config['mot reload'] = photon_producion_config.mot_reload
+        self.config['iterations'] = photon_producion_config.iterations
         
         self.config['waveform sequence'] = photon_producion_config.waveform_sequence
         self.config['waveforms'] = photon_producion_config.waveforms
@@ -303,7 +303,7 @@ class PhotonProductionWriter(object):
         self.config['marker width'] = photon_producion_config.marker_width
         self.config['marker delay']= photon_producion_config.marker_delay
         
-        awg_config = photon_producion_config.awg_configuration
+        awg_config:AwgConfiguration = photon_producion_config.awg_configuration
         
         self.config['AWG'] = {}
         self.config['AWG']['sample rate'] = awg_config.sample_rate
@@ -346,7 +346,7 @@ class AbsorbtionImagingReader(object):
                  camera_trig_levs = toFloatTuple(self.config['camera_trig_levs']), imag_power_levs = toFloatTuple(self.config['imag_power_levs']), 
                  camera_pulse_width = float(self.config['camera_pulse_width']), imag_pulse_width = float(self.config['imag_pulse_width']),
                  t_imgs = toFloatList(self.config['t_imgs']), 
-                 mot_reload_time = float(self.config['mot_reload_time']), 
+                 mot_reload = float(self.config['mot_reload_time']), 
                  n_backgrounds = int(self.config['n_backgrounds']), bkg_off_channels = toIntList(self.config['bkg_off_channels']), 
                  cam_gain = int(self.config['cam_gain']), cam_exposure = int(self.config['cam_exposure']), 
                  cam_gain_lims = toIntTuple(self.config['cam_gain_lims']), cam_exposure_lims = toIntTuple(self.config['cam_exposure_lims']),
@@ -750,7 +750,7 @@ def _makeAbsorbtionImagingConfig():
     config['camera_pulse_width'] = 100
     config['imag_pulse_width'] = 5
     config['t_imgs'] = [5000]
-    config['mot_reload_time'] = 5000 * 10**3 # In us
+    config['mot_reload_time'] = 5000 * 10**3
     config['n_backgrounds'] = 3
     config['bkg_off_channels'] = [7]
     config['save_location'] = os.getcwd() + '/data/Absorbtion images/'
@@ -782,20 +782,20 @@ def _makeExperimentalAutomationConfig():
     config['experiments']['0'] = {'daq_channel_static_values' : [(10, 75.25)],
                                   'sequence_fname' : os.path.join(seq_folder, 'cav_75_25'),
                                   'iterations' : 50,
-                                  'mot_reload' : 1000*10**3, # in us
+                                  'mot_reload' : 1000*10**3,
                                   'modulation_frequencies' : []}
     
     config['experiments']['1'] = {'daq_channel_static_values' : [(10, 75.75)],
                                   'sequence_fname' : os.path.join(seq_folder, 'cav_75_75'),
                                   'iterations' : 50,
                                   'mot_reload' : 1000*10**3,
-                                  'modulation_frequencies' : []} # in us
+                                  'modulation_frequencies' : []}
     
     config['experiments']['2'] = {'daq_channel_static_values' : [(10, 76.25)],
                                   'sequence_fname' : os.path.join(seq_folder, 'cav_76_25'),
                                   'iterations' : 50,
                                   'mot_reload' : 1000*10**3,
-                                  'modulation_frequencies' : []} # in us
+                                  'modulation_frequencies' : []}
     
     config.write()
 
@@ -830,7 +830,7 @@ def _makeExperimentalAutomationConfig_cavityScan(cavity_freqs=[], cav_daq_channe
         config['experiments'][str(i)] = {'daq_channel_static_values' : [(cav_daq_channel, freq)],
                                       'sequence_fname' : os.path.join(seq_folder, 'CavLock_{0}'.format(str(freq).replace('.','_'))),
                                       'iterations' : iterations,
-                                      'mot_reload' : mot_reload, # in us
+                                      'mot_reload' : mot_reload, 
                                       'modulation_frequencies' : []}
         
         i += 1
@@ -866,7 +866,7 @@ def _makeExperimentalAutomationConfig_xBiasScan(x_biases = [], iterations=50, mo
             config['experiments'][str(i)] = {'daq_channel_static_values' : [],
                                           'sequence_fname' : os.path.join(seq_folder, '{0}A_xBias'.format(str(bias).replace('.','_'))),
                                           'iterations' : iterations,
-                                          'mot_reload' : mot_reload, # in us
+                                          'mot_reload' : mot_reload,
                                           'modulation_frequencies' : []}
             
             i += 1
@@ -903,7 +903,7 @@ def _makeExperimentalAutomationConfig_yBiasScan(y_biases = [], iterations=50, mo
             config['experiments'][str(i)] = {'daq_channel_static_values' : [],
                                           'sequence_fname' : os.path.join(seq_folder, '{0}A_yBias'.format(str(bias).replace('.','_'))),
                                           'iterations' : iterations,
-                                          'mot_reload' : mot_reload, # in us
+                                          'mot_reload' : mot_reload, 
                                           'modulation_frequencies' : []}
             
             i += 1
@@ -940,7 +940,7 @@ def _makeExperimentalAutomationConfig_zBiasScan(z_biases = [], iterations=500, m
             config['experiments'][str(i)] = {'daq_channel_static_values' : [],
                                           'sequence_fname' : os.path.join(seq_folder, '{0}A_zBias'.format(str(bias).replace('.','_'))),
                                           'iterations' : iterations,
-                                          'mot_reload' : mot_reload, # in us
+                                          'mot_reload' : mot_reload,
                                           'modulation_frequencies' : []}
             
             i += 1
@@ -972,7 +972,7 @@ def _makeExperimentalAutomationConfig_stirapFreqScan(stirap_freqs=[], iterations
         config['experiments'][str(i)] = {'daq_channel_static_values' : [],
                                          'sequence_fname' : seq_loc,
                                          'iterations' : iterations,
-                                         'mot_reload' : mot_reload, # in us
+                                         'mot_reload' : mot_reload,
                                          'modulation_frequencies' : freqs}
         
         i += 1

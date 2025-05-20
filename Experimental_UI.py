@@ -25,7 +25,7 @@ from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
 from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration, GenericConfiguration,\
-    AwgConfiguration, TdcConfiguration, Waveform
+    AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration, MotFluoresceExperiment
 
 from abcoll import Sequence
 from atom.event import Event
@@ -89,9 +89,9 @@ class Experimental_UI(tk.LabelFrame):
         self.total_iterations_frame = Frame_ExperimentalParam(self, 'Num. iterations', initVal=self.photon_production_config.iterations, dataType=int,
                                                        helpText='The number of times the experimental sequence will be run.',
                                                        action = lambda entry_value: self.photon_production_config.set_iterations(entry_value))
-        self.reload_time_frame = Frame_ExperimentalParam(self, 'MOT reload time (ms):', initVal = self.photon_production_config.mot_reload*10**-3, dataType=float,
+        self.reload_time_frame = Frame_ExperimentalParam(self, 'MOT reload time (ms):', initVal = self.photon_production_config.mot_reload, dataType=float,
                                                        helpText='The delay between successive iterations.',
-                                                       action = lambda entry_value: self.photon_production_config.set_mot_reload(entry_value*10**3))
+                                                       action = lambda entry_value: self.photon_production_config.set_mot_reload(entry_value))
         
         icon = Image.open("icons/play_icon.png").resize((30,30))
         icon = ImageTk.PhotoImage(icon)
@@ -266,13 +266,27 @@ class Experimental_UI(tk.LabelFrame):
         for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
             if state:
                 button.invoke()
-                        
-        experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
-                                                sequence=self.sequence_ui.sequence,
-                                                photon_production_configuration=self.photon_production_config)
-        
+
+        if isinstance(self.photon_production_config, PhotonProductionConfiguration):
+            # If the experiment loaded is a photon production experiment, run the code as normal
+            experiment = PhotonProductionExperiment(daq_controller=self.daq_ui.daq_controller,
+                                                    sequence=self.sequence_ui.sequence,
+                                                    photon_production_configuration=self.photon_production_config)
+            
+
+        elif isinstance(self.photon_production_config, MotFluoresceConfiguration):
+            experiment = MotFluoresceExperiment(daq_controller=self.daq_ui.daq_controller,
+                                                sequence = self.sequence_ui.sequence,
+                                                mot_fluoresce_configuration=self.photon_production_config)
+            # The mot fluoresce experiment is a special case where the Live UI is not set up.
+            liveUI = False
+            autoCloseLiveUI = False
+
+        else:
+            raise Exception('Invalid experiment type specified.  Must be either PhotonProductionExperiment or MotFluoresceExperiment.')
+
         self.runExperiment(experiment, liveUI, autoCloseLiveUI)
-        
+            
     def runAutomatedExp(self, liveUI=True):
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an Experimental Automation Configuration",
                                              initialdir=os.path.join(os.getcwd(),"/configs/experimental automation"))
@@ -498,7 +512,7 @@ class Experimental_UI(tk.LabelFrame):
         self.total_iterations_frame.entryWid.delete(0, tk.END)
         self.total_iterations_frame.entryWid.insert(0, self.photon_production_config.iterations)
         self.reload_time_frame.entryWid.delete(0, tk.END)
-        self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload*10**-3)
+        self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload)
            
     def absorbtionImagingConfigButton(self):
         config_UI = Absorbtion_imaging_configuration_UI(self,
@@ -737,10 +751,10 @@ class Photon_production_configuration_UI(object):
                                                    action= lambda entry_value: self.php_c.set_iterations(entry_value)))
         gen_widgets.append(Frame_ExperimentalParam(gen_frame,
                                                    label='MOT reload (ms):',
-                                                   initVal=self.php_c.mot_reload*10**-3,
+                                                   initVal=self.php_c.mot_reload,
                                                    dataType=float,
                                                    helpText='How long the MOT is loaded for.',
-                                                   action= lambda entry_value: self.php_c.set_mot_reload(entry_value*10**3)))
+                                                   action= lambda entry_value: self.php_c.set_mot_reload(entry_value)))
         
         
         ##############################################################################
@@ -1006,7 +1020,7 @@ class Absorbtion_imaging_configuration_UI(object):
         
         labels.append(u'MOT reload time (ms):')
         mot_reload_time_wid = e = tk.Entry(frame)
-        e.insert(0, self.c.mot_reload_time * 10**-3) # convert from us to ms
+        e.insert(0, self.c.mot_reload_time)
         widgets.append(e)
         fns_to_bind.append(lambda event: self.mot_reload_time_focus_out(event.widget))
         
@@ -1329,13 +1343,13 @@ class Absorbtion_imaging_configuration_UI(object):
             if new_mot_reload_time < 0:
                 raise ValueError
             # If we reach this point, everything was sucessful so update the stored values.
-            self.c.mot_reload_time = new_mot_reload_time* 10**3 #convert from ms to us
+            self.c.mot_reload_time = new_mot_reload_time# in ms
         # If there was an error while converting the entered text to the correct form, catch it and flash red.
         except (NameError, ValueError, SyntaxError, TypeError):
             flash_col = 'red'
         # Update the display text and flash the widget accordingly.
         widget.delete(0, tk.END)
-        widget.insert(0, self.c.mot_reload_time*10**-3) #convert from us to ms
+        widget.insert(0, self.c.mot_reload_time) #in ms
         widget.config(bg=flash_col)
         widget.after(500, lambda: widget.configure(bg='white'))
         

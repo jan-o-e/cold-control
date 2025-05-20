@@ -5,61 +5,61 @@ daq_channel_update_delay = 1
 [experiments]
 [[0]]
 daq_channel_static_values = "(10, 90.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_90_25
 [[1]]
 daq_channel_static_values = "(10, 91.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_91_25
 [[2]]
 daq_channel_static_values = "(10, 92.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_92_25
 [[3]]
 daq_channel_static_values = "(10, 93.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_93_25
 [[4]]
 daq_channel_static_values = "(10, 94.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_94_25
 [[5]]
 daq_channel_static_values = "(10, 95.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_95_25
 [[6]]
 daq_channel_static_values = "(10, 96.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_96_25
 [[7]]
 daq_channel_static_values = "(10, 97.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_97_25
 [[8]]
 daq_channel_static_values = "(10, 98.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_98_25
 [[9]]
 daq_channel_static_values = "(10, 99.25)",
-mot_reload = 1000000
+mot_reload = 1000
 modulation_frequencies = ,
 iterations = 500
 sequence_fname = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\photon production\Juan_Trial\cav_99_25

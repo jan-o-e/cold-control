@@ -215,7 +215,7 @@ class GenericConfiguration:
                  iterations,):
         
         self._save_location = save_location
-        self._mot_reload = mot_reload
+        self._mot_reload = mot_reload# in milliseconds
         self._iterations = iterations
 
     
@@ -224,6 +224,7 @@ class GenericConfiguration:
     iterations = make_property('_iterations')
 
     def set_mot_reload(self, value):
+        """Sets the value of the MOT reload time in milliseconds."""
         self._mot_reload = value
     
     def set_iterations(self, value):
@@ -286,7 +287,7 @@ class PhotonProductionConfiguration(GenericConfiguration):
     tdc_configuration = make_property('_tdc_configuration')
 
 
-class AbsorbtionImagingConfiguration(object):
+class AbsorbtionImagingConfiguration(GenericConfiguration):
     '''
     This object stores and presents for editing the settings for absorbtion imaging experiments.
         
@@ -296,7 +297,7 @@ class AbsorbtionImagingConfiguration(object):
         camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
         camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
         t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
-        mot_reload_time - The MOT reload time in us
+        mot_reload_time - The MOT reload time in ms
         bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
         n_backgrounds - The number of background images to take for each absorbtion image.
         cam_gain - The gain setting for the camera when taking the picture.
@@ -318,12 +319,13 @@ class AbsorbtionImagingConfiguration(object):
                  camera_trig_levs, imag_power_levs, 
                  camera_pulse_width, imag_pulse_width,
                  t_imgs, 
-                 mot_reload_time, 
+                 mot_reload, 
                  n_backgrounds, bkg_off_channels, 
                  cam_gain, cam_exposure, 
                  cam_gain_lims, cam_exposure_lims,
                  save_location,
-                 save_raw_images, save_processed_images, review_processed_images):
+                 save_raw_images, save_processed_images, review_processed_images, iterations=1):
+        super().__init__(save_location, mot_reload, iterations)
         
         self.scan_abs_img_freq = scan_abs_img_freq
         self.abs_img_freq_ch = abs_img_freq_ch
@@ -335,7 +337,7 @@ class AbsorbtionImagingConfiguration(object):
         self.camera_pulse_width = camera_pulse_width
         self.imag_pulse_width = imag_pulse_width
         self.t_imgs = t_imgs
-        self.mot_reload_time = mot_reload_time
+        self.mot_reload_time = mot_reload
         self.n_backgrounds = n_backgrounds
         self.bkg_off_channels = bkg_off_channels
         self.cam_gain = cam_gain
@@ -346,10 +348,6 @@ class AbsorbtionImagingConfiguration(object):
         self.save_raw_images = save_raw_images
         self.save_processed_images = save_processed_images
         self.review_processed_images = review_processed_images
-
-
-
-
 
 """
 class SingleExperimentConfig(object):
@@ -458,30 +456,63 @@ class SingleExperimentConfig(GenericConfiguration):
     sequence = make_property('_sequence')
     modulation_frequencies = make_property('_modulation_frequencies')
 
-class ExperimentalRunner(object):
+class GenericExperiment:
     '''
-    classdocs
+    A generic base class for all experiments.  This is not intended to be used directly, but is what other experiments should inherit from.
     '''
-    def __init__(self, daq_controller):
+    def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, configuration:GenericConfiguration):
         '''
         Constructor
         '''        
-        # Save the initial values on the DAQ channels so we can return to them later
         self.daq_controller = daq_controller
+        self.sequence = sequence
+        self.config = configuration
         
-        self.configure()
 
     def configure(self):
         raise NotImplementedError()
     
+    def daq_cards_on(self):
+        """
+        Function to turn on the DAQ card output.  This is required to run a sequence.
+        """
+        self.isDaqContinuousOutput = self.daq_controller.continuousOutput
+        if not self.isDaqContinuousOutput:
+            print("DAQ output must be on to run a sequence - turning it on.")
+            self.daq_controller.toggleContinuousOutput()
+    
     def run(self):
         raise NotImplementedError()
     
+    def daq_cards_off(self):
+        if self.isDaqContinuousOutput:
+            print("Returning to free running DAQ values.")
+            self.daq_controller.writeChannelValues()
+        else:
+            print("Reverting DAQ output to off.")
+            self.daq_controller.toggleContinuousOutput()
+            self.daq_controller.writeChannelValues()
+
     def close(self):
         raise NotImplementedError()
+
+    def run_in_thread(self, start_thread=True):
+        '''
+        Run the experiment with the experimental loop in a separate thread.
+        '''
+        def run_and_close():
+            self.run()
+            self.close()
+        
+        thread = threading.Thread(name='Cold Control Experiment Thread',
+                                  target=run_and_close)
+        
+        if start_thread:
+            thread.start()
+        return thread
     
 
-class AbsorbtionImagingExperiment(ExperimentalRunner):
+class AbsorbtionImagingExperiment(GenericExperiment):
         
     shutter_lag = 4.8 #The camera response time to the trigger.  Hard coded as it is a physical camera property.
      
@@ -495,9 +526,9 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             absorbtion_imaging_configuration - An instance of AbsorbtionImagingConfiguration.
         '''
         
-        self.daq_controller = daq_controller
-        self.sequence = sequence
-        self.config = c = absorbtion_imaging_configuration
+        super().__init__(daq_controller, sequence, absorbtion_imaging_configuration)
+        # the configuration object is called self.config
+        c:AbsorbtionImagingConfiguration = self.config
         self.results_ready = False # A flag to determine if the experiment has finished running and the results exist yet
         
         # Use the externally provided IC_ImagingControl instances if one is provided
@@ -572,7 +603,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 
         # It is important to properly close the camera before exiting, otherwise the computer can be crashed.
         finally:
-            self.__close()
+            self.close()
             
         return self.getResults()
     
@@ -586,7 +617,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         self.sequences: List[Sequence] = []
         self.bkg_sequences: List[Sequence] = []
 
-        c = self.config
+        c:AbsorbtionImagingConfiguration = self.config
 
         t_lag = AbsorbtionImagingExperiment.shutter_lag
 #         t_offset = AbsorbtionImagingExperiment.flash_offset
@@ -645,10 +676,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.bkg_sequences = self.bkg_sequences*len(c.abs_img_freqs)
             self.sequence_labels = new_labs
             
-        self.isDaqContinuousOutput = self.daq_controller.continuousOutput
-        if not self.isDaqContinuousOutput:
-            print("DAQ output must be on to run a sequence - turning it on.")
-            self.daq_controller.toggleContinuousOutput()
+        super().daq_cards_on()
 
      
     def __configureCamera(self):
@@ -698,8 +726,8 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
                 # Write the persistance values and wait for the MOT to reload
                 self.daq_controller.load(seq.getArray())
                 self.daq_controller.writeChannelValues()
-                print('Loading MOT for {0}s...'.format(self.config.mot_reload_time*10**-6))
-                sleep(self.config.mot_reload_time*10**-6) # convert from us to s 
+                print('Loading MOT for {0}ms...'.format(self.config.mot_reload))
+                sleep(self.config.mot_reload*10**-3) # convert from ms to s 
                 
                 if save_raw_images: 
                     # Make dirs for saving pictures
@@ -836,7 +864,7 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
         print('Returning absorbtion imaging results.', len(self.ave_bkg_arrs))
         return self.corr_img_arrs, self.ave_bkg_arrs, self.raw_images, self.sequence_labels
     
-    def __close(self):
+    def close(self):
         '''
         Perform any tidying up.
         '''
@@ -849,33 +877,31 @@ class AbsorbtionImagingExperiment(ExperimentalRunner):
             self.ic_ic.close_library()
         print('...closed')
     
-        if self.isDaqContinuousOutput:
-            print("Returing to free running DAQ values.")
-            self.daq_controller.writeChannelValues()
-        else:
-            print("Reverting DAQ output to off.")
-            self.daq_controller.toggleContinuousOutput()    
+        super().daq_cards_off()  
     
-class PhotonProductionExperiment(ExperimentalRunner):
+
+
+class PhotonProductionExperiment(GenericExperiment):
     
-    def __init__(self, daq_controller, sequence, photon_production_configuration):
-        self.daq_controller = daq_controller
-        self.sequence = sequence
-        
-        self.photon_production_config = c = photon_production_configuration
+    def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, photon_production_configuration:PhotonProductionConfiguration):
+        super().__init__(daq_controller, sequence, photon_production_configuration)
+        # the configuration object is a PhotonProductionConfiguration object and called self.config
+        self.photon_production_config:PhotonProductionConfiguration = self.config
         self.tdc_config = self.photon_production_config.tdc_configuration
         self.awg_config = self.photon_production_config.awg_configuration
+
+        c = self.config
         
         self.iterations = c.iterations
-        #why is this multiplied by e10e-6?
-        self.mot_reload_time = c.mot_reload*10**-6
-        print('MOT reload time (s)', self.mot_reload_time)
+        self.mot_reload_time = c.mot_reload# in ms
+        print('MOT reload time (ms)', self.mot_reload_time)
         self.is_live = False # Experiment is not running yet
         self.forced_stop = False # Flag for if the experiment is forcibly stopped early.
         self.data_queue = None # Queue to push data into
         
     def configure(self):
-        self.__configure_DAQ_cards()
+        super().daq_cards_on()
+        self.daq_controller.load(self.sequence.getArray())
         # Configure the awg and record the length of the waveform loaded onto it (in seconds)
         self.awg, self.waveform_length = self.__configure_awg()
         self.tdc = self.__configure_tdc()
@@ -915,7 +941,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
         while i <= self.iterations and self.is_live:
             print('iter: {0}'.format(i))
             
-            sleep(self.mot_reload_time)
+            sleep(self.mot_reload_time*10**-3) # convert from ms to s
             
             if tdc_read_thread: tdc_read_thread.join(timeout=5000)
 #             self.daq_controller.load(self.sequence.getArray()) # TODO: can we load only once at start?
@@ -944,20 +970,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
         if tdc_read_thread: tdc_read_thread.join(timeout=5000)
         self.tdc.enable_tdc_input(False)
 
-    def run_in_thread(self, start_thread=True):
-        '''
-        Run the experiment with the experimental loop in a separate thread.
-        '''
-        def run_and_close():
-            self.run()
-            self.close()
-        
-        thread = threading.Thread(name='PhotonProductionExperiment_run',
-                                  target=run_and_close)
-        
-        if start_thread:
-            thread.start()
-        return thread
+
 
     def close(self):
         print("Closing connection to AWG..."),
@@ -976,13 +989,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
             print('Closing connection to TF930')
             self.counter.close()
 
-        if self.isDaqContinuousOutput:
-            print("Returning to free running DAQ values.")
-            self.daq_controller.writeChannelValues()
-        else:
-            print("Reverting DAQ output to off.")
-            self.daq_controller.toggleContinuousOutput()
-            self.daq_controller.writeChannelValues()    
+        super().daq_cards_off()
     
         print('Consolidating experimental data...',
         self.data_saver.combine_saves())
@@ -1005,13 +1012,7 @@ class PhotonProductionExperiment(ExperimentalRunner):
 #             f.write('{0},{1}\n'.format(*line))
 #         f.close()
         
-    def __configure_DAQ_cards(self):
-        self.isDaqContinuousOutput = self.daq_controller.continuousOutput
-        if not self.isDaqContinuousOutput:
-            print("DAQ output must be on to run a sequence - turning it on.")
-            self.daq_controller.toggleContinuousOutput()
         
-        self.daq_controller.load(self.sequence.getArray())
         
 
     def __configure_awg(self):
@@ -1335,11 +1336,46 @@ class PhotonProductionExperiment(ExperimentalRunner):
         
     def set_mot_reload_time(self, reload_time):
         '''
-        Sets the MOt reload time. Takes the reload_time in milliseconds.
+        Sets the MOT reload time. Takes the reload_time in milliseconds.
         '''
-        print('Setting reload_time to', reload_time)
-        self.mot_reload_time = reload_time*10**-3
+        print(f'Setting reload_time to {reload_time}ms')
+        self.mot_reload_time = reload_time
         
+
+class MotFluoresceExperiment(GenericExperiment):
+    def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
+                 mot_fluoresce_configuration:MotFluoresceConfiguration):
+        super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
+        # the configuration object is a MotFluoresceConfiguration object and called self.config
+        self.mot_fluoresce_config:MotFluoresceConfiguration = self.config
+
+    def configure(self):
+        super().daq_cards_on()
+        self.daq_controller.load(self.sequence.getArray())
+
+    def run(self):
+        self.daq_controller.load(self.sequence.getArray())
+        self.daq_controller.writeChannelValues()
+        i = 1
+
+        while i <= self.config.iterations:
+            print(f"Iteration {i}")
+            print(f"loading mot for {self.config.mot_reload}ms")
+            sleep(self.config.mot_reload*10**-3) # convert from ms to s
+
+            print("playing sequence")
+            self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+            print("writing channel values")
+            self.daq_controller.writeChannelValues()
+
+            i += 1
+
+        self.daq_controller.clearCards()
+
+    def close(self):
+        super().daq_cards_off()
+
+
 
 
 class PhotonProductionDataSaver(object):
