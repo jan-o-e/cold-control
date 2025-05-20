@@ -233,9 +233,10 @@ class PhotonProductionReader(object):
 
         try: expt_type = self.config['metadata']['experiment_type']
         except KeyError:
+            print("To fix this error you probably need to add a 'metadata' section to the config file. See C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\pulse_shaping_expt\photon_prod_config.ini")
             raise KeyError("No instruments specified in the config file.")
-
-        return expt_type
+        
+        return expt_type.lower()
     
     def get_photon_production_configuration(self):
         
@@ -268,6 +269,10 @@ class PhotonProductionReader(object):
                                                                  tdc_configuration = tdc_config)
 
         return photon_production_config
+    
+    def get_mot_flourescence_configuration(self):
+        #TODO
+        pass
     
 class PhotonProductionWriter(object):
     

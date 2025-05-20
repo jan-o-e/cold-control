@@ -35,7 +35,12 @@ from serial.serialutil import SerialException
 
 
 
-
+def make_property(attr_name):
+    return property(
+        fget=lambda self: getattr(self, attr_name),
+        fset=lambda self, value: setattr(self, attr_name, value),
+        fdel=lambda self: delattr(self, attr_name),
+    )
 
 """
 class ExperimentSessionConfig (object):
@@ -199,7 +204,34 @@ class ExperimentSessionConfig:
     def daq_channel_update_delay(self):
         del self._daq_channel_update_delay
 
-class PhotonProductionConfiguration:
+class GenericConfiguration:
+    """
+    GenericConfiguration is a placeholder for any configuration that doesn't fit into the other categories.
+    This class is not intended to be used directly but serves as a base for other configuration classes.
+    """
+    def __init__(self,
+                 save_location,
+                 mot_reload,
+                 iterations,):
+        
+        self._save_location = save_location
+        self._mot_reload = mot_reload
+        self._iterations = iterations
+
+    
+    save_location = make_property('_save_location')
+    mot_reload = make_property('_mot_reload')
+    iterations = make_property('_iterations')
+
+    def set_mot_reload(self, value):
+        self._mot_reload = value
+    
+    def set_iterations(self, value):
+        self._iterations = value
+
+
+
+class PhotonProductionConfiguration(GenericConfiguration):
     """
     PhotonProductionConfiguration stores all configuration parameters
     required for a photon production experiment.
@@ -223,9 +255,7 @@ class PhotonProductionConfiguration:
                  awg_configuration,
                  tdc_configuration):
         
-        self._save_location = save_location
-        self._mot_reload = mot_reload
-        self._iterations = iterations
+        super().__init__(save_location, mot_reload, iterations)
 
         self._waveform_sequence = waveform_sequence
         self.waveforms: List[Waveform] = waveforms
@@ -235,38 +265,6 @@ class PhotonProductionConfiguration:
         self._awg_configuration: AwgConfiguration = awg_configuration
         self._tdc_configuration: TdcConfiguration = tdc_configuration
 
-    # --- save_location ---
-    @property
-    def save_location(self):
-        return self._save_location
-    @save_location.setter
-    def save_location(self, value):
-        self._save_location = value
-    @save_location.deleter
-    def save_location(self):
-        del self._save_location
-
-    # --- mot_reload ---
-    @property
-    def mot_reload(self):
-        return self._mot_reload
-    @mot_reload.setter
-    def mot_reload(self, value):
-        self._mot_reload = value
-    @mot_reload.deleter
-    def mot_reload(self):
-        del self._mot_reload
-
-    # --- iterations ---
-    @property
-    def iterations(self):
-        return self._iterations
-    @iterations.setter
-    def iterations(self, value):
-        self._iterations = value
-    @iterations.deleter
-    def iterations(self):
-        del self._iterations
 
     # --- waveform_sequence ---
     @property
@@ -280,27 +278,9 @@ class PhotonProductionConfiguration:
     def waveform_sequence(self):
         del self._waveform_sequence
 
-    # --- awg_configuration ---
-    @property
-    def awg_configuration(self):
-        return self._awg_configuration
-    @awg_configuration.setter
-    def awg_configuration(self, value):
-        self._awg_configuration = value
-    @awg_configuration.deleter
-    def awg_configuration(self):
-        del self._awg_configuration
-
-    # --- tdc_configuration ---
-    @property
-    def tdc_configuration(self):
-        return self._tdc_configuration
-    @tdc_configuration.setter
-    def tdc_configuration(self, value):
-        self._tdc_configuration = value
-    @tdc_configuration.deleter
-    def tdc_configuration(self):
-        del self._tdc_configuration
+    
+    awg_configuration = make_property('_awg_configuration')
+    tdc_configuration = make_property('_tdc_configuration')
 
 
 class AbsorbtionImagingConfiguration(object):
@@ -363,6 +343,8 @@ class AbsorbtionImagingConfiguration(object):
         self.save_raw_images = save_raw_images
         self.save_processed_images = save_processed_images
         self.review_processed_images = review_processed_images
+
+
 
 
 
@@ -437,7 +419,7 @@ class SingleExperimentConfig(object):
     mot_reload_time = property(get_mot_reload_time, set_mot_reload_time, del_mot_reload_time, "mot_reload_time's docstring")
 #"""
 
-class SingleExperimentConfig:
+class SingleExperimentConfig(GenericConfiguration):
     """
     SingleExperimentConfig defines the configuration for a single automated experiment run.
     Previously called AutomatedExperimentConfiguration.
@@ -457,80 +439,21 @@ class SingleExperimentConfig:
                  sequence,
                  iterations,
                  mot_reload,
-                 modulation_frequencies):
+                 modulation_frequencies,
+                 save_location=None):
         
         self._daq_channel_static_values = daq_channel_static_values
         self._sequence_fname = sequence_fname
         self._sequence = sequence
-        self._iterations = iterations
-        self._mot_reload_time = mot_reload
         self._modulation_frequencies = modulation_frequencies
+        super().__init__(save_location, mot_reload, iterations)
 
-    # --- daq_channel_static_values ---
-    @property
-    def daq_channel_static_values(self):
-        return self._daq_channel_static_values
-    @daq_channel_static_values.setter
-    def daq_channel_static_values(self, value):
-        self._daq_channel_static_values = value
-    @daq_channel_static_values.deleter
-    def daq_channel_static_values(self):
-        del self._daq_channel_static_values
-
-    # --- sequence_fname ---
-    @property
-    def sequence_fname(self):
-        return self._sequence_fname
-    @sequence_fname.setter
-    def sequence_fname(self, value):
-        self._sequence_fname = value
-    @sequence_fname.deleter
-    def sequence_fname(self):
-        del self._sequence_fname
-
-    # --- iterations ---
-    @property
-    def iterations(self):
-        return self._iterations
-    @iterations.setter
-    def iterations(self, value):
-        self._iterations = value
-    @iterations.deleter
-    def iterations(self):
-        del self._iterations
-
-    # --- mot_reload_time ---
-    @property
-    def mot_reload_time(self):
-        return self._mot_reload_time
-    @mot_reload_time.setter
-    def mot_reload_time(self, value):
-        self._mot_reload_time = value
-    @mot_reload_time.deleter
-    def mot_reload_time(self):
-        del self._mot_reload_time
-
-    # --- sequence ---
-    @property
-    def sequence(self):
-        return self._sequence
-    @sequence.setter
-    def sequence(self, value):
-        self._sequence = value
-    @sequence.deleter
-    def sequence(self):
-        del self._sequence
-
-    # --- modulation_frequencies ---
-    @property
-    def modulation_frequencies(self):
-        return self._modulation_frequencies
-    @modulation_frequencies.setter
-    def modulation_frequencies(self, value):
-        self._modulation_frequencies = value
-    @modulation_frequencies.deleter
-    def modulation_frequencies(self):
-        del self._modulation_frequencies
+    daq_channel_static_values = make_property('_daq_channel_static_values')
+    sequence_fname = make_property('_sequence_fname')
+    iterations = make_property('_iterations')
+    mot_reload_time = make_property('_mot_reload_time')
+    sequence = make_property('_sequence')
+    modulation_frequencies = make_property('_modulation_frequencies')
 
 class ExperimentalRunner(object):
     '''
@@ -1991,6 +1914,10 @@ class Waveform:
     def get_t_length(self, sample_rate: float) -> float:
         """Returns the duration of the waveform at a given sample rate."""
         return len(self.data) * sample_rate
+    
+    def set_mod_frequency(self, value: float):
+        """Sets the modulation frequency."""
+        self.__mod_frequency = value
 
     # --- Properties ---
 
@@ -2001,7 +1928,7 @@ class Waveform:
     def fname(self, value: str):
         self.__fname = value
         self.data = self.__load_data()
-
+    
     @property
     def mod_frequency(self) -> float:
         return self.__mod_frequency
@@ -2080,47 +2007,25 @@ class AwgConfiguration:
                  marked_channels: List[int],
                  marker_width: int,
                  waveform_aom_calibrations_locations: Dict[int, Any]):
-        self.__sample_rate = sample_rate
-        self.__burst_count = burst_count
-        self.__waveform_output_channels = waveform_output_channels
+        self._sample_rate = sample_rate
+        self._burst_count = burst_count
+        self._waveform_output_channels = waveform_output_channels
 
         self.waveform_output_channel_lags = waveform_output_channel_lags
         self.marked_channels = marked_channels
         self.marker_width = marker_width
         self.waveform_aom_calibrations_locations = waveform_aom_calibrations_locations
 
-    @property
-    def sample_rate(self) -> float:
-        """Sampling rate used by the AWG."""
-        return self.__sample_rate
-    @sample_rate.setter
-    def sample_rate(self, value: float):
-        self.__sample_rate = value
-    @sample_rate.deleter
-    def sample_rate(self):
-        del self.__sample_rate
 
-    @property
-    def burst_count(self) -> int:
-        """Number of waveform bursts the AWG will produce."""
-        return self.__burst_count
-    @burst_count.setter
-    def burst_count(self, value: int):
-        self.__burst_count = value
-    @burst_count.deleter
-    def burst_count(self):
-        del self.__burst_count
+    sample_rate = make_property('_sample_rate')
+    burst_count = make_property('_burst_count')
+    waveform_output_channels = make_property('_waveform_output_channels')
 
-    @property
-    def waveform_output_channels(self) -> List[int]:
-        """List of output channels for waveform generation."""
-        return self.__waveform_output_channels
-    @waveform_output_channels.setter
-    def waveform_output_channels(self, value: List[int]):
-        self.__waveform_output_channels = value
-    @waveform_output_channels.deleter
-    def waveform_output_channels(self):
-        del self.__waveform_output_channels
+    def set_burst_count(self, value: int):
+        self._burst_count = value
+
+    def set_sample_rate(self, value: float):
+        self._sample_rate = value
 
 
 """
@@ -2175,40 +2080,17 @@ class TdcConfiguration:
                  counter_channels: List[int],
                  marker_channel: int,
                  timestamp_buffer_size: int):
-        self.__counter_channels = counter_channels
-        self.__marker_channel = marker_channel
-        self.__timestamp_buffer_size = timestamp_buffer_size
+        self._counter_channels = counter_channels
+        self._marker_channel = marker_channel
+        self._timestamp_buffer_size = timestamp_buffer_size
 
-    @property
-    def counter_channels(self) -> List[int]:
-        """List of TDC input channels used for counting."""
-        return self.__counter_channels
-    @counter_channels.setter
-    def counter_channels(self, value: List[int]):
-        self.__counter_channels = value
-    @counter_channels.deleter
-    def counter_channels(self):
-        del self.__counter_channels
+    counter_channels = make_property('_counter_channels')
+    marker_channel = make_property('_marker_channel')
+    timestamp_buffer_size = make_property('_timestamp_buffer_size')
 
-    @property
-    def marker_channel(self) -> int:
-        """Channel used to mark events or synchronize TDC acquisition."""
-        return self.__marker_channel
-    @marker_channel.setter
-    def marker_channel(self, value: int):
-        self.__marker_channel = value
-    @marker_channel.deleter
-    def marker_channel(self):
-        del self.__marker_channel
-
-    @property
-    def timestamp_buffer_size(self) -> int:
-        """Size of the internal buffer for storing timestamps."""
-        return self.__timestamp_buffer_size
-    @timestamp_buffer_size.setter
-    def timestamp_buffer_size(self, value: int):
-        self.__timestamp_buffer_size = value
-    @timestamp_buffer_size.deleter
-    def timestamp_buffer_size(self):
-        del self.__timestamp_buffer_size
+    def set_counter_channels(self, value: List[int]):
+        self._counter_channels = value
+    
+    def set_marker_channel(self, value: int):
+        self._marker_channel = value
 

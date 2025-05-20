@@ -24,7 +24,9 @@ from Sequence_UI import Sequence_UI
 from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
-from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration
+from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration, GenericConfiguration,\
+    AwgConfiguration, TdcConfiguration, Waveform
+
 from abcoll import Sequence
 from atom.event import Event
 from win32inetcon import STICKY_CACHE_ENTRY
@@ -46,7 +48,7 @@ from tkinter import filedialog as tkFileDialog
 
 class Experimental_UI(tk.LabelFrame):
 
-    def __init__(self, parent, daq_ui:DAQ_UI, sequence_ui:Sequence_UI, photon_produciton_configuration_fname, absorbtion_imaging_config_fname,
+    def __init__(self, parent, daq_ui:DAQ_UI, sequence_ui:Sequence_UI, photon_production_config_fname, absorbtion_imaging_config_fname,
                  ic_imaging_control=None, text="Experimental Actions", font=("Helvetica", 16), development_mode=False, **kwargs):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
         
@@ -54,7 +56,12 @@ class Experimental_UI(tk.LabelFrame):
         self.daq_ui = daq_ui
         self.sequence_ui = sequence_ui
         self.absorbtion_imaging_config = AbsorbtionImagingReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
-        self.photon_production_config = PhotonProductionReader(photon_produciton_configuration_fname).get_photon_production_configuration()
+        photon_prod_reader = PhotonProductionReader(photon_production_config_fname)
+        self.photon_production_config = GenericConfiguration()
+        if photon_prod_reader.get_expt_type() == "normal":
+            self.photon_production_config = PhotonProductionReader(photon_production_config_fname).get_photon_production_configuration()
+        elif photon_prod_reader.get_expt_type() == "mot fluorescence":
+            self.photon_production_config = PhotonProductionReader(photon_production_config_fname).get_mot_flourescence_configuration()
         self.ic_ic = ic_imaging_control
         
         '''Add buttons to set and run the experimental sequence'''
@@ -83,7 +90,7 @@ class Experimental_UI(tk.LabelFrame):
                                                        helpText='The number of times the experimental sequence will be run.',
                                                        action = lambda entry_value: self.photon_production_config.set_iterations(entry_value))
         self.reload_time_frame = Frame_ExperimentalParam(self, 'MOT reload time (ms):', initVal = self.photon_production_config.mot_reload*10**-3, dataType=float,
-                                                       helpText='The delay between sucsessive iterations.',
+                                                       helpText='The delay between successive iterations.',
                                                        action = lambda entry_value: self.photon_production_config.set_mot_reload(entry_value*10**3))
         
         icon = Image.open("icons/play_icon.png").resize((30,30))
@@ -684,8 +691,10 @@ class Photon_production_configuration_UI(object):
         self.apply_changes = False
         
         self.photon_production_config = self.php_c = copy.copy(photon_production_configuration)
-        self.tdc_config = self.tdc_c = copy.copy(photon_production_configuration.tdc_configuration)
-        self.awg_config = self.awg_c = copy.copy(photon_production_configuration.awg_configuration)
+        self.tdc_config:TdcConfiguration = copy.copy(photon_production_configuration.tdc_configuration)
+        self.tdc_c = self.tdc_config
+        self.awg_config:AwgConfiguration = copy.copy(photon_production_configuration.awg_configuration)
+        self.awg_c = self.awg_config
       
         self.top = self.configureWindow(parent)
     
@@ -828,7 +837,7 @@ class Photon_production_configuration_UI(object):
             
             wfm_mod_freq_wid = Frame_ExperimentalParam(frame,
                                                        label='Mod. frequency (MHz):',
-                                                       initVal=wfm.get_mod_frequency()*10**-6,
+                                                       initVal=wfm.mod_frequency*10**-6,
                                                        dataType=float,
                                                        helpText='The frequency with which to modulate the waveform.',
                                                        action= lambda entry_value, wfm=wfm: wfm.set_mod_frequency(entry_value*10**6))
@@ -855,12 +864,12 @@ class Photon_production_configuration_UI(object):
     
         return top
 
-    def loadWaveform(self, wfm, wfm_fname_wid):
+    def loadWaveform(self, wfm:Waveform, wfm_fname_wid):
         fname = tkFileDialog.askopenfilename(master=self.top, title="Load a sequence", initialdir="waveforms")
         
         # Check for empty filenames (i.e. when the user cancelled the action)
         if fname!= '':
-            wfm.set_fname(fname)
+            wfm.fname = fname
             wfm_fname_wid.updateEntry(fname)
             
         # Seems to be a tkinter bug that the parent is shown on top after a file dialog - so let's fix that
@@ -1522,7 +1531,7 @@ class Absorbtion_imaging_configuration_UI(object):
 
 class Photon_produduction_live_UI(tk.Toplevel):
       
-    def __init__(self, parent, photon_produciton_experiment, auto_close=False, **kwargs):
+    def __init__(self, parent, photon_production_experiment:PhotonProductionExperiment, auto_close=False, **kwargs):
         '''
         This object the abosrbtion images taken and offers the user the chance to save them with notes or discard them.
         '''
@@ -1530,9 +1539,9 @@ class Photon_produduction_live_UI(tk.Toplevel):
         
         self.auto_close = auto_close
         
-        self.photon_production_experiment = photon_produciton_experiment
+        self.photon_production_experiment = photon_production_experiment
 #         self.data_hander = Photon_production_live_analysis(t_stirap_length=photon_produciton_experiment.waveform_length*10**6)
-        self.data_hander = Photon_production_buffered_data_handler(t_stirap_length = 0.5 * photon_produciton_experiment.waveform_length*10**6)
+        self.data_hander = Photon_production_buffered_data_handler(t_stirap_length = 0.5 * photon_production_experiment.waveform_length*10**6)
 
         # Configure the push function in the experimental runner so we can get data on the fly.
         self.photon_production_experiment.configure_data_queue(self.data_hander.data_queue)
@@ -1574,7 +1583,7 @@ class Photon_produduction_live_UI(tk.Toplevel):
 
         # add iterations entry
         self.total_iterations_frame = Frame_ExperimentalParam(self, 'Total iterations',
-                                                        initVal=photon_produciton_experiment.iterations,
+                                                        initVal=photon_production_experiment.iterations,
                                                         dataType=int,
                                                         helpText='The number of times the experimental sequence will be run.',
                                                         action = lambda n_iters: self.photon_production_experiment.set_iterations(n_iters))
@@ -1583,8 +1592,8 @@ class Photon_produduction_live_UI(tk.Toplevel):
         self.reload_time_frame = Frame_ExperimentalParam(self, 'MOT reload time (s):',
                                                          initVal = self.photon_production_experiment.mot_reload_time,
                                                          dataType=float,
-                                                         helpText='The delay between sucsessive iterations.')
-#                                                          action = lambda reload_time: self.photon_production_experiment.set_mot_reload_time(reload_time))
+                                                         helpText='The delay between sucsessive iterations.',
+                                                        action = lambda reload_time: self.photon_production_experiment.set_mot_reload_time(reload_time))
 
         # add basic analytics (e.g. count rate)
         self.count_rate_wid = tk.Entry(self, width=10, font = "Helvetica 44 bold")
