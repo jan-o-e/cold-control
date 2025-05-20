@@ -227,15 +227,15 @@ class PhotonProductionReader(object):
         self.config = ConfigObj(fname)
 
     
-    def get_instruments(self):
-        """Method to return the instruments used for this automtated experiment.
+    def get_expt_type(self):
+        """Method to return the experiment type.
         """
 
-        try: instruments = self.config['instruments']
+        try: expt_type = self.config['metadata']['experiment_type']
         except KeyError:
             raise KeyError("No instruments specified in the config file.")
 
-        return instruments
+        return expt_type
     
     def get_photon_production_configuration(self):
         
