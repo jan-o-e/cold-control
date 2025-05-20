@@ -501,18 +501,22 @@ class Experimental_UI(tk.LabelFrame):
 
     
     def photonProductionConfigButton(self):
-        config_UI = Photon_production_configuration_UI(self,
-                                                       photon_production_configuration=self.photon_production_config
-                                                    )
-        self.winfo_toplevel().wait_window(config_UI.top)
-        # If the user asked for their changes to be applied, set the absorbtion imaging config accordingly.
-        if config_UI.apply_changes:
-            self.photon_production_config = config_UI.photon_production_config
-            
-        self.total_iterations_frame.entryWid.delete(0, tk.END)
-        self.total_iterations_frame.entryWid.insert(0, self.photon_production_config.iterations)
-        self.reload_time_frame.entryWid.delete(0, tk.END)
-        self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload)
+        if isinstance(self.photon_production_config, PhotonProductionConfiguration):
+            config_UI = Photon_production_configuration_UI(self,
+                                                        photon_production_configuration=self.photon_production_config
+                                                        )
+            self.winfo_toplevel().wait_window(config_UI.top)
+            # If the user asked for their changes to be applied, set the absorbtion imaging config accordingly.
+            if config_UI.apply_changes:
+                self.photon_production_config = config_UI.photon_production_config
+                
+            self.total_iterations_frame.entryWid.delete(0, tk.END)
+            self.total_iterations_frame.entryWid.insert(0, self.photon_production_config.iterations)
+            self.reload_time_frame.entryWid.delete(0, tk.END)
+            self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload)
+        else:
+            tkMessageBox.showwarning("Error", "Photon production config button not yet implemented for this experiment type.")
+            return
            
     def absorbtionImagingConfigButton(self):
         config_UI = Absorbtion_imaging_configuration_UI(self,
