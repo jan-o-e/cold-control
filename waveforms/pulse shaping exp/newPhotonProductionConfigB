@@ -3,7 +3,7 @@ time = 15:20:55
 save location = Z:/Results017_New/data
 mot reload = 500000
 iterations = 100000
-waveform sequence = "[0,1],[0,2],[3,5],[4,6,7]"
+waveform sequence = "[0,1],[9,2],[8,3,5],[4,6,7]"
 waveform stitch delays = "[-1,[]],[-1,[]],[1,[]],[1,[]]"
 interleave waveforms = True
 
@@ -11,7 +11,7 @@ interleave waveforms = True
 [[0]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_2500.csv
+filename = c:\Users\apc\Documents\marina\zeros\zero_3380.csv
 [[1]]
 modulation frequency = 107000000
 phases = ,
@@ -37,9 +37,18 @@ modulation frequency = 0
 phases = ,
 filename = c:\Users\apc\Documents\marina\zeros\zero_578.csv
 [[7]]
-modulation frequency = 79800000
+modulation frequency = 83500000
 phases = ,
 filename = c:\Users\apc\Documents\marina\flatg_20_ch4_12000.csv
+[[8]]
+modulation frequency = 0
+phases = ,
+filename = c:\Users\apc\Documents\marina\zeros\zero_189.csv
+[[9]]
+modulation frequency = 0
+phases = ,
+filename = c:\Users\apc\Documents\marina\zeros\zero_3148.csv
+
 
 
 
@@ -48,7 +57,7 @@ sample rate = 1000000000.0
 burst count = 10000
 waveform output channels = channel1, channel2, channel3, channel4
 waveform output channel lags = 0.015, 0, 0, 0
-marked channels = channel1,
+marked channels = channel4,
 marker width = 0.1
 waveform aom calibrations locations = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/stirap_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/depump_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg, C:\Users\apc\Documents\Python Scripts\Cold Control Heavy/calibrations/repump_awg
 
