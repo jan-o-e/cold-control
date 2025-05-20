@@ -57,7 +57,7 @@ class Experimental_UI(tk.LabelFrame):
         self.sequence_ui = sequence_ui
         self.absorbtion_imaging_config = AbsorbtionImagingReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
         photon_prod_reader = PhotonProductionReader(photon_production_config_fname)
-        self.photon_production_config = GenericConfiguration(None, None, None)
+        self.photon_production_config: GenericConfiguration = None
         if photon_prod_reader.get_expt_type() == "normal":
             self.photon_production_config = PhotonProductionReader(photon_production_config_fname).get_photon_production_configuration()
         elif photon_prod_reader.get_expt_type() == "mot fluorescence":

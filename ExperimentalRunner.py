@@ -229,6 +229,9 @@ class GenericConfiguration:
     def set_iterations(self, value):
         self._iterations = value
 
+class MotFluoresceConfiguration(GenericConfiguration):
+    def __init__(self, save_location, mot_reload, iterations):
+        super().__init__(save_location, mot_reload, iterations)
 
 
 class PhotonProductionConfiguration(GenericConfiguration):

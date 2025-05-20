@@ -9,7 +9,9 @@ from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INP
     Channel_P2A
 from instruments.WX218x.WX218x_awg import Channel
 from Sequence import Sequence
-from ExperimentalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform, ExperimentSessionConfig , SingleExperimentConfig
+from ExperimentalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration,\
+      AwgConfiguration, TdcConfiguration, Waveform, ExperimentSessionConfig , SingleExperimentConfig,\
+      MotFluoresceConfiguration
 import time
 import os
 from mock import patch
@@ -271,8 +273,11 @@ class PhotonProductionReader(object):
         return photon_production_config
     
     def get_mot_flourescence_configuration(self):
-        #TODO
-        pass
+        mot_fluoresce_config = MotFluoresceConfiguration(save_location= self.config['save location'],
+                                                         mot_reload= eval(self.config['mot reload']),
+                                                         iterations= int(self.config['iterations']))
+        return mot_fluoresce_config
+        
     
 class PhotonProductionWriter(object):
     
