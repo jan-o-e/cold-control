@@ -1354,6 +1354,10 @@ class MotFluoresceExperiment(GenericExperiment):
     def configure(self):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
+        self.scope = osc.oscilloscope_manager()
+        self.scope.configure_scope(timebase_range=1e-6, centered_0=False)
+
+
 
     def run(self):
         self.daq_controller.load(self.sequence.getArray())
@@ -1361,25 +1365,37 @@ class MotFluoresceExperiment(GenericExperiment):
         i = 1
 
         while i <= self.config.iterations:
+            print("connecting to scope")
+
+
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
+            #self.scope.configure_scope(1e9, )
+            self.scope.set_to_run()
+            self.scope.set_to_digitize()
+
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
 
+            print("waiting for sequence to finish")
+            sleep(1.5) # wait for 1.5s for the scope
+            
+            #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
+            print("collecting data")
+            collected_data, filename = self.scope.acquire_with_trigger_multichannel([1,2], save_file=True, window='A')
+            #self.scope.set_to_run()
+            time.sleep(0.5)
+            
             print("writing channel values")
             self.daq_controller.writeChannelValues()
 
-            print("collecting data")
-            rm = visa.ResourceManager('@py') 
-            test = osc.oscilloscope_manager()
-            collected_data, filename = test.acquire_with_trigger_multichannel([1,2], samp_rate=1e9, timebase_range=16e-6, save_file=True, window='A', centered_0=False)
 
             i += 1
 
         self.daq_controller.clearCards()
-        test.quit()
+        self.scope.quit()
 
     def close(self):
         super().daq_cards_off()
@@ -1565,7 +1581,182 @@ class PhotonProductionDataSaver(object):
             print('__log: Can not write. No log file exists.')
 
 
+class MOTFluorescenceDataSaver(object):
+    '''
+    This object takes raw data from the PD Measuring MOT fluorescnece, parses it into our desired format and saves
+    it to file.  It also enables all of the parsing/saving to be done in a separate thread
+    so as to not hold up the experiment.
+    '''
+    def __init__(self, scope_timebase, scope_marker_channel, save_location, data_queue=None, create_log=False):
+        '''
+        Initialise the object with the information it will need for saving.
+        '''
+        self.scope_timebase = scope_timebase
+        self.scope_marker_channel = scope_marker_channel
+        
+        self.experiment_time = time.strftime("%H-%M-%S")
+        self.experiment_date = time.strftime("%y-%m-%d")
+        
+        self.save_location = os.path.join(save_location, self.experiment_date, self.experiment_time)
+        self.save_location_raw = os.path.join(self.save_location, 'raw')
+        
+        if not os.path.exists(self.save_location):
+            os.makedirs(self.save_location)
+        if not os.path.exists(self.save_location_raw):
+            os.makedirs(self.save_location_raw)
+            
+        if create_log:
+            self.log_file = os.path.join(self.save_location, 'log.txt')
+            print('Log file at {0}'.format(self.log_file))
+        else:
+            self.log_file = None
+                
+        self.data_queue = data_queue
+            
+        self.threads = []
+        
+    def save_in_thread(self,timestamps, channels, valid, throw_number):
+        '''
+        Save the data in a new thread.
+        '''
+        thread = threading.Thread(name='Throw {0} save'.format(throw_number),
+                                  target=self.__save,
+                                  args=(timestamps, channels, valid, throw_number))
+        thread.start()
+        self.threads.append(thread)
+        return thread
+    
+    def log_in_thread(self, log_input, throw_number):
+        thread = threading.Thread(name='Throw {0} save'.format(throw_number),
+                                  target=self.__log,
+                                  args=(log_input, throw_number))
+        thread.start()
+        self.threads.append(thread)
+        return thread
+        
+    def combine_saves(self):
+        '''
+        Combine all the individual files from each MOT throw into a single file.
+        '''
+        t = 0
+        # Check only the main thread is still running i.e. nothing is stills saving.
+        while True in [thread.is_alive() for thread in self.threads]:
+            time.sleep(1)
+            t+=1
+            if t>60:
+                print("Timed-out waiting for save-threads to finish. Abandoning combine_saves().")
+                return
+            
+        combined_file = open(os.path.join(self.save_location, self.experiment_time + '.txt'), 'w')
+        for fname in os.listdir(self.save_location_raw):
+            if fname.endswith(".txt"):
+                data_file = open(os.path.join(self.save_location_raw, fname))
+                combined_file.write(data_file.read())
+                data_file.close()
+                combined_file.write('nan,nan,nan,nan\n') # Batman!
+        combined_file.close()
+        
+    def __save(self, timestamps, channels, valid, throw_number):
+        '''
+        Save the data returned from the TDC.
+        '''
+        print('__save iter', throw_number)
+        
+        t = time.time()
+#         print 'Num markers:', channels.tolist().count(self.tdc_marker_channel)
+        try:
+#             marker_index = channels.tolist().index(self.tdc_marker_channel)
+            first_marker_index = next(i for i,elm in enumerate(channels.tolist()) if elm==self.tdc_marker_channel)
+            last_marker_index  = next(len(channels)-1-i for i,elm in enumerate(reversed(channels.tolist())) if elm==self.tdc_marker_channel)
+        except ValueError as err:
+            print("__save(throw={0}) Nothing measured on marker channel - so nothing to save.".format(throw_number))
+            print(err)
+            return
+        print('__save: found first marker index ({0} sec)'.format(time.time()-t))
+        x_0 = timestamps[first_marker_index]
+#         t_mot_0 = x_0*self.tdc_timebase
+#         timestamps = [(x-x_0)*self.tdc_timebase for x in timestamps[marker_index+1:] if x >= 0]
+#         channels = [x for x in channels[marker_index+1:] if x >= 0]
+        
+        # This step essentially does two things:
+        #     1. Converts all the timestamps to picoseconds by *tdc_timebase.
+        #     2. Makes t=0 be the time of the initial marker pulse, i.e. writes
+        #        all timestamps in terms of the so-called mot-time.
+        t = time.time()
+        timestamps = [(x-x_0)*self.tdc_timebase for x in timestamps[first_marker_index:last_marker_index+1]]
+        channels = channels[first_marker_index:last_marker_index+1]
+#         print 'create temp data dump'
+#         t = open(os.path.join(self.save_location, 'temp.txt'), 'w')
+#         for line in zip(timestamps, channels):
+#             t.write('{0},{1}\n'.format(*line))
+#         t.close()
+#         
+        print('__save: selected valid timestamps and channels')
+        t = time.time()
+        pulse_number = 0
+        data = []
+        data_buffer = []
+#         sti_lens = []
 
+        try:
+            for t, ch in zip(timestamps, channels):
+                if ch == self.tdc_marker_channel:
+#                     print 'MARKER', t, ch
+                    t_stirap_0 = t
+                    pulse_number += 1
+                    data += data_buffer
+    #                 sti_lens.append(len(data_buffer))
+                    data_buffer = []
+                else:
+#                     print 'DATA', t, ch
+                    data_buffer.append((ch, t-t_stirap_0, t, pulse_number))
+        except _tkinter.TclError as err:
+            print(t, ch)
+            raise err
+        
+        if pulse_number > 25000:
+            print('__save: Too many pulses recorded ({0}) - returning.'.format(pulse_number))
+            return
+        
+#         print len(data), sti_lens
+        print('__save: creating file')
+        f = open(os.path.join(self.save_location_raw, '{0}.txt'.format(throw_number)), 'w')
+        print('__save: writing file')
+        for line in data:
+            f.write('{0},{1},{2},{3}\n'.format(*line))
+        print('__save: closing file')
+        f.close()
+        
+        # If a push data function is configured, throw it now
+        if self.data_queue:
+            print('Queuing  data')
+            self.data_queue.put((throw_number, data))
+        
+        print('iter {0}: counts {1}, pulses recorded {2}'.format(throw_number, len(data), pulse_number))
+
+    def __log(self, log_input, throw_number):
+        if self.log_file != None:
+            print('__log: writing to log')
+            
+            if callable(log_input):
+                log_input = log_input()
+            if type(log_input) in [list, tuple]:
+                def flatten(l):
+                    for el in l:
+                        if isinstance(el, collections.Iterable) and not isinstance(el, str):# replaced basestring with str as an update from python 2 python 3. See
+                            # https://stackoverflow.com/questions/60743762/basestring-equivalent-in-python3-str-and-string-types-from-future-and-six-not
+                            for sub in flatten(el):
+                                yield sub
+                        else:
+                            yield el
+                log_input = ' '.join([str(x) for x in flatten([x() if callable(x) else x for x in log_input])])
+
+            f = open(self.log_file, 'w')
+            f.write('Throw {0}: {1}\n'.format(throw_number, log_input))
+            f.close()
+            print('__log: closed log file')
+        else:
+            print('__log: Can not write. No log file exists.')
 
 
 """

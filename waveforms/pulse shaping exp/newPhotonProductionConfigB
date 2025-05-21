@@ -11,50 +11,50 @@ interleave waveforms = True
 [[0]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_3380.csv
+filename =C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\zeros\zero_3380.csv
 [[1]]
 modulation frequency = 107000000
 phases = ,
-filename = c:\Users\apc\Documents\marina\04_apr\29-04\pulse 1\0.2\pump\x_optimized_6_0.6.csv 
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\pump_optimized_6_0.6.csv 
 [[2]]
 modulation frequency = 78500000
 phases = ,
-filename = c:\Users\apc\Documents\marina\03_mar\06-03\0.25\stokes\x_optimized_1.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\stokes_optimized_46_0.6.csv
 [[3]]
 modulation frequency = 62350000
 phases = ,
-filename = c:\Users\apc\Documents\marina\flatg_20_ch4_3000.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\flatg_20_ch4_3000.csv
 [[4]]
 modulation frequency = 82500000
 phases = ,
-filename = c:\Users\apc\Documents\marina\flatg_20_ch4_3000.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\flatg_20_ch4_3000.csv
 [[5]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_578.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marinaa\zeros\zero_578.csv
 [[6]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_578.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\zeros\zero_578.csv
 [[7]]
 modulation frequency = 83500000
 phases = ,
-filename = c:\Users\apc\Documents\marina\flatg_20_ch4_12000.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\flatg_20_ch4_12000.csv
 [[8]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_189.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\zeros\zero_189.csv
 [[9]]
 modulation frequency = 0
 phases = ,
-filename = c:\Users\apc\Documents\marina\zeros\zero_3148.csv
+filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\zeros\zero_3148.csv
 
 
 
 
 [AWG]
 sample rate = 1000000000.0
-burst count = 10000
+burst count = 10
 waveform output channels = channel1, channel2, channel3, channel4
 waveform output channel lags = 0.015, 0, 0, 0
 marked channels = channel4,

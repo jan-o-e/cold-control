@@ -9,6 +9,7 @@ from lab_control_functions.awg_control_functions_psh import run_awg
 from lab_control_functions.awg_control_functions_single_psh import run_awg_single
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 import pyvisa 
+import re, ast
 
 
 def toBool(string):
@@ -101,6 +102,13 @@ if __name__ == '__main__':
                                                                     awg_configuration = awg_config_single,
                                                                     tdc_configuration = tdc_config_single)
 
+    rm = pyvisa.ResourceManager()
+    awg = rm.open_resource("USB0::0x168C::0x1284::0000215582::0::INSTR")   
+    awg.write(":SYSTem:REBoot") 
+    awg.close()
+
+    awg_test=run_awg_single(awg_config_single, photon_production_config_single)
+    awg_test=run_awg(awg_config, photon_production_config) 
 
     # Opens a new config file as a "config reader" object.
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
