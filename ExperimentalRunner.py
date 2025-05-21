@@ -19,6 +19,8 @@ import re
 import collections
 import _tkinter
 from typing import List, Tuple, Dict, Any
+import oscilloscope_manager as osc
+import pyvisa as visa
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
@@ -1365,12 +1367,19 @@ class MotFluoresceExperiment(GenericExperiment):
 
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+
             print("writing channel values")
             self.daq_controller.writeChannelValues()
+
+            print("collecting data")
+            rm = visa.ResourceManager('@py') 
+            test = osc.oscilloscope_manager()
+            collected_data, filename = test.acquire_with_trigger_multichannel([1,2], samp_rate=1e9, timebase_range=16e-6, save_file=True, window='A', centered_0=False)
 
             i += 1
 
         self.daq_controller.clearCards()
+        test.quit()
 
     def close(self):
         super().daq_cards_off()
