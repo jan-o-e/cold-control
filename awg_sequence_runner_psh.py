@@ -110,6 +110,8 @@ if __name__ == '__main__':
     awg_test=run_awg_single(awg_config_single, photon_production_config_single)
     awg_test=run_awg(awg_config, photon_production_config) 
 
+
+    
     # Opens a new config file as a "config reader" object.
     config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')
     for i in range(1,1000):

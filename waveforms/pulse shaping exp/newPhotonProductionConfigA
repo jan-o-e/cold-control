@@ -53,7 +53,7 @@ filename = C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\ma
 
 [AWG]
 sample rate = 1000000000.0
-burst count = 10000
+burst count = 10
 waveform output channels = channel1, channel2, channel3, channel4
 waveform output channel lags = 0.015, 0, 0, 0
 marked channels = channel4,

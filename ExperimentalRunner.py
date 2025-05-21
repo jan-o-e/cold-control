@@ -1367,7 +1367,6 @@ class MotFluoresceExperiment(GenericExperiment):
         while i <= self.config.iterations:
             print("connecting to scope")
 
-
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
@@ -1385,8 +1384,7 @@ class MotFluoresceExperiment(GenericExperiment):
             #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
             print("collecting data")
             collected_data, filename = self.scope.acquire_with_trigger_multichannel([1,2], save_file=True, window='A')
-            #self.scope.set_to_run()
-            time.sleep(0.5)
+            time.sleep(0.1)
             
             print("writing channel values")
             self.daq_controller.writeChannelValues()
