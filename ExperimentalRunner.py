@@ -32,7 +32,9 @@ import pyvisa as visa
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
-from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode, WX218x_OperationMode, WX218x_SequenceAdvanceMode, WX218x_TraceMode, WX218x_TriggerImpedance, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_Waveform 
+from instruments.WX218x.WX218x_DLL import WX218x_MarkerSource, WX218x_OutputMode, WX218x_OperationMode, \
+    WX218x_SequenceAdvanceMode, WX218x_TraceMode, WX218x_TriggerImpedance, WX218x_TriggerMode,\
+    WX218x_TriggerSlope, WX218x_Waveform 
 from instruments.quTAU.TDC_quTAU import TDC_quTAU
 from instruments.quTAU.TDC_BaseDLL import TDC_SimType, TDC_DevType, TDC_SignalCond
 from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
@@ -1353,7 +1355,7 @@ class MotFluoresceExperiment(GenericExperiment):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
         print("connecting to scope")
-        self.scope = osc.oscilloscope_manager()
+        self.scope = osc.OscilloscopeManager()
         self.scope.configure_scope(samp_rate=1e6, timebase_range=1e-3, centered_0=False)
         self.scope.configure_trigger(1, 1)
 
@@ -1379,7 +1381,8 @@ class MotFluoresceExperiment(GenericExperiment):
             
             #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
             print("collecting data")
-            collected_data, filename = self.scope.acquire_with_trigger_multichannel([1,2], save_file=True, window='A')
+            filename = self.scope.acquire_slow_save_data([1,2], save_file=True, window='A')
+            print(f"data saved to {filename}")
 
             i += 1
 

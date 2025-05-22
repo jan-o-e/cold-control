@@ -1,3 +1,14 @@
+"""
+Created on 22/05/2025.
+@authors: Marina Llanero Pinero, Matt King
+
+
+@description: This script contains the OscilloscopeManager class, which is used to manage
+the connection to and data acquisition from an oscilloscope.
+"""
+
+
+
 import numpy as np
 import pyvisa as visa
 import pandas as pd
@@ -6,13 +17,12 @@ from datetime import datetime
 import time
 import matplotlib.pyplot as plt
 
-# herramienta poderosa para interactuar con un osciloscopio, adquirir datos, guardarlos y visualizarlos. 
-# La clase permite la adquisición de datos en diferentes configuraciones, incluyendo la adquisición basada en triggers.
 
-class oscilloscope_manager:
+class OscilloscopeManager:
 
     def __init__(self, scope_id='USB0::0x2A8D::0x900E::MY53450121::0::INSTR'):
         self.scope_id = scope_id
+        self.read_speed = None
 
         try:
             # Inicializar VISA y conectar al osciloscopio
@@ -70,7 +80,8 @@ class oscilloscope_manager:
             return full_name
 
 
-    @staticmethod   # Se comporta como una función independiente, pero está encapsulada dentro de la clase por razones de organización.
+    @staticmethod   # Se comporta como una función independiente, pero está encapsulada
+    #dentro de la clase por razones de organización.
     # no tiene acceso a los atributos de la clase (self o cls)
     def csv_analysis(filename):
         """
@@ -123,18 +134,34 @@ class oscilloscope_manager:
         plt.show()
 
 
-    def configure_scope(self, samp_rate=1e10, timebase_range=1e-8, centered_0=False):
-        # Configurar el osciloscopio para iniciar muestreo
+    def configure_scope(self, samp_rate=1e10, timebase_range=1e-8, centered_0=False,\
+                        high_speed = False):
+        """
+        Function to configure the general scope settings.
+        Inputs:
+         - samp_rate (float): Rate at which samples are collected
+         - timebase_range (float): How long to collect samples for
+         - centered_0 (bool): if True, the time axis will be centered on 0. 
+            If false, the time axis will start at 0.
+         - high_speed (bool): TODO if True, the scope will be set to read data at high speed.
+        """
+
+        self.read_speed = high_speed
+        
         print("configuring the scope settings")
         self.scope.write('ACQUIRE:MODE HRESOLUTION')
         self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}')
-        self.scope.write(f'TIMEBASE:RANGE {timebase_range}') 
-        self.scope.write(f'TIMEBASE:POSITION {timebase_range / 2}')
+        self.scope.write(f'TIMEBASE:RANGE {timebase_range}')
+
         if centered_0:
-            self.scope.write(f"TIMEBASE:POSITION 0") 
+            self.scope.write(f"TIMEBASE:POSITION 0")
+        else:
+            self.scope.write(f'TIMEBASE:POSITION {timebase_range / 2}')
+
         self.scope.write('WAVEFORM:FORMAT WORD')
         self.scope.write('WAVEFORM:STREAMING OFF')
         print("scope settings configured")
+
 
     def configure_trigger(self, trigger_channel, trigger_level, trigger_slope="+"):
         """
@@ -144,7 +171,7 @@ class oscilloscope_manager:
          - trigger_level (float): Voltage level at which to trigger
          - trigger_slope (str): Slope of the trigger, either '+' or '-'
         """
-        # Set the trigger level and slope#
+        # Set the trigger level and slope
         self.scope.write(":TRIGGER:SWEEP TRIGGERED")
         self.scope.write(":TRIGGER:MODE EDGE")
         self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
@@ -161,7 +188,8 @@ class oscilloscope_manager:
 
     def set_to_single(self):
         """
-        Function to set the scope to single mode. 
+        Function to set the scope to single mode.
+        TODO: Does this actually work?
         """
         # Set the scope to single mode
         self.scope.write(':SINGLE')
@@ -178,153 +206,39 @@ class oscilloscope_manager:
         print("Oscilloscope set to run mode.")
     
 
-    def set_to_digitize(self):
+    def set_to_digitize(self, channels=[1, 2]):
         """
-        Function to set the scope to digitize mode. 
+        Function to set the scope to digitize mode. This is the primary way to collect
+        data from the scope. Use this before sending a trigger pulse to the scope.
         """
         # Set the scope to digitize mode
-        self.scope.write(':DIGITIZE CHANNEL1 CHANNEL2')
-        print("Oscilloscope set to digitize mode.")
-
-
-    # Function to acquire data from a single channel
-    def acquire_single_channel(self, channel, samp_rate = 1e10, timebase_range=1e-8, save_file = False):
-        """
-        Function to sample data from a single channel.
-        WARNING: if the product of samp_rate and timebase_range is too large (>>1e3)
-        then too many samples will be collected and the program may crash.
-
-        Inputs:
-         - channel (int): Channel to collect data from
-         - samp_rate (float): Rate at which samples are collected
-         - timebase_range (float): How long to collect samples for
-         - save_file (bool): Option to save the collected data in a csv file
-
-        Returns:
-         - collected_data (pd.DataFrame): Dataframe of time and voltage values at each sample
-        """
-
-        # Set up scope to begin sampling
-        self.scope.write('ACQUIRE:MODE HRESOLUTION')
-        self.scope.write('ACQUIRE:SRATE:ANALOG {}'.format(samp_rate))
-        self.scope.write('TIMEBASE:RANGE {}'.format(timebase_range)) 
-        self.scope.write('WAVEFORM:FORMAT WORD')
-        self.scope.write('WAVEFORM:STREAMING OFF')
-        self.scope.write(':RUN')
-
-        # Start collecting samples
-        self.scope.write(f'DIGITIZE CHANNEL{channel}')
-        self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
-        self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
-
-        # Collect y (voltage) data
-        y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
-        y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-        y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-        y_data = y_data * y_incr + y_orig  # Apply scaling
-
-        # Collect x (time) data
-        x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-        x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-        num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-        time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-
-        # Store x and y data in a pandas dataframe
-        collected_data = pd.DataFrame({'Time (s)': time_data, 'Voltage (V)': y_data})
-        
-        # If the data should be saved to a csv, save the data
-        if save_file:
-            filename = self.save_data(collected_data, f"channel_{channel}_data")
-            return collected_data, filename
-
-                        
-        # Return the dataframe of collected data
-        return collected_data
-    
-                    
-    
-    def acquire_with_trigger(self, channel, samp_rate = 1e10, timebase_range=1e-8, save_file = False, window=00, centered_0=False): 
-        """
-        Function to sample data from a single channel when a trigger has been manually set on the oscilloscope.
-        (Alternative to using the get_data_triggered function if it doesn't work).
-        WARNING: if the product of samp_rate and timebase_range is too large (>>1e3)
-        then too many samples will be collected and the program may crash.
-
-        Inputs:
-         - channel (int): Channel to collect data from
-         - samp_rate (float): Rate at which samples are collected
-         - timebase_range (float): How long to collect samples for
-         - save_file (bool): Option to save the collected data in a csv file
-
-        Returns:
-         - collected_data (pd.DataFrame): Dataframe of time and voltage values at each sample
-        """
-        try:
-            # Set up scope to begin sampling
-            self.scope.write('ACQUIRE:MODE HRESOLUTION')
-            self.scope.write('ACQUIRE:SRATE:ANALOG {}'.format(samp_rate))
-            self.scope.write('TIMEBASE:RANGE {}'.format(timebase_range)) 
-            self.scope.write(f"TIMEBASE:POSITION {timebase_range / 2}") # starts measurements at time 0
-            if centered_0:
-                self.scope.write(f"TIMEBASE:POSITION 0")  # centers measurements on 0 
-            self.scope.write('WAVEFORM:FORMAT WORD')
-            self.scope.write('WAVEFORM:STREAMING OFF')
-            self.scope.write(':RUN')
-            # actual_samp_rate = float(self.scope.query('ACQUIRE:SRATE?'))
-            # print(f"Sample rate real: {actual_samp_rate} Hz")
-            points = timebase_range * samp_rate
-            self.scope.write(f'ACQUIRE:POINTS {points}')  # Needed if we want timebase range smaller than 1us
-
-            # Start collecting samples
+        for channel in channels:
             self.scope.write(f'DIGITIZE CHANNEL{channel}')
-            self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
-            self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
 
-            # Collect y (voltage) data
-            y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
-            y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-            y_data = y_data * y_incr + y_orig  # Apply scaling
-
-            # Collect x (time) data
-            x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-            x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-            num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-            time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-
-            # Store x and y data in a pandas dataframe
-            collected_data = pd.DataFrame({'Time (s)': time_data, 'Voltage (V)': y_data})
-            
-            # If the data should be saved to a csv, save the data
-            if save_file:
-                filename = self.save_data(collected_data, f"channel_{channel}_data", window)
-                return collected_data, filename
-                            
-            # Return the dataframe of collected data
-            return collected_data
-        
-        finally:
-            # Poner el osciloscopio en modo RUN después de adquirir los datos
-            self.scope.write(":RUN")
-            print("Osciloscopio puesto en modo RUN.")
+        print(f"Oscilloscope set to digitize mode for channels {channels}.")
 
 
-    def acquire_with_trigger_multichannel(self, channels, save_file=False, window=00):   
+
+
+    def acquire_slow_return_data(self, channels, window=00):   
         """
-        Function to sample data from multiple channels when a trigger has been manually set on the oscilloscope.
+        Function to sample data from multiple channels when a trigger has been manually 
+        set on the oscilloscope.
         
         Inputs:
          - channels (list of int): List of channels to collect data from
-         - sample_rate (float): Rate at which samples are collected
-        - timebase_range (float): How long to collect samples for
-        - save_file (bool): Option to save the collected data in a csv file
-        - window (int): Name for saving the data
-        - centered_0 (bool): if True, the time axis will be centered on 0. If false, the time axis will start at 0.
+         - save_file (bool): Option to save the collected data in a csv file
+         - window (int): Name for saving the data
 
         Returns:
          - collected_data (pd.DataFrame): Datafram with time and voltage values for each channel
         """
         collected_data = None
+
+        if self.read_speed is None:
+            raise ValueError("Scope read speed not set. Please configure the scope first.")
+        elif self.read_speed is True:
+            print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
 
         for channel in channels:
             self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
@@ -333,7 +247,6 @@ class oscilloscope_manager:
             print(f"Collecting data from channel {channel}...")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-            print("reached this point")
             y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
             y_data = y_data * y_incr + y_orig
 
@@ -352,173 +265,56 @@ class oscilloscope_manager:
             collected_data[f'Channel {channel} Voltage (V)'] = y_data
 
         
-        
-        if save_file:
-            channels_str = "_".join(map(str, channels))
-            filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
-            return collected_data, filename
     
         return collected_data
         
 
-            
-
-    def get_data_triggered(self, trigger_channel, data_channel, trigger_level, scope_opts=None):
+    def acquire_slow_save_data(self, channels, window=00):   
         """
-        Adquiere datos con trigger, esperando activamente a que se cumpla la condición de trigger.
-        """
-        defaults = {"data_scale": 0.1, "time_scale": 5e-7, "trigger_scale": 5e-3}
-        if scope_opts:
-            for key in defaults:
-                if key in scope_opts:
-                    defaults[key] = scope_opts[key]
-
-        try:
-            # Configurar el osciloscopio
-            self.scope.write(":RUN")
-            self.scope.write(f"CHANNEL{trigger_channel}:SCALE {defaults['trigger_scale']}")
-            self.scope.write(f":CHANNEL{data_channel}:SCALE {defaults['data_scale']}")
-            self.scope.write(f":TIMEBASE:SCALE {defaults['time_scale']}")
-
-            # Configurar el trigger
-            print(f"Configurando trigger en el canal {trigger_channel} con nivel {trigger_level} V...")
-            self.scope.write(f":TRIGGER:LEVEL CHANNEL{trigger_channel} {trigger_level}")
-            self.scope.write(":TRIGGER:MODE EDGE")
-            self.scope.write(":TRIGGER:SWEEP TRIGGERED")
-            self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
-            self.scope.write(":TRIGGER:EDGE:SLOPE POSITIVE")
-
-            # Iniciar la adquisición
-            print("Iniciando adquisición...")
-            self.scope.write(":DIGITIZE")
-
-            # Esperar activamente a que se cumpla el trigger
-            max_attempts = 100  # Número máximo de intentos para evitar un bucle infinito
-            for _ in range(max_attempts):
-                trigger_state = self.scope.query(":TRIGGER:STATE?").strip()
-                print(f"Estado del trigger: {trigger_state}")
-
-                if trigger_state == "READY":
-                    print("Trigger detectado. Adquiriendo datos...")
-                    break
-                elif trigger_state == "ARMED":
-                    time.sleep(0.1)  # Esperar 100 ms antes de verificar nuevamente
-                else:
-                    raise ValueError(f"Estado del trigger no reconocido: {trigger_state}")
-            else:
-                raise TimeoutError("El trigger no se activó después de varios intentos.")
-
-            # Adquirir los datos
-            self.scope.write(f'WAVEFORM:SOURCE CHANNEL{data_channel}')
-            self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
-
-            # Leer los datos
-            y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
-            y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-            y_data = y_data * y_incr + y_orig  # Aplicar escalado
-
-            # Leer los datos de tiempo
-            x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-            x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-            num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-            time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-
-            # Guardar los datos en un DataFrame
-            collected_data = pd.DataFrame({'Time (s)': time_data, 'Voltage (V)': y_data})
-            filename = self.save_data(collected_data, f"channel{data_channel}")
-
-            return filename
-
-        except visa.Error as e:
-            print(f"Error durante la adquisición: {e}")
-            print("Reiniciando la conexión con el osciloscopio...")
-            self.scope.close()
-            self.scope = self.rm.open_resource(self.scope_id)
-            raise
-        except (ValueError, TimeoutError) as e:
-            print(e)
-            return None
-
-
-    def aux_triggered_multichannel(self, data_channels, trigger_level, trigger_slope="+", scope_opts=None):
-        """
-        Gets data from the scope, with the scope waveform based on edge triggering.
-
-        Inputs:
-         - data_channels (list of int): channels on which to collect data
-         - trigger_level (float): level at which to trigger
-         - trigger_slope (str): whether the slope should be positive, + or negative, -
-         - scope_opts (dict): dictionary containing data about the horizontal and vertical scaling of the waveforms
+        Function to sample data from multiple channels when a trigger has been manually 
+        set on the oscilloscope. This is a slower method of acquiring data, and is used
+        when the read speed is slow. It saves the data to a file rather than returning it.
         
+        Inputs:
+         - channels (list of int): List of channels to collect data from
+         - window (int): Name for saving the data
+
         Returns:
-         - filename (str): file path of file in which the data is stored
+         - filename (str): File path of the saved data
         """
-        # adquiere datos de varios canales cuando se cumple una condición de trigger (antes solo uno)
 
-        defaults = {"data_scale": 5e-2, "time_scale": 5e-7, "trigger_scale": 5e-3}
-        # Change default values to those specified in scope_opts
-        if scope_opts:
-            for key in defaults:
-                if key in scope_opts:
-                    defaults[key] = scope_opts[key]
+        if self.read_speed is None:
+            raise ValueError("Scope read speed not set. Please configure the scope first.")
+        elif self.read_speed is True:
+            print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
 
-        # Set the scope to run mode
-        self.scope.write(":RUN")
+        collected_data = None
 
-        # Set the voltage scales for the data channel, and the timebase scale
-        #self.scope.write(f"CHANNEL{trigger_channel}:SCALE {defaults["trigger_scale"]}")
-        for channel in data_channels:
-            self.scope.write(f":CHANNEL{channel}:SCALE {defaults['data_scale']}")
-        self.scope.write(f":TIMEBASE:SCALE {defaults['time_scale']}")
-
-        # Set the scope to trigger on the rising edge of the trigger channel
-        self.scope.write(f":TRIGGER:LEVEL AUX {trigger_level}")
-        self.scope.write(":TRIGGER:MODE EDGE")
-        self.scope.write(":TRIGGER:SWEEP TRIGGERED")
-        self.scope.write(f":TRIGGER:EDGE:SOURCE AUX")
-        if trigger_slope == "+":
-            self.scope.write(":TRIGGER:EDGE:SLOPE POSITIVE")
-        elif trigger_slope == "-":
-            self.scope.write(":TRIGGER:EDGE:SLOPE NEGATIVE")
-        else:
-            raise ValueError(f"Invalid value for trigger_slope: {trigger_slope}")
-
-
-        # Stop data collection?
-        self.scope.write(":STOP")
-
-        # Collect the data from the scope
-
-        # Collect x (time) data
-        x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-        x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-        num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-
-        time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-
-        # Store x and y data in a pandas dataframe
-        collected_data = pd.DataFrame({'Time (s)': time_data})
-
-
-        for channel in data_channels:
-            self.scope.write(f'DIGITIZE CHANNEL{channel}')
+        for channel in channels:
             self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
             self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
 
-            # Collect y (voltage) data
+            print(f"Collecting data from channel {channel}...")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
             y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-            y_data = y_data * y_incr + y_orig  # Apply scaling
+            y_data = y_data * y_incr + y_orig
+
+            if len(y_data) == 0:
+                raise ValueError(f"No data collected from channel {channel}.")
 
 
-            # append data to dataframe
-            collected_data[f"Channel {channel} Voltage (V)"] = y_data
+            if collected_data is None:
+                print("collecting time data")
+                x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
+                x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
+                num_points = int(self.scope.query('WAVEFORM:POINTS?'))
+                time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
+                collected_data = pd.DataFrame({'Time (s)': time_data})
+            
+            collected_data[f'Channel {channel} Voltage (V)'] = y_data
 
         
-        channels = "".join([f"{i}" for i in data_channels])
-        filename = self.save_data(collected_data, f"channels{channels}")
+        channels_str = "_".join(map(str, channels))
+        filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
         return filename
-
-
