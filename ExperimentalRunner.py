@@ -1352,10 +1352,9 @@ class MotFluoresceExperiment(GenericExperiment):
     def configure(self):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
-        print("connecting to scope")
         self.scope = osc.oscilloscope_manager()
-        self.scope.configure_scope(samp_rate=1e6, timebase_range=1e-3, centered_0=False)
-        self.scope.configure_trigger(1, 1)
+        self.scope.configure_scope(timebase_range=1e-6, centered_0=False)
+
 
 
     def run(self):
@@ -1364,30 +1363,37 @@ class MotFluoresceExperiment(GenericExperiment):
         i = 1
 
         while i <= self.config.iterations:
+            print("connecting to scope")
+
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
+            #self.scope.configure_scope(1e9, )
             self.scope.set_to_run()
             self.scope.set_to_digitize()
 
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-           
-            print("writing channel values")
-            self.daq_controller.writeChannelValues()
+
+            print("waiting for sequence to finish")
+            sleep(1.5) # wait for 1.5s for the scope
             
             #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
             print("collecting data")
             collected_data, filename = self.scope.acquire_with_trigger_multichannel([1,2], save_file=True, window='A')
+            time.sleep(0.1)
+            
+            print("writing channel values")
+            self.daq_controller.writeChannelValues()
+
 
             i += 1
 
-
-
-    def close(self):
         self.daq_controller.clearCards()
         self.scope.quit()
+
+    def close(self):
         super().daq_cards_off()
 
 
