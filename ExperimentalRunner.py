@@ -1356,7 +1356,7 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.load(self.sequence.getArray())
         print("connecting to scope")
         self.scope = osc.OscilloscopeManager()
-        self.scope.configure_scope(samp_rate=1e6, timebase_range=1e-3, centered_0=False)
+        self.scope.configure_scope(samp_rate=1e9, timebase_range=1e-3, centered_0=False)
         self.scope.configure_trigger(1, 1)
 
 
@@ -1370,7 +1370,7 @@ class MotFluoresceExperiment(GenericExperiment):
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            self.scope.set_to_run()
+            #self.scope.set_to_run()
             self.scope.set_to_digitize()
 
             print("playing sequence")
@@ -1383,6 +1383,9 @@ class MotFluoresceExperiment(GenericExperiment):
             print("collecting data")
             filename = self.scope.acquire_slow_save_data([1,2],window='A')
             print(f"data saved to {filename}")
+            #self.scope.set_to_run()
+
+
 
             i += 1
 

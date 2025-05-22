@@ -211,9 +211,12 @@ class OscilloscopeManager:
         Function to set the scope to digitize mode. This is the primary way to collect
         data from the scope. Use this before sending a trigger pulse to the scope.
         """
-        # Set the scope to digitize mode
+        # HACK - This is allows all the channels to be digitized at once.
+        write_text = "DIGITIZE:"
         for channel in channels:
-            self.scope.write(f'DIGITIZE CHANNEL{channel}')
+            write_text += f",CHANNEL{channel}"
+        
+        self.scope.write(write_text) 
 
         print(f"Oscilloscope set to digitize mode for channels {channels}.")
 
