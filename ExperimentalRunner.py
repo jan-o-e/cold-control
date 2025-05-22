@@ -1381,7 +1381,7 @@ class MotFluoresceExperiment(GenericExperiment):
             
             #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
             print("collecting data")
-            filename = self.scope.acquire_slow_save_data([1,2], save_file=True, window='A')
+            filename = self.scope.acquire_slow_save_data([1,2],window='A')
             print(f"data saved to {filename}")
 
             i += 1
