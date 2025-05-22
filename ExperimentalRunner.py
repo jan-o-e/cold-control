@@ -2,9 +2,17 @@
 This module is intended to hold the top profiles for running assorted experiments from 
 configuration through to data acquisition.
 
-Created on 13 Aug 2016
+Created on 13 Aug 2016, Refactored on 22 May 2025
 
-@author: Tom Barrett
+@authors: Tom Barrett, Matt King
+
+This module contains configuration classes that are used to store the parameters for a 
+particular experiment, usually loaded from a configuration file. It also contains 
+experiment classes that are used to run the experiments getting the details from the
+configuration classes. The (experimental) configuration classes should inherit from the
+generic configuration class, GenericConfiguration. The experiment classes should inherit
+from the GenericExperiment class.
+
 '''
 from time import sleep
 import copy
@@ -151,60 +159,14 @@ class ExperimentSessionConfig:
         self._daq_channel_update_steps = daq_channel_update_steps
         self._daq_channel_update_delay = daq_channel_update_delay
 
-    # --- summary_fname ---
-    @property
-    def summary_fname(self):
-        return self._summary_fname
-    @summary_fname.setter
-    def summary_fname(self, value):
-        self._summary_fname = value
-    @summary_fname.deleter
-    def summary_fname(self):
-        del self._summary_fname
 
-    # --- save_location ---
-    @property
-    def save_location(self):
-        return self._save_location
-    @save_location.setter
-    def save_location(self, value):
-        self._save_location = value
-    @save_location.deleter
-    def save_location(self):
-        del self._save_location
+    summary_fname = make_property('_summary_fname')
+    save_location = make_property('_save_location')
+    automated_experiment_configurations = make_property('_automated_experiment_configurations')
+    daq_channel_update_steps = make_property('_daq_channel_update_steps')
+    daq_channel_update_delay = make_property('_daq_channel_update_delay')
 
-    # --- automated_experiment_configurations ---
-    @property
-    def automated_experiment_configurations(self):
-        return self._automated_experiment_configurations
-    @automated_experiment_configurations.setter
-    def automated_experiment_configurations(self, value):
-        self._automated_experiment_configurations = value
-    @automated_experiment_configurations.deleter
-    def automated_experiment_configurations(self):
-        del self._automated_experiment_configurations
 
-    # --- daq_channel_update_steps ---
-    @property
-    def daq_channel_update_steps(self):
-        return self._daq_channel_update_steps
-    @daq_channel_update_steps.setter
-    def daq_channel_update_steps(self, value):
-        self._daq_channel_update_steps = value
-    @daq_channel_update_steps.deleter
-    def daq_channel_update_steps(self):
-        del self._daq_channel_update_steps
-
-    # --- daq_channel_update_delay ---
-    @property
-    def daq_channel_update_delay(self):
-        return self._daq_channel_update_delay
-    @daq_channel_update_delay.setter
-    def daq_channel_update_delay(self, value):
-        self._daq_channel_update_delay = value
-    @daq_channel_update_delay.deleter
-    def daq_channel_update_delay(self):
-        del self._daq_channel_update_delay
 
 class GenericConfiguration:
     """
@@ -233,6 +195,18 @@ class GenericConfiguration:
         self._iterations = value
 
 class MotFluoresceConfiguration(GenericConfiguration):
+    """
+    Configuration for a MOT fluorescence experiment. More details can be found in the MotFluoresceExperiment class.
+    
+    The data used to configure the experiment should be loaded from a configuration file with (currently) the 
+    "PhotonProductionReader" class and the get_mot_fluoresce_config method. This class must be passed to the 
+    MotFluoresceExperiment class to run the experiment.
+
+    inputs:
+     - save_location: The location to save the data collected in the experiment
+     - mot_reload: The time in milliseconds to wait for the MOT to reload
+     - iterations: The number of times to repeat the experiment
+    """
     def __init__(self, save_location, mot_reload, iterations):
         super().__init__(save_location, mot_reload, iterations)
 
@@ -1345,6 +1319,30 @@ class PhotonProductionExperiment(GenericExperiment):
         
 
 class MotFluoresceExperiment(GenericExperiment):
+    """
+    Experimental runner for the mot fluoresce experiment.
+
+    The MOT fluorescence experiment works as follows:
+    1. The MOT is loaded for a set time.
+    2. A sequence of DAQ cards is played, which turns off the MOT and sends a pulse to 
+        trigger the oscilloscope. (This sequence can also be used to send a trigger to the
+        AWG.)
+    3. The oscilloscope is used to read data captured by a photodiode allowing the
+        fluorescence of the atoms to be measured. The data is saved to file.
+
+    Inputs:
+    - daq_controller: The DAQ controller object that controls the DAQ cards.
+    - sequence: The sequence object that contains the DAQ card sequence to be played.
+    - mot_fluoresce_configuration: The configuration object that contains the MOT
+        fluorescence experiment configuration.
+
+    Methods:
+    - configure(): Configures the DAQ cards and loads and configures the oscilloscope.
+    - run(): Runs the experiment by playing the sequence and collecting data from the
+        oscilloscope.
+    - close(): Closes the DAQ cards and the oscilloscope.
+    """
+
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                  mot_fluoresce_configuration:MotFluoresceConfiguration):
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
@@ -1354,9 +1352,10 @@ class MotFluoresceExperiment(GenericExperiment):
     def configure(self):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
+        print("connecting to scope")
         self.scope = osc.oscilloscope_manager()
-        self.scope.configure_scope(timebase_range=1e-6, centered_0=False)
-
+        self.scope.configure_scope(samp_rate=1e6, timebase_range=1e-3, centered_0=False)
+        self.scope.configure_trigger(1, 1)
 
 
     def run(self):
@@ -1365,37 +1364,30 @@ class MotFluoresceExperiment(GenericExperiment):
         i = 1
 
         while i <= self.config.iterations:
-            print("connecting to scope")
-
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            #self.scope.configure_scope(1e9, )
             self.scope.set_to_run()
             self.scope.set_to_digitize()
 
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-
-            print("waiting for sequence to finish")
-            sleep(1.5) # wait for 1.5s for the scope
+           
+            print("writing channel values")
+            self.daq_controller.writeChannelValues()
             
             #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
             print("collecting data")
             collected_data, filename = self.scope.acquire_with_trigger_multichannel([1,2], save_file=True, window='A')
-            time.sleep(0.1)
-            
-            print("writing channel values")
-            self.daq_controller.writeChannelValues()
-
 
             i += 1
 
-        self.daq_controller.clearCards()
-        self.scope.quit()
+
 
     def close(self):
+        self.daq_controller.clearCards()
+        self.scope.quit()
         super().daq_cards_off()
 
 

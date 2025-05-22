@@ -134,8 +134,28 @@ class oscilloscope_manager:
             self.scope.write(f"TIMEBASE:POSITION 0") 
         self.scope.write('WAVEFORM:FORMAT WORD')
         self.scope.write('WAVEFORM:STREAMING OFF')
-        # self.scope.write(':RUN')
         print("scope settings configured")
+
+    def configure_trigger(self, trigger_channel, trigger_level, trigger_slope="+"):
+        """
+        Function to configure the trigger settings of the oscilloscope.
+        Inputs:
+         - trigger_channel (int): Channel on which to set the trigger
+         - trigger_level (float): Voltage level at which to trigger
+         - trigger_slope (str): Slope of the trigger, either '+' or '-'
+        """
+        # Set the trigger level and slope#
+        self.scope.write(":TRIGGER:SWEEP TRIGGERED")
+        self.scope.write(":TRIGGER:MODE EDGE")
+        self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
+        self.scope.write(f":TRIGGER:EDGE:LEVEL {trigger_level}")
+        
+        if trigger_slope == "+":
+            self.scope.write(":TRIGGER:EDGE:SLOPE POSITIVE")
+        elif trigger_slope == "-":
+            self.scope.write(":TRIGGER:EDGE:SLOPE NEGATIVE")
+        else:
+            raise ValueError(f"Invalid value for trigger_slope: {trigger_slope}")
 
 
 
@@ -291,17 +311,18 @@ class oscilloscope_manager:
 
     def acquire_with_trigger_multichannel(self, channels, save_file=False, window=00):   
         """
-        Función para muestrear datos de múltiples canales cuando un trigger ha sido manualmente configurado en el osciloscopio.
+        Function to sample data from multiple channels when a trigger has been manually set on the oscilloscope.
         
         Inputs:
-         - channels (list of int): Lista de canales a recoger datos
-         - samp_rate (float): Tasa de muestreo
-         - timebase_range (float): Rango de tiempo para la adquisición
-         - save_file (bool): Opción para guardar los datos en un archivo CSV
-         - centered_0 (bool): if True, the time axis will be centered on 0. If false, the time axis will start at 0.
+         - channels (list of int): List of channels to collect data from
+         - sample_rate (float): Rate at which samples are collected
+        - timebase_range (float): How long to collect samples for
+        - save_file (bool): Option to save the collected data in a csv file
+        - window (int): Name for saving the data
+        - centered_0 (bool): if True, the time axis will be centered on 0. If false, the time axis will start at 0.
 
         Returns:
-         - collected_data (pd.DataFrame): Dataframe con valores de tiempo y voltaje por canal
+         - collected_data (pd.DataFrame): Datafram with time and voltage values for each channel
         """
         collected_data = None
 
@@ -501,114 +522,3 @@ class oscilloscope_manager:
         return filename
 
 
-
-
-    # BROKEN
-    """
-    def capture_on_marker(self, data_channel, marker_channel,\
-                            threshold = 2e-3, poll_interval = 1e-12, scope_opts=None):
-        
-        \"""
-        Function to sample data on a given data channel when a voltage trigger condition is met on
-        the marker channel. WIP
-
-        Inputs:
-         - data_channel (int): Channel to collect data on
-         - marker_channel (int): Channel on which the marker pulse should be detected
-         - threshold (float): Voltage value above which the marker pulse can be determined to have been detected
-         - poll_interval (float): How long to wait between each check for a marker pulse
-         - scope_opts (dict): Dictionary containing entries governing other options for the scope
-
-        Returns:
-         - _collected_data (pd.DataFrame): Dataframe containing the data collected after the marker pulse was detected
-        \"""
-
-        # Check if scope options are set, otherwise use default values
-        if scope_opts != None:
-            if "samp_rate" in scope_opts:
-                _samp_rate = scope_opts["samp_rate"]
-            else:
-                _samp_rate = 1e10
-
-            if "timebase_range" in scope_opts:
-                _timebase_range = scope_opts["timebase_range"]
-            else:
-                _timebase_range = 1e-8
-
-
-        print(f"Waiting for marker pulse on channel {marker_channel}")
-
-
-        # Infinite loop while waiting for marker to exceed the threshold
-        while True:
-            # Check marker channel voltage level
-            self.scope.write(f'WAVEFORM:SOURCE CHANNEL{marker_channel}')
-            marker_level = float(self.scope.query('MEASURE:VAVERAGE?'))
-            print(f"Marker level measured at {marker_level}")
-            
-            # Trigger condition
-            if marker_level > threshold:
-                print("Marker pulse detected.")
-                break            
-
-            # Wait before polling again
-            time.sleep(poll_interval)
-        
-
-        print("Marker detected, capturing data...")
-        
-        # Use the acquire_single_channel function to collect data.
-        _collected_data, filename = self.acquire_single_channel(data_channel, _samp_rate, _timebase_range, save_file=True)
-        return _collected_data, filename
-        """
-    
-
-
-        # BROKEN
-    """
-    def measure_triggered_data(self, data_channel, trigger_channel, trigger_level):
-        # Set up the channel to acquire data from
-        self.scope.write(f"CHAN{trigger_channel}:DISP ON")  # Enable Channel 
-        self.scope.write("TIMEBASE:SCAL 5E-7")  # Set time scale
-
-        # Set up trigger conditions
-        self.scope.write(f"TRIG:EDGE:SOUR CHAN{trigger_channel}")  # Trigger on Channel 1
-        self.scope.write(f"TRIG:EDGE:LEV {trigger_level}")  # Trigger at 0.5V, for example
-        self.scope.write("TRIG:SWE NORM")  # Normal trigger mode
-
-        # Arm the trigger
-        self.scope.write(f"DIGITIZE CHAN{trigger_channel}")  # Start digitizing data on Channel 1
-
-        # Wait for the oscilloscope to indicate the trigger has been met
-        while True:
-            if self.scope.query("*OPC?").strip() == '1':  # "*OPC?" returns '1' when complete
-                print("Trigger condition met, collecting data...")
-                break
-            time.sleep(0.1)  # Polling interval (100 ms)
-
-
-
-        # Start collecting samples
-        self.scope.write(f'DIGITIZE CHANNEL{data_channel}')
-        self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
-        self.scope.write(f'WAVEFORM:SOURCE CHANNEL{data_channel}')
-
-        # Collect y (voltage) data
-        y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
-        y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-        y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-        y_data = y_data * y_incr + y_orig  # Apply scaling
-
-        # Collect x (time) data
-        x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-        x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-        num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-        time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-
-        # Store x and y data in a pandas dataframe
-        collected_data = pd.DataFrame({'Time (s)': time_data, 'Voltage (V)': y_data})
-        
-        # If the data should be saved to a csv, save the data
-        filename = self.save_data(collected_data, f"channel_{data_channel}_data")
-        return collected_data, filename
-        """
