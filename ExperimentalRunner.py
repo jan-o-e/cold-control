@@ -28,7 +28,9 @@ import collections
 import _tkinter
 from typing import List, Tuple, Dict, Any
 import oscilloscope_manager as osc
-import pyvisa as visa
+#import pyvisa as visa
+from datetime import datetime
+
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
@@ -1346,52 +1348,162 @@ class MotFluoresceExperiment(GenericExperiment):
     """
 
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
-                 mot_fluoresce_configuration:MotFluoresceConfiguration):
+                mot_fluoresce_configuration:MotFluoresceConfiguration,
+                ic_imaging_control:IC_ImagingControl = None):
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
         # the configuration object is a MotFluoresceConfiguration object and called self.config
         self.mot_fluoresce_config:MotFluoresceConfiguration = self.config
 
+
+        if ic_imaging_control != None:
+            self.with_cam = True
+            self.ic_ic = ic_imaging_control
+            if not self.ic_ic.initialised:
+                self.ic_ic.init_library()
+            self.external_ic_ic_provided = True
+        else:
+            self.with_cam = False
+
+        self.save_location = self.mot_fluoresce_config.save_location
+
+
+    def __configureCamera(self):
+        # open first available camera device
+        cam_names = self.ic_ic.get_unique_device_names()
+        self.cam:IC_Camera = None
+        cam:IC_Camera = None
+        self.cam = cam = self.ic_ic.get_device(cam_names[0])
+#         self.cam_frame_timeout = int(self.sequences[0].getLength()*10**-3 + (1./self.config.cam_exposure)*10**3)
+        self.cam_frame_timeout = 5000
+        print('Timeout set to {0}ms'.format(self.cam_frame_timeout))
+        print('Opened connection to camera {0}', cam_names[0])
+        
+        if not cam.is_open():
+            cam.open()
+            
+        # change camera settings
+        cam.gain.auto = False
+        cam.exposure.auto = False
+        cam.gain.value = self.config.cam_gain
+        cam.exposure.value = self.config.cam_exposure
+        formats = cam.list_video_formats()
+        cam.set_video_format(formats[0])        # use first available video format
+        cam.enable_continuous_mode(True)        # image in continuous mode
+        cam.start_live(show_display=False)       # start imaging
+                    
+        # print cam.is_triggerable()
+        cam.enable_trigger(True)              # camera will wait for trigger
+        
+        if not cam.callback_registered:
+            cam.register_frame_ready_callback() # needed to wait for frame ready callback
+        
+        # Clear out the memory of any rogue image still in there
+        try:
+            cam.wait_til_frame_ready(self.cam_frame_timeout)
+            cam.get_image_data()
+        except IC_Exception as err:
+            print("Caught IC_Exception with error: {0}".format(err.message))
+        cam.reset_frame_ready()
+
+
+
     def configure(self):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
-        print("connecting to scope")
-        self.scope = osc.OscilloscopeManager()
-        self.scope.configure_scope(samp_rate=200e6, timebase_range=6e-3, centered_0=False)
-        self.scope.configure_trigger(1, 1)
+
+        if not self.with_cam:
+            print("connecting to scope")
+            self.scope = osc.OscilloscopeManager()
+            self.scope.configure_scope(samp_rate=200e6, timebase_range=6e-3, centered_0=False)
+            self.scope.configure_trigger(1, 1)
 
 
     def run(self):
-        self.daq_controller.load(self.sequence.getArray())
-        self.daq_controller.writeChannelValues()
-        i = 1
-
-        while i <= self.config.iterations:
-            print(f"Iteration {i}")
-            print(f"loading mot for {self.config.mot_reload}ms")
-            sleep(self.config.mot_reload*10**-3) # convert from ms to s
-
-            #self.scope.set_to_run()
-            self.scope.set_to_digitize()
-
-            print("playing sequence")
-            self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-           
-            print("writing channel values")
+        if not self.with_cam:
+            self.daq_controller.load(self.sequence.getArray())
             self.daq_controller.writeChannelValues()
+            i = 1
+
+            while i <= self.config.iterations:
+                print(f"Iteration {i}")
+                print(f"loading mot for {self.config.mot_reload}ms")
+                sleep(self.config.mot_reload*10**-3) # convert from ms to s
+
+                #self.scope.set_to_run()
+                self.scope.set_to_digitize()
+
+                print("playing sequence")
+                self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
             
-            #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
-            print("collecting data")
-            filename = self.scope.acquire_slow_save_data([1,2],window='A')
-            print(f"data saved to {filename}")
-            #self.scope.set_to_run()
+                print("writing channel values")
+                self.daq_controller.writeChannelValues()
+                
+                #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
+                print("collecting data")
+                filename = self.scope.acquire_slow_save_data([1,2],window='A')
+                print(f"data saved to {filename}")
+                #self.scope.set_to_run()
+                i += 1
+
+        else:
+            try:
+                self.__configureCamera()
+                img_arrs = []
+
+                while i <= self.config.iterations:
+                    print(f"Iteration {i}")
+                    print(f"loading mot for {self.config.mot_reload}ms")
+                    sleep(self.config.mot_reload*10**-3) # convert from ms to s
+
+                    #self.scope.set_to_run()
+                    self.scope.set_to_digitize()
+
+                    print("playing sequence")
+                    self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+
+                    # Grab image and save as bmp
+                    self.cam.wait_til_frame_ready(self.cam_frame_timeout)    
+                    data = self.cam.get_image_data()
+                    img = Image.frombuffer('RGB', (data[1], data[2]), data[0], 'raw', 'RGB',0,1).convert('L').transpose(Image.FLIP_TOP_BOTTOM)
+                    img_arrs.append(np.array(img))
+
+                    # Get current date and time
+                    current_date = datetime.now().strftime("%Y-%m-%d")
+                    current_time = datetime.now().strftime("%H-%M-%S")
+
+                    # Ensure the new directory exists
+                    directory = os.path.join("data", current_date)
+                    os.makedirs(directory, exist_ok=True) 
+
+                    # Creates full file name including time and parent folders
+                    full_name = os.path.join(directory, current_time)
+                    img.save(f"{full_name}.bmp", "bmp")
+
+                    self.cam.reset_frame_ready()
+
+                    print("writing channel values")
+                    self.daq_controller.writeChannelValues()
 
 
-
-            i += 1
+            finally:
+                self.close()
 
 
 
     def close(self):
+        '''
+        Perform any tidying up.
+        '''
+
+        print('closing camera...')
+        self.cam.enable_trigger(False)
+        self.cam.stop_live()
+        self.cam.close()
+        
+        if not self.external_ic_ic_provided:
+            self.ic_ic.close_library()
+        print('...closed')
+
         self.daq_controller.clearCards()
         self.scope.quit()
         super().daq_cards_off()
