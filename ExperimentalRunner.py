@@ -1356,7 +1356,7 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.load(self.sequence.getArray())
         print("connecting to scope")
         self.scope = osc.OscilloscopeManager()
-        self.scope.configure_scope(samp_rate=1e9, timebase_range=1e-3, centered_0=False)
+        self.scope.configure_scope(samp_rate=200e6, timebase_range=6e-3, centered_0=False)
         self.scope.configure_trigger(1, 1)
 
 
