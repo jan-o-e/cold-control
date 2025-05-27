@@ -211,8 +211,19 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - mot_reload: The time in milliseconds to wait for the MOT to reload
      - iterations: The number of times to repeat the experiment
     """
-    def __init__(self, save_location, mot_reload, iterations):
+    def __init__(self, save_location, mot_reload, iterations, cam_exposure=1000,cam_gain=900,
+                camera_trigger_channel=23, camera_trigger_level=5.0, camera_pulse_width=1000,
+                save_raw_images=True, save_processed_images=True):
+        
         super().__init__(save_location, mot_reload, iterations)
+        
+        self.cam_exposure = cam_exposure
+        self.cam_gain = cam_gain
+        self.camera_trigger_channel = camera_trigger_channel
+        self.camera_trigger_level = camera_trigger_level
+        self.camera_pulse_width = camera_pulse_width
+        self.save_raw_images = save_raw_images
+        self.save_processed_images = save_processed_images
 
 
 class PhotonProductionConfiguration(GenericConfiguration):
@@ -1353,7 +1364,10 @@ class MotFluoresceExperiment(GenericExperiment):
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
         # the configuration object is a MotFluoresceConfiguration object and called self.config
         self.mot_fluoresce_config:MotFluoresceConfiguration = self.config
-
+        self.save_location = self.mot_fluoresce_config.save_location
+        self.iterations = self.mot_fluoresce_config.iterations
+        self.mot_reload = self.mot_fluoresce_config.mot_reload # in ms
+        print('MOT reload time (ms)', self.mot_reload)        
 
         if ic_imaging_control != None:
             self.with_cam = True
@@ -1361,10 +1375,17 @@ class MotFluoresceExperiment(GenericExperiment):
             if not self.ic_ic.initialised:
                 self.ic_ic.init_library()
             self.external_ic_ic_provided = True
+            self.cam_gain = self.mot_fluoresce_config.cam_gain
+            self.cam_exposure = self.mot_fluoresce_config.cam_exposure
+            self.camera_trigger_channel = self.mot_fluoresce_config.camera_trigger_channel
+            self.camera_trigger_level = self.mot_fluoresce_config.camera_trigger_level
+            self.camera_pulse_width = self.mot_fluoresce_config.camera_pulse_width
+            self.save_raw_images = self.mot_fluoresce_config.save_raw_images
+            self.save_processed_images = self.mot_fluoresce_config.save_processed_images
+
         else:
             self.with_cam = False
-
-        self.save_location = self.mot_fluoresce_config.save_location
+            self.save_location = "data/pd_fluorescence_images"
 
 
     def __configureCamera(self):
@@ -1374,6 +1395,7 @@ class MotFluoresceExperiment(GenericExperiment):
         cam:IC_Camera = None
         self.cam = cam = self.ic_ic.get_device(cam_names[0])
 #         self.cam_frame_timeout = int(self.sequences[0].getLength()*10**-3 + (1./self.config.cam_exposure)*10**3)
+        #is this in milliseconds? and does it match the MOT reload time? I think so
         self.cam_frame_timeout = 5000
         print('Timeout set to {0}ms'.format(self.cam_frame_timeout))
         print('Opened connection to camera {0}', cam_names[0])
@@ -1384,8 +1406,8 @@ class MotFluoresceExperiment(GenericExperiment):
         # change camera settings
         cam.gain.auto = False
         cam.exposure.auto = False
-        cam.gain.value = self.config.cam_gain
-        cam.exposure.value = self.config.cam_exposure
+        cam.gain.value = self.cam_gain
+        cam.exposure.value = self.cam_exposure
         formats = cam.list_video_formats()
         cam.set_video_format(formats[0])        # use first available video format
         cam.enable_continuous_mode(True)        # image in continuous mode
@@ -1404,7 +1426,6 @@ class MotFluoresceExperiment(GenericExperiment):
         except IC_Exception as err:
             print("Caught IC_Exception with error: {0}".format(err.message))
         cam.reset_frame_ready()
-
 
 
     def configure(self):
@@ -1455,9 +1476,6 @@ class MotFluoresceExperiment(GenericExperiment):
                     print(f"loading mot for {self.config.mot_reload}ms")
                     sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-                    #self.scope.set_to_run()
-                    self.scope.set_to_digitize()
-
                     print("playing sequence")
                     self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
 
@@ -1472,12 +1490,18 @@ class MotFluoresceExperiment(GenericExperiment):
                     current_time = datetime.now().strftime("%H-%M-%S")
 
                     # Ensure the new directory exists
-                    directory = os.path.join("data", current_date)
+                    directory = os.path.join(self.save_location, current_date)
                     os.makedirs(directory, exist_ok=True) 
 
-                    # Creates full file name including time and parent folders
-                    full_name = os.path.join(directory, current_time)
-                    img.save(f"{full_name}.bmp", "bmp")
+                    if self.save_raw_images:
+                        # Creates full file name including time and parent folders
+                        full_name = os.path.join(directory, current_time)
+                        img.save(f"{full_name}.bmp", "bmp")
+
+                    if self.save_processed_images:
+                        # Save processed image as png
+                        img.save(f"{full_name}_processed.png", "png")
+                        print(f"Saved processed image to {full_name}_processed.png")
 
                     self.cam.reset_frame_ready()
 
