@@ -223,6 +223,17 @@ class SequenceWriter(object):
 
 
 class ExperimentConfigReader(object):
+    """
+    A class to read experimental config files. First the get_expt_type() method should be 
+    called to determine the type of experiment the config file is set up for. Then the 
+    relevant get_[expt_type]_configuration() method should be called which returns a
+    GenericConfiguration object for the experiment type specified in the config file.
+    The config file should contain:
+     - an initial section without a heading containing general properties shared by all
+     config files, such as the save location and the MOT reload time
+     - sections containing the parameters for the experiment apparatus
+     - a final metadata section containing the experiment type
+    """
 
     def __init__(self, fname):
         self.fname = fname
