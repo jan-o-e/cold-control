@@ -25,7 +25,8 @@ from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
 from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration, GenericConfiguration,\
-    AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration, MotFluoresceExperiment
+     AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration, MotFluoresceExperiment,\
+     GenericExperiment
 
 from abcoll import Sequence
 from atom.event import Event
@@ -48,7 +49,7 @@ from tkinter import filedialog as tkFileDialog
 
 class Experimental_UI(tk.LabelFrame):
 
-    def __init__(self, parent, daq_ui:DAQ_UI, sequence_ui:Sequence_UI, photon_production_config_fname, absorbtion_imaging_config_fname,
+    def __init__(self, parent, daq_ui:DAQ_UI, sequence_ui:Sequence_UI, experiment_config_fname, absorbtion_imaging_config_fname,
                  ic_imaging_control=None, text="Experimental Actions", font=("Helvetica", 16), development_mode=False, **kwargs):
         tk.LabelFrame.__init__(self, parent, text=text, font=font, **kwargs)
         
@@ -56,12 +57,12 @@ class Experimental_UI(tk.LabelFrame):
         self.daq_ui = daq_ui
         self.sequence_ui = sequence_ui
         self.absorbtion_imaging_config = ExperimentConfigReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
-        photon_prod_reader = ExperimentConfigReader(photon_production_config_fname)
+        expt_config_reader = ExperimentConfigReader(experiment_config_fname)
         self.photon_production_config: GenericConfiguration = None
-        if photon_prod_reader.get_expt_type() == "normal":
-            self.photon_production_config = ExperimentConfigReader(photon_production_config_fname).get_photon_production_configuration()
-        elif photon_prod_reader.get_expt_type() == "mot fluorescence":
-            self.photon_production_config = ExperimentConfigReader(photon_production_config_fname).get_mot_flourescence_configuration()
+        if expt_config_reader.get_expt_type() == "photon production":
+            self.photon_production_config = expt_config_reader.get_photon_production_configuration()
+        elif expt_config_reader.get_expt_type() == "mot fluorescence":
+            self.photon_production_config = expt_config_reader.get_mot_flourescence_configuration()
         self.ic_ic = ic_imaging_control
         
         '''Add buttons to set and run the experimental sequence'''
@@ -214,7 +215,7 @@ class Experimental_UI(tk.LabelFrame):
             self.sequence_ui.configureForNewChannelCalibrations(self.daq_ui.daq_controller.getChannelCalibrationDict())
         self.sequence_ui.openWindow()
         
-    def runExperiment(self, photon_production_experiment: PhotonProductionExperiment, liveUI=True, autoCloseLiveUI=False):
+    def runExperiment(self, loaded_experiment: GenericExperiment, liveUI=True, autoCloseLiveUI=False):
         '''
         Run a photon production experiment. There is a some layered architecture here to be aware of if you
         change code (threading can cause very confused computers if done wrong...).  Basically we create two
@@ -233,13 +234,14 @@ class Experimental_UI(tk.LabelFrame):
         Note for completeness: to avoid timing issues between taking/saving the data, the PhotonProductionExperiment
         spawns a new thread to save every iterations data to file.
         '''
-        photon_production_experiment.configure()
+        loaded_experiment.configure()
         
-        if liveUI: experiment_live_ui = Photon_produduction_live_UI(self,
-                                                                    photon_produciton_experiment=photon_production_experiment,
+        if liveUI: 
+            experiment_live_ui = Photon_produduction_live_UI(self,
+                                                                    photon_produciton_experiment=loaded_experiment,
                                                                     auto_close=autoCloseLiveUI)
         
-        experiment_thread = photon_production_experiment.run_in_thread()
+        experiment_thread = loaded_experiment.run_in_thread()
         
         # Small delay to ensure the photon_production_experiment is flagged as live before the UI starts polling it.
         # Otherwise the UI can think it's already over and not update!
@@ -275,9 +277,18 @@ class Experimental_UI(tk.LabelFrame):
             
 
         elif isinstance(self.photon_production_config, MotFluoresceConfiguration):
+            if self.photon_production_config.use_cam:
+                if self.parent.camera_live:
+                    tkMessageBox.showwarning("Error", "Can't run an absorption imaging experiment\n while the camera is running.")
+                    return
+                camera_control = self.ic_ic
+            else:
+                camera_control = None
+
             experiment = MotFluoresceExperiment(daq_controller=self.daq_ui.daq_controller,
                                                 sequence = self.sequence_ui.sequence,
-                                                mot_fluoresce_configuration=self.photon_production_config)
+                                                mot_fluoresce_configuration=self.photon_production_config,
+                                                ic_imaging_control=camera_control)
             # The mot fluoresce experiment is a special case where the Live UI is not set up.
             liveUI = False
             autoCloseLiveUI = False
