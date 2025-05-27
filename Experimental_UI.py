@@ -18,7 +18,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends.backend_tkagg import NavigationToolbar2Tk as NavigationToolbar2TkAgg
 import matplotlib.pyplot as plt
 
-from Config import AbsorbtionImagingReader, PhotonProductionReader, ExperimentalAutomationReader
+from Config import ExperimentConfigReader, ExperimentalAutomationReader
 from ToolTip_UI import ToolTip
 from Sequence_UI import Sequence_UI
 from DAQ_UI import DAQ_UI
@@ -55,13 +55,13 @@ class Experimental_UI(tk.LabelFrame):
         self.parent = parent
         self.daq_ui = daq_ui
         self.sequence_ui = sequence_ui
-        self.absorbtion_imaging_config = AbsorbtionImagingReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
-        photon_prod_reader = PhotonProductionReader(photon_production_config_fname)
+        self.absorbtion_imaging_config = ExperimentConfigReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
+        photon_prod_reader = ExperimentConfigReader(photon_production_config_fname)
         self.photon_production_config: GenericConfiguration = None
         if photon_prod_reader.get_expt_type() == "normal":
-            self.photon_production_config = PhotonProductionReader(photon_production_config_fname).get_photon_production_configuration()
+            self.photon_production_config = ExperimentConfigReader(photon_production_config_fname).get_photon_production_configuration()
         elif photon_prod_reader.get_expt_type() == "mot fluorescence":
-            self.photon_production_config = PhotonProductionReader(photon_production_config_fname).get_mot_flourescence_configuration()
+            self.photon_production_config = ExperimentConfigReader(photon_production_config_fname).get_mot_flourescence_configuration()
         self.ic_ic = ic_imaging_control
         
         '''Add buttons to set and run the experimental sequence'''

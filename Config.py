@@ -222,7 +222,7 @@ class SequenceWriter(object):
         self.config.write()
 
 
-class PhotonProductionReader(object):
+class ExperimentConfigReader(object):
 
     def __init__(self, fname):
         self.fname = fname
@@ -230,7 +230,8 @@ class PhotonProductionReader(object):
 
     
     def get_expt_type(self):
-        """Method to return the experiment type.
+        """
+        Method to extract the experiment type from the config file
         """
 
         try: expt_type = self.config['metadata']['experiment_type']
@@ -240,6 +241,7 @@ class PhotonProductionReader(object):
         
         return expt_type.lower()
     
+
     def get_photon_production_configuration(self):
         
         awg_config = AwgConfiguration(sample_rate = float(self.config['AWG']['sample rate']),
@@ -260,23 +262,93 @@ class PhotonProductionReader(object):
                                       mod_frequency= float(v['modulation frequency']),
                                       phases = map(float, v['phases'])))
         print(self.config['waveform sequence'])
-        photon_production_config = PhotonProductionConfiguration(save_location = self.config['save location'],
-                                                                 mot_reload  = eval(self.config['mot reload']),
-                                                                 iterations = int(self.config['iterations']),
-                                                                 waveform_sequence = list(eval(self.config['waveform sequence'])),
-                                                                 waveforms = waveforms,
-                                                                 waveform_stitch_delays = list(eval(self.config['waveform stitch delays'])),
-                                                                 interleave_waveforms = toBool(self.config['interleave waveforms']),
-                                                                 awg_configuration = awg_config,
-                                                                 tdc_configuration = tdc_config)
+        photon_production_config = \
+        PhotonProductionConfiguration(save_location = self.config['save location'],
+                                      mot_reload  = eval(self.config['mot reload']),
+                                      iterations = int(self.config['iterations']),
+                                      waveform_sequence = list(eval(self.config['waveform sequence'])),
+                                      waveforms = waveforms,
+                                      waveform_stitch_delays = list(eval(self.config['waveform stitch delays'])),
+                                      interleave_waveforms = toBool(self.config['interleave waveforms']),
+                                      awg_configuration = awg_config,
+                                      tdc_configuration = tdc_config)
 
         return photon_production_config
     
     def get_mot_flourescence_configuration(self):
-        mot_fluoresce_config = MotFluoresceConfiguration(save_location= self.config['save location'],
-                                                         mot_reload= eval(self.config['mot reload']),
-                                                         iterations= int(self.config['iterations']))
+        """
+        Method to extract the mot fluorescence configuration from the config file.
+        """
+
+        def toFloatTuple(arg):
+            return tuple(map(float,arg))
+        
+        use_camera = toBool(self.config["use_cam"])
+
+        if use_camera == True:
+            camera = self.config['camera_settings']
+            camera_settings_dict = {\
+                    "cam_exposure" : int(camera['cam_exposure']),
+                    "cam_gain" : int(camera['cam_gain']),
+                    "camera_trig_ch" : int(camera['camera_trig_ch']),
+                    "camera_trig_levs" : toFloatTuple(camera['camera_trig_levs']),
+                    "camera_pulse_width" : float(camera['camera_pulse_width']),
+                    "save_images" : toBool(camera['save_images'])
+            }
+            
+
+        else:
+            camera_settings_dict = None
+            raise ValueError("Camera is not enabled in the configuration file. This method" \
+            "can't yet be used without a camera.")
+        
+        mot_fluoresce_config = \
+        MotFluoresceConfiguration(save_location= self.config['save location'],
+                                mot_reload= eval(self.config['mot reload']),
+                                iterations= int(self.config['iterations']),
+                                use_cam=use_camera,
+                                camera_settings=camera_settings_dict
+                                )
+        
+        
         return mot_fluoresce_config
+    
+    def get_absorbtion_imaging_configuration(self):
+        
+        def toFloatTuple(arg):
+            return tuple(map(float,arg))
+        
+        def toFloatList(arg):
+            return list(map(float,arg))
+        
+        def toIntTuple(arg):
+            return tuple(map(int,arg))
+        
+        def toIntList(arg):
+            return list(map(int,arg))
+                
+        return AbsorbtionImagingConfiguration(
+                 scan_abs_img_freq = eval(self.config['scan_abs_img_freq']),
+                 abs_img_freq_ch = int(self.config['abs_img_freq_ch']),
+                 abs_img_freqs = toFloatList(self.config['abs_img_freqs']),
+                 camera_trig_ch = int(self.config['camera_trig_ch']),
+                 imag_power_ch = int(self.config['imag_power_ch']), 
+                 camera_trig_levs = toFloatTuple(self.config['camera_trig_levs']),
+                 imag_power_levs = toFloatTuple(self.config['imag_power_levs']), 
+                 camera_pulse_width = float(self.config['camera_pulse_width']),
+                 imag_pulse_width = float(self.config['imag_pulse_width']),
+                 t_imgs = toFloatList(self.config['t_imgs']), 
+                 mot_reload = float(self.config['mot_reload_time']), 
+                 n_backgrounds = int(self.config['n_backgrounds']),
+                 bkg_off_channels = toIntList(self.config['bkg_off_channels']), 
+                 cam_gain = int(self.config['cam_gain']),
+                 cam_exposure = int(self.config['cam_exposure']), 
+                 cam_gain_lims = toIntTuple(self.config['cam_gain_lims']),
+                 cam_exposure_lims = toIntTuple(self.config['cam_exposure_lims']),
+                 save_location = self.config['save_location'],
+                 save_raw_images = toBool(self.config['save_raw_images']),
+                 save_processed_images = toBool(self.config['save_processed_images']),
+                 review_processed_images = toBool(self.config['review_processed_images']))
         
     
 class PhotonProductionWriter(object):
@@ -318,42 +390,7 @@ class PhotonProductionWriter(object):
         
         self.config.write()
 
-class AbsorbtionImagingReader(object):
-    
-    def __init__(self, fname):
-        self.fname = fname
-        self.config = ConfigObj(fname)
-        
-    def get_absorbtion_imaging_configuration(self):
-        
-        def toFloatTuple(arg):
-            return tuple(map(float,arg))
-        
-        def toFloatList(arg):
-            return list(map(float,arg))
-        
-        def toIntTuple(arg):
-            return tuple(map(int,arg))
-        
-        def toIntList(arg):
-            return list(map(int,arg))
-                
-        return AbsorbtionImagingConfiguration(
-                 scan_abs_img_freq = eval(self.config['scan_abs_img_freq']),
-                 abs_img_freq_ch = int(self.config['abs_img_freq_ch']),
-                 abs_img_freqs = toFloatList(self.config['abs_img_freqs']),
-                 camera_trig_ch = int(self.config['camera_trig_ch']), imag_power_ch = int(self.config['imag_power_ch']), 
-                 camera_trig_levs = toFloatTuple(self.config['camera_trig_levs']), imag_power_levs = toFloatTuple(self.config['imag_power_levs']), 
-                 camera_pulse_width = float(self.config['camera_pulse_width']), imag_pulse_width = float(self.config['imag_pulse_width']),
-                 t_imgs = toFloatList(self.config['t_imgs']), 
-                 mot_reload = float(self.config['mot_reload_time']), 
-                 n_backgrounds = int(self.config['n_backgrounds']), bkg_off_channels = toIntList(self.config['bkg_off_channels']), 
-                 cam_gain = int(self.config['cam_gain']), cam_exposure = int(self.config['cam_exposure']), 
-                 cam_gain_lims = toIntTuple(self.config['cam_gain_lims']), cam_exposure_lims = toIntTuple(self.config['cam_exposure_lims']),
-                 save_location = self.config['save_location'],
-                 save_raw_images = toBool(self.config['save_raw_images']),
-                 save_processed_images = toBool(self.config['save_processed_images']),
-                 review_processed_images = toBool(self.config['review_processed_images']))
+
     
 class AbsorbtionImagingWriter(object):
     

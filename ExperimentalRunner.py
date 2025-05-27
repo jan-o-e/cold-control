@@ -203,7 +203,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
     Configuration for a MOT fluorescence experiment. More details can be found in the MotFluoresceExperiment class.
     
     The data used to configure the experiment should be loaded from a configuration file with (currently) the 
-    "PhotonProductionReader" class and the get_mot_fluoresce_config method. This class must be passed to the 
+    "ExperimentConfigReader" class and the get_mot_fluoresce_config method. This class must be passed to the 
     MotFluoresceExperiment class to run the experiment.
 
     inputs:
@@ -211,19 +211,19 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - mot_reload: The time in milliseconds to wait for the MOT to reload
      - iterations: The number of times to repeat the experiment
     """
-    def __init__(self, save_location, mot_reload, iterations, cam_exposure=1000,cam_gain=900,
-                camera_trigger_channel=23, camera_trigger_level=5.0, camera_pulse_width=1000,
-                save_raw_images=True, save_processed_images=True):
-        
+    def __init__(self, save_location, mot_reload, iterations, use_cam, cam_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
-        
-        self.cam_exposure = cam_exposure
-        self.cam_gain = cam_gain
-        self.camera_trigger_channel = camera_trigger_channel
-        self.camera_trigger_level = camera_trigger_level
-        self.camera_pulse_width = camera_pulse_width
-        self.save_raw_images = save_raw_images
-        self.save_processed_images = save_processed_images
+
+        self.use_cam = use_cam
+        if use_cam == True:
+            self.cam_exposure = cam_dict["cam_exposure"]
+            self.cam_gain = cam_dict["cam_gain"]
+            self.camera_trigger_channel = cam_dict["camera_trigger_channel"]
+            self.camera_trigger_level = cam_dict["camera_trigger_level"]
+            self.camera_pulse_width = cam_dict["camera_pulse_width"]
+            self.save_images = cam_dict["save_images"]
+        else:
+            print("No camera will be used. Functionality may not be fully implemented")
 
 
 class PhotonProductionConfiguration(GenericConfiguration):
@@ -1361,30 +1361,36 @@ class MotFluoresceExperiment(GenericExperiment):
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                 mot_fluoresce_configuration:MotFluoresceConfiguration,
                 ic_imaging_control:IC_ImagingControl = None):
+        
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
         # the configuration object is a MotFluoresceConfiguration object and called self.config
         self.mot_fluoresce_config:MotFluoresceConfiguration = self.config
         self.save_location = self.mot_fluoresce_config.save_location
         self.iterations = self.mot_fluoresce_config.iterations
         self.mot_reload = self.mot_fluoresce_config.mot_reload # in ms
-        print('MOT reload time (ms)', self.mot_reload)        
+        print('MOT reload time (ms)', self.mot_reload)
+        self.with_cam = self.mot_fluoresce_config.use_cam
 
-        if ic_imaging_control != None:
-            self.with_cam = True
-            self.ic_ic = ic_imaging_control
-            if not self.ic_ic.initialised:
+        if self.with_cam:
+            if ic_imaging_control is None:
+                # if no imaging control object is provided, create a new one
+                self.ic_ic = IC_ImagingControl()
+                self.external_ic_ic_provided = False
                 self.ic_ic.init_library()
-            self.external_ic_ic_provided = True
+            else:
+                self.ic_ic = ic_imaging_control
+                if not self.ic_ic.initialised:
+                    self.ic_ic.init_library()
+                self.external_ic_ic_provided = True
+
             self.cam_gain = self.mot_fluoresce_config.cam_gain
             self.cam_exposure = self.mot_fluoresce_config.cam_exposure
             self.camera_trigger_channel = self.mot_fluoresce_config.camera_trigger_channel
             self.camera_trigger_level = self.mot_fluoresce_config.camera_trigger_level
             self.camera_pulse_width = self.mot_fluoresce_config.camera_pulse_width
-            self.save_raw_images = self.mot_fluoresce_config.save_raw_images
-            self.save_processed_images = self.mot_fluoresce_config.save_processed_images
+            self.save_images = self.mot_fluoresce_config.save_images
 
         else:
-            self.with_cam = False
             self.save_location = "data/pd_fluorescence_images"
 
 
@@ -1493,15 +1499,11 @@ class MotFluoresceExperiment(GenericExperiment):
                     directory = os.path.join(self.save_location, current_date)
                     os.makedirs(directory, exist_ok=True) 
 
-                    if self.save_raw_images:
+                    if self.save_images:
                         # Creates full file name including time and parent folders
                         full_name = os.path.join(directory, current_time)
                         img.save(f"{full_name}.bmp", "bmp")
 
-                    if self.save_processed_images:
-                        # Save processed image as png
-                        img.save(f"{full_name}_processed.png", "png")
-                        print(f"Saved processed image to {full_name}_processed.png")
 
                     self.cam.reset_frame_ready()
 
