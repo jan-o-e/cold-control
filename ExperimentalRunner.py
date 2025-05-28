@@ -234,6 +234,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_sample_rate = scope_dict["sample_rate"]
             self.scope_time_range = scope_dict["time_range"]
             self.scope_centered_0 = scope_dict["centered_0"]
+            self.scope_data_channels = scope_dict["data_channels"]
 
 
 class PhotonProductionConfiguration(GenericConfiguration):
@@ -1409,6 +1410,7 @@ class MotFluoresceExperiment(GenericExperiment):
             self.centred_0 = self.mot_fluoresce_config.scope_centered_0
             self.trig_ch = self.mot_fluoresce_config.scope_trigger_channel
             self.trig_lvl = self.mot_fluoresce_config.scope_trigger_level
+            self.data_chs = self.mot_fluoresce_config.scope_data_channels
 
 
 
@@ -1483,9 +1485,8 @@ class MotFluoresceExperiment(GenericExperiment):
                 print("writing channel values")
                 self.daq_controller.writeChannelValues()
                 
-                #this cannot be serialised, but must happen in parallel with the sequence playing otherwise you miss all the data
                 print("collecting data")
-                filename = self.scope.acquire_slow_save_data([1,2],window='A')
+                filename = self.scope.acquire_slow_save_data(self.data_chs,window='A')
                 print(f"data saved to {filename}")
                 #self.scope.set_to_run()
                 i += 1

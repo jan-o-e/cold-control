@@ -294,6 +294,9 @@ class ExperimentConfigReader(object):
         def toFloatTuple(arg):
             return tuple(map(float,arg))
         
+        def toIntList(arg):
+            return list(map(int,arg))
+        
         use_camera = toBool(self.config["use_cam"])
         use_scope = toBool(self.config["use_scope"])
 
@@ -319,7 +322,8 @@ class ExperimentConfigReader(object):
                 "trigger_level": float(scope['trigger_level']),
                 "sample_rate": float(scope['sample_rate']),
                 "time_range": float(scope['time_range']),
-                "centered_0": toBool(scope['centered_0'])
+                "centered_0": toBool(scope['centered_0']),
+                "data_channels": toIntList(scope['data_channels']),
                 }
         else:
             scope_settings_dict = None
