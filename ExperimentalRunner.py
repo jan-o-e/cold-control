@@ -1641,7 +1641,7 @@ class MotFluoresceDataProcessor():
         Run the full processing and save the result.
         """
         # Extract the marker and PD data from the full DataFrame
-        marker_ch = 2# These should be set in the configuration object?
+        marker_ch = 1# These should be set in the configuration object?
         pd_ch = 3 #Or maybe somewhere else?
         marker_data = pd.DataFrame()
         pd_data = pd.DataFrame()
@@ -1653,8 +1653,8 @@ class MotFluoresceDataProcessor():
         trigger_times = self.detect_triggers(marker_data)
         # Extract readouts from the PD data based on the detected triggers
         processed_data = self.extract_readouts(pd_data, trigger_times)
-        # Save the processed data to a feather file
-        processed_data.reset_index(drop=True).to_feather(self.save_path)
+        # Save the processed data to a binary file CANN'T DO THIS YET AS MISSING A #DEPENDENCY
+        #processed_data.reset_index(drop=True).to_feather(self.save_path)
         print(f"Readouts saved to {self.save_path}")
 
 
