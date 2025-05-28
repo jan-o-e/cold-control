@@ -171,7 +171,6 @@ class ExperimentSessionConfig:
     daq_channel_update_delay = make_property('_daq_channel_update_delay')
 
 
-
 class GenericConfiguration:
     """
     GenericConfiguration is a placeholder for any configuration that doesn't fit into the other categories.
@@ -186,7 +185,6 @@ class GenericConfiguration:
         self._mot_reload = mot_reload# in milliseconds
         self._iterations = iterations
 
-    
     save_location = make_property('_save_location')
     mot_reload = make_property('_mot_reload')
     iterations = make_property('_iterations')
@@ -1560,15 +1558,15 @@ class MotFluoresceExperiment(GenericExperiment):
         '''
         Perform any tidying up.
         '''
-
-        print('closing camera...')
-        self.cam.enable_trigger(False)
-        self.cam.stop_live()
-        self.cam.close()
+        if self.with_cam:
+            print('closing camera...')
+            self.cam.enable_trigger(False)
+            self.cam.stop_live()
+            self.cam.close()
         
-        if not self.external_ic_ic_provided:
-            self.ic_ic.close_library()
-        print('...closed')
+            if not self.external_ic_ic_provided:
+                self.ic_ic.close_library()
+            print('...closed')
 
         self.daq_controller.clearCards()
         self.scope.quit()

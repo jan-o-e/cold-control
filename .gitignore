@@ -11,3 +11,5 @@ labbook/**
 
 exceptions
 exceptions.log
+
+data/**
