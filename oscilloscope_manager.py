@@ -223,7 +223,7 @@ class OscilloscopeManager:
 
 
 
-    def acquire_slow_return_data(self, channels, window=00):   
+    def acquire_slow_return_data(self, channels):   
         """
         Function to sample data from multiple channels when a trigger has been manually 
         set on the oscilloscope.
@@ -241,7 +241,7 @@ class OscilloscopeManager:
         if self.read_speed is None:
             raise ValueError("Scope read speed not set. Please configure the scope first.")
         elif self.read_speed is True:
-            print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
+            print("Warning: Scope is set to high speed. Consider using acquire_fast_return_data() instead.")
 
         for channel in channels:
             self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
@@ -268,7 +268,6 @@ class OscilloscopeManager:
             collected_data[f'Channel {channel} Voltage (V)'] = y_data
 
         
-    
         return collected_data
         
 

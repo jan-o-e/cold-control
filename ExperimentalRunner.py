@@ -30,6 +30,7 @@ from typing import List, Tuple, Dict, Any
 import oscilloscope_manager as osc
 #import pyvisa as visa
 from datetime import datetime
+import pandas as pd
 
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
@@ -1476,6 +1477,11 @@ class MotFluoresceExperiment(GenericExperiment):
                                        centered_0=self.centred_0)
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
 
+            # This sets up the data processor to process the data collected from the scope.
+            self.data_processor = MotFluoresceDataProcessor(self.mot_fluoresce_config)
+
+
+
 
     def __run_with_scope(self):
         """
@@ -1498,9 +1504,16 @@ class MotFluoresceExperiment(GenericExperiment):
             self.daq_controller.writeChannelValues()
             
             print("collecting data")
-            filename = self.scope.acquire_slow_save_data(self.data_chs,window='A')
-            print(f"data saved to {filename}")
+            dataframe = self.scope.acquire_slow_return_data(self.data_chs)
+            # Pass the dataframe to the data processor
+            self.data_processor.process_and_save(dataframe)
+            print("data collected and processed")
             i += 1
+
+        self.data_processor.iterations_avg()
+        self.data_processor.save_mean_data()
+        print("Experiment completed.")
+            
 
     def __run_with_cam(self):
         try:# needs to be in a try except. If the camera isn't closed the computer will crash
@@ -1571,6 +1584,120 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.clearCards()
         self.scope.quit()
         super().daq_cards_off()
+
+
+
+
+class MotFluoresceDataProcessor():
+    """
+    Processes oscilloscope data: detects triggers in the marker channel,
+    extracts PD signal after each trigger, and saves all readouts in binary format.
+    """
+    def __init__(self, mot_fluoresce_config:MotFluoresceConfiguration):
+        """
+        Initialize the data processor with the configuration object.
+        """
+        self.config = mot_fluoresce_config
+
+        # Where should these values be set? In the configuration object?
+        self.window = 500e-6  # 500 us window after each trigger
+        self.save_path = self.config.save_location
+        self.all_dataframes = []  # Will hold all readouts
+        self.mean_data = None  # Will hold the mean readouts across iterations
+    
+
+    def detect_triggers(self, data_marker):
+        """
+        Detect all falling edges (triggers) in the marker channel.
+        """
+        signal = data_marker['Voltage (V)'].values
+        trigger_val = (signal.max() + signal.min()) / 2
+        trigger_idxs = np.where((signal[:-1] > trigger_val) & (signal[1:] < trigger_val))[0] + 1
+        trigger_times = data_marker['Time (s)'].iloc[trigger_idxs].values
+        return trigger_times
+
+    def extract_readouts(self, pd_data, trig_times):
+        """
+        Extract PD signal after each trigger and store all readouts in a DataFrame.
+        """
+        time_array = pd_data['Time (s)'].values
+        pd_array = pd_data['Voltage (V)'].values
+
+        readout = []
+        for t0 in trig_times:
+            mask = (time_array >= t0) & (time_array <= t0 + self.window)
+            pd_time = time_array[mask] - t0  # relative time to trigger
+            pd_signal = pd_array[mask]
+            df_temp = pd.DataFrame({'Time (s)': pd_time, 'PD Signal': pd_signal, 'Trigger Time': t0})
+            readout.append(df_temp)
+
+        df_all = pd.concat(readout, ignore_index=True)
+        self.all_dataframes.append(df_all)
+        return df_all
+
+
+    def process_and_save(self, full_data):
+        """
+        Run the full processing and save the result.
+        """
+        # Extract the marker and PD data from the full DataFrame
+        marker_ch = 2# These should be set in the configuration object?
+        pd_ch = 3 #Or maybe somewhere else?
+        marker_data = pd.DataFrame()
+        pd_data = pd.DataFrame()
+        marker_data['Time (s)'] = full_data['Time (s)']
+        pd_data['Time (s)'] = full_data['Time (s)']
+        marker_data['Voltage (V)'] = full_data[f'Channel {marker_ch} Voltage (V)']
+        pd_data['Voltage (V)'] = full_data[f'Channel {pd_ch} Voltage (V)']
+        # Detect triggers in the marker channel
+        trigger_times = self.detect_triggers(marker_data)
+        # Extract readouts from the PD data based on the detected triggers
+        processed_data = self.extract_readouts(pd_data, trigger_times)
+        # Save the processed data to a feather file
+        processed_data.reset_index(drop=True).to_feather(self.save_path)
+        print(f"Readouts saved to {self.save_path}")
+
+
+    def iterations_avg(self):
+        """
+        Given a list of df_all DataFrames (one per iteration), compute the mean PD Signal
+        for each readout index (Trigger Time) across all iterations.
+        Returns a DataFrame with columns: 'Time (s)', 'Mean PD Signal', 'Readout Index'
+        """
+        all_readouts = self.all_dataframes
+
+        # Group each iteration's df_all by 'Trigger Time'
+        grouped_per_iter = [df.groupby('Trigger Time') for df in all_readouts]
+
+        # Get the sorted list of unique trigger times (readout indices) from all iterations
+        readout_ids = sorted(pd.concat(all_readouts)['Trigger Time'].unique())
+
+        mean_readouts = []
+        for rid in readout_ids:
+            # For each readout index, collect the DataFrame for this readout from every iteration
+            readout_list = [g.get_group(rid).set_index('Time (s)')['PD Signal'] for g in grouped_per_iter]
+            # Concatenate along columns (axis=1)
+            readout_matrix = pd.concat(readout_list, axis=1)
+            # Compute the mean row-wise (across iterations)
+            mean_signal = readout_matrix.mean(axis=1)
+            mean_df = pd.DataFrame({'Time (s)': mean_signal.index, 'Mean PD Signal': mean_signal.values, 'Readout Index': rid})
+            mean_readouts.append(mean_df)
+
+        # Concatenate all mean readouts into a single DataFrame
+        mean_readouts_df = pd.concat(mean_readouts, ignore_index=True)
+        self.mean_data = mean_readouts_df
+
+    def save_mean_data(self):
+        """
+        Save the mean readouts DataFrame to a csv file.
+        """
+        #save to csv file
+        if self.mean_data is not None:
+            mean_save_path = os.path.join(self.save_path, 'mean_readouts.csv')
+            self.mean_data.to_csv(mean_save_path, index=False)
+            print(f"Mean readouts saved to {mean_save_path}")
+        else:
+            raise ValueError("Mean data has not been computed yet. Call iterations_avg() first.")
 
 
 
