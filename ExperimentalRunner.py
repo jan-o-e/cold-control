@@ -211,8 +211,14 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - mot_reload: The time in milliseconds to wait for the MOT to reload
      - iterations: The number of times to repeat the experiment
     """
-    def __init__(self, save_location, mot_reload, iterations, use_cam, cam_dict:Dict = None):
+    def __init__(self, save_location, mot_reload, iterations, use_cam,
+                 cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
+
+        # HACK: This is a temporary solution to use the scope
+        self.use_scope = True
+        scope_dict = {"trigger_channel": 1, "trigger_level": 1, "sample_rate":50e6,
+                       "time_range": 10e-3, "centered_0": False}
 
         self.use_cam = use_cam
         if use_cam == True:
@@ -224,6 +230,13 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.save_images = cam_dict["save_images"]
         else:
             print("No camera will be used. Functionality may not be fully implemented")
+
+        if self.use_scope:
+            self.scope_trigger_channel = scope_dict["trigger_channel"]
+            self.scope_trigger_level = scope_dict["trigger_level"]
+            self.scope_sample_rate = scope_dict["sample_rate"]
+            self.scope_time_range = scope_dict["time_range"]
+            self.scope_centered_0 = scope_dict["centered_0"]
 
 
 class PhotonProductionConfiguration(GenericConfiguration):
@@ -1370,6 +1383,7 @@ class MotFluoresceExperiment(GenericExperiment):
         self.mot_reload = self.mot_fluoresce_config.mot_reload # in ms
         print('MOT reload time (ms)', self.mot_reload)
         self.with_cam = self.mot_fluoresce_config.use_cam
+        self.with_scope = self.mot_fluoresce_config.use_scope
 
         if self.with_cam:
             if ic_imaging_control is None:
@@ -1389,9 +1403,16 @@ class MotFluoresceExperiment(GenericExperiment):
             self.camera_trigger_level = self.mot_fluoresce_config.camera_trigger_level
             self.camera_pulse_width = self.mot_fluoresce_config.camera_pulse_width
             self.save_images = self.mot_fluoresce_config.save_images
-
         else:
-            self.save_location = "data/pd_fluorescence_images"
+            print("Not using camera for MOT fluorescence experiment.")
+
+        if self.with_scope:
+            self.samp_rate = self.mot_fluoresce_config.scope_sample_rate
+            self.time_range = self.mot_fluoresce_config.scope_time_range
+            self.centred_0 = self.mot_fluoresce_config.scope_centered_0
+            self.trig_ch = self.mot_fluoresce_config.scope_trigger_channel
+            self.trig_lvl = self.mot_fluoresce_config.scope_trigger_level
+
 
 
     def __configureCamera(self):
@@ -1438,11 +1459,12 @@ class MotFluoresceExperiment(GenericExperiment):
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
 
-        if not self.with_cam:
+        if self.with_scope:
             print("connecting to scope")
             self.scope = osc.OscilloscopeManager()
-            self.scope.configure_scope(samp_rate=200e6, timebase_range=6e-3, centered_0=False)
-            self.scope.configure_trigger(1, 1)
+            self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
+                                       centered_0=self.centred_0)
+            self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
 
 
     def run(self):
@@ -1456,7 +1478,6 @@ class MotFluoresceExperiment(GenericExperiment):
                 print(f"loading mot for {self.config.mot_reload}ms")
                 sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-                #self.scope.set_to_run()
                 self.scope.set_to_digitize()
 
                 print("playing sequence")
