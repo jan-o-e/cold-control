@@ -211,16 +211,13 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - mot_reload: The time in milliseconds to wait for the MOT to reload
      - iterations: The number of times to repeat the experiment
     """
-    def __init__(self, save_location, mot_reload, iterations, use_cam,
+    def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope,
                  cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
 
-        # HACK: This is a temporary solution to use the scope
-        self.use_scope = True
-        scope_dict = {"trigger_channel": 1, "trigger_level": 1, "sample_rate":50e6,
-                       "time_range": 10e-3, "centered_0": False}
-
+        self.use_scope = use_scope
         self.use_cam = use_cam
+
         if use_cam == True:
             self.cam_exposure = cam_dict["cam_exposure"]
             self.cam_gain = cam_dict["cam_gain"]

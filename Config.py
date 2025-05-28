@@ -295,30 +295,45 @@ class ExperimentConfigReader(object):
             return tuple(map(float,arg))
         
         use_camera = toBool(self.config["use_cam"])
+        use_scope = toBool(self.config["use_scope"])
 
-        if use_camera == True:
+        if use_camera:
             camera = self.config['camera_settings']
             camera_settings_dict = {\
-                    "cam_exposure" : int(camera['cam_exposure']),
-                    "cam_gain" : int(camera['cam_gain']),
-                    "camera_trig_ch" : int(camera['camera_trig_ch']),
-                    "camera_trig_levs" : toFloatTuple(camera['camera_trig_levs']),
-                    "camera_pulse_width" : float(camera['camera_pulse_width']),
-                    "save_images" : toBool(camera['save_images'])
-            }
+                "cam_exposure" : int(camera['cam_exposure']),
+                "cam_gain" : int(camera['cam_gain']),
+                "camera_trig_ch" : int(camera['camera_trig_ch']),
+                "camera_trig_levs" : toFloatTuple(camera['camera_trig_levs']),
+                "camera_pulse_width" : float(camera['camera_pulse_width']),
+                "save_images" : toBool(camera['save_images'])
+                }
             
 
         else:
             camera_settings_dict = None
-            raise ValueError("Camera is not enabled in the configuration file. This method" \
-            "can't yet be used without a camera.")
+
+        if use_scope:
+            scope = self.config['scope_settings']
+            scope_settings_dict = {\
+                "trigger_channel": int(scope['trigger_channel']),
+                "trigger_level": float(scope['trigger_level']),
+                "sample_rate": float(scope['sample_rate']),
+                "time_range": float(scope['time_range']),
+                "centered_0": toBool(scope['centered_0'])
+                }
+        else:
+            scope_settings_dict = None
+
+
         
         mot_fluoresce_config = \
         MotFluoresceConfiguration(save_location= self.config['save location'],
                                 mot_reload= eval(self.config['mot reload']),
                                 iterations= int(self.config['iterations']),
                                 use_cam=use_camera,
-                                camera_settings=camera_settings_dict
+                                use_scope=use_scope,
+                                cam_dict=camera_settings_dict,
+                                scope_dict=scope_settings_dict
                                 )
         
         
