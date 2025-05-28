@@ -210,6 +210,10 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - save_location: The location to save the data collected in the experiment
      - mot_reload: The time in milliseconds to wait for the MOT to reload
      - iterations: The number of times to repeat the experiment
+     - use_cam: Boolean to determine whether to use the camera for imaging
+     - use_scope: Boolean to determine whether to use the scope for data acquisition
+     - cam_dict: Dictionary containing camera configuration parameters (if use_cam is True)
+     - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
     """
     def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope,
                  cam_dict:Dict = None, scope_dict:Dict = None):
@@ -1348,19 +1352,22 @@ class MotFluoresceExperiment(GenericExperiment):
     """
     Experimental runner for the mot fluoresce experiment.
 
-    The MOT fluorescence experiment works as follows:
+    The MOT fluorescence experiment can be run with or without a camera and/or an 
+    oscilloscope, but at least one of these is needed to collect data. The experimental 
+    steps are as follows:
     1. The MOT is loaded for a set time.
-    2. A sequence of DAQ cards is played, which turns off the MOT and sends a pulse to 
-        trigger the oscilloscope. (This sequence can also be used to send a trigger to the
-        AWG.)
+    2. A sequence of DAQ cards is played. This will consist of turning off the MOT and 
+     sending a trigger to the oscilloscope or camera, amongst other things.
     3. The oscilloscope is used to read data captured by a photodiode allowing the
-        fluorescence of the atoms to be measured. The data is saved to file.
+     fluorescence of the atoms to be measured, or the image of the MOT is read from the
+     camera
 
     Inputs:
     - daq_controller: The DAQ controller object that controls the DAQ cards.
     - sequence: The sequence object that contains the DAQ card sequence to be played.
     - mot_fluoresce_configuration: The configuration object that contains the MOT
         fluorescence experiment configuration.
+    - ic_imaging_control: Optional. The IC Imaging Control object that controls the camera.
 
     Methods:
     - configure(): Configures the DAQ cards and loads and configures the oscilloscope.
@@ -1415,6 +1422,9 @@ class MotFluoresceExperiment(GenericExperiment):
 
 
     def __configureCamera(self):
+        """
+        Private method to configure the camera for the MOT fluorescence experiment.
+        """
         # open first available camera device
         cam_names = self.ic_ic.get_unique_device_names()
         self.cam:IC_Camera = None
@@ -1455,6 +1465,9 @@ class MotFluoresceExperiment(GenericExperiment):
 
 
     def configure(self):
+        """
+        Configures the experiment. This method should called before the experiment is run.
+        """
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
 
@@ -1466,73 +1479,81 @@ class MotFluoresceExperiment(GenericExperiment):
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
 
 
-    def run(self):
-        if not self.with_cam:
-            self.daq_controller.load(self.sequence.getArray())
-            self.daq_controller.writeChannelValues()
-            i = 1
+    def __run_with_scope(self):
+        """
+        Private method to run the experiment with a scope.
+        """
+        self.daq_controller.load(self.sequence.getArray())
+        self.daq_controller.writeChannelValues()
+        i = 1
 
+        while i <= self.config.iterations:
+            print(f"Iteration {i}")
+            print(f"loading mot for {self.config.mot_reload}ms")
+            sleep(self.config.mot_reload*10**-3) # convert from ms to s
+
+            self.scope.set_to_digitize()
+            print("playing sequence")
+            self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+        
+            print("writing channel values")
+            self.daq_controller.writeChannelValues()
+            
+            print("collecting data")
+            filename = self.scope.acquire_slow_save_data(self.data_chs,window='A')
+            print(f"data saved to {filename}")
+            i += 1
+
+    def __run_with_cam(self):
+        try:# needs to be in a try except. If the camera isn't closed the computer will crash
+            self.__configureCamera()
+            img_arrs = []
+            i = 1
             while i <= self.config.iterations:
                 print(f"Iteration {i}")
                 print(f"loading mot for {self.config.mot_reload}ms")
                 sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-                self.scope.set_to_digitize()
-
                 print("playing sequence")
                 self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-            
+
+                # Grab image and save as bmp
+                self.cam.wait_til_frame_ready(self.cam_frame_timeout)    
+                data = self.cam.get_image_data()
+                img = Image.frombuffer('RGB', (data[1], data[2]), data[0], 'raw', 'RGB',\
+                                       0,1).convert('L').transpose(Image.FLIP_TOP_BOTTOM)
+                img_arrs.append(np.array(img))
+
+                # Save the images
+                current_date = datetime.now().strftime("%Y-%m-%d")
+                current_time = datetime.now().strftime("%H-%M-%S")
+                directory = os.path.join(self.save_location, current_date)
+                os.makedirs(directory, exist_ok=True) 
+
+                if self.save_images:
+                    # Creates full file name including time and parent folders
+                    full_name = os.path.join(directory, current_time)
+                    img.save(f"{full_name}.bmp", "bmp")
+
+                self.cam.reset_frame_ready()
                 print("writing channel values")
                 self.daq_controller.writeChannelValues()
-                
-                print("collecting data")
-                filename = self.scope.acquire_slow_save_data(self.data_chs,window='A')
-                print(f"data saved to {filename}")
-                #self.scope.set_to_run()
+
                 i += 1
+        finally:
+            self.close()
 
+
+    def run(self):
+        """
+        Runs the experiment. This is called by the run_in_thread method.
+        """
+        if not self.with_cam and self.with_scope:
+            self.__run_with_scope()
+        elif self.with_cam and not self.with_scope:
+            self.__run_with_cam()
         else:
-            try:
-                self.__configureCamera()
-                img_arrs = []
-
-                while i <= self.config.iterations:
-                    print(f"Iteration {i}")
-                    print(f"loading mot for {self.config.mot_reload}ms")
-                    sleep(self.config.mot_reload*10**-3) # convert from ms to s
-
-                    print("playing sequence")
-                    self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-
-                    # Grab image and save as bmp
-                    self.cam.wait_til_frame_ready(self.cam_frame_timeout)    
-                    data = self.cam.get_image_data()
-                    img = Image.frombuffer('RGB', (data[1], data[2]), data[0], 'raw', 'RGB',0,1).convert('L').transpose(Image.FLIP_TOP_BOTTOM)
-                    img_arrs.append(np.array(img))
-
-                    # Get current date and time
-                    current_date = datetime.now().strftime("%Y-%m-%d")
-                    current_time = datetime.now().strftime("%H-%M-%S")
-
-                    # Ensure the new directory exists
-                    directory = os.path.join(self.save_location, current_date)
-                    os.makedirs(directory, exist_ok=True) 
-
-                    if self.save_images:
-                        # Creates full file name including time and parent folders
-                        full_name = os.path.join(directory, current_time)
-                        img.save(f"{full_name}.bmp", "bmp")
-
-
-                    self.cam.reset_frame_ready()
-
-                    print("writing channel values")
-                    self.daq_controller.writeChannelValues()
-
-
-            finally:
-                self.close()
-
+            raise ValueError("Either a camera or a scope must be used, but not both.")
 
 
     def close(self):
