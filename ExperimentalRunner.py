@@ -238,6 +238,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_time_range = scope_dict["time_range"]
             self.scope_centered_0 = scope_dict["centered_0"]
             self.scope_data_channels = scope_dict["data_channels"]
+            self.scope_trigger_type = scope_dict["trigger_type"]
 
 
 class PhotonProductionConfiguration(GenericConfiguration):
@@ -1419,7 +1420,6 @@ class MotFluoresceExperiment(GenericExperiment):
             self.data_chs = self.mot_fluoresce_config.scope_data_channels
 
 
-
     def __configureCamera(self):
         """
         Private method to configure the camera for the MOT fluorescence experiment.
@@ -1480,15 +1480,10 @@ class MotFluoresceExperiment(GenericExperiment):
             # This sets up the data processor to process the data collected from the scope.
             self.data_processor = MotFluoresceDataProcessor(self.mot_fluoresce_config)
 
-
-
-
     def __run_with_scope(self):
         """
         Private method to run the experiment with a scope.
         """
-        self.daq_controller.load(self.sequence.getArray())
-        self.daq_controller.writeChannelValues()
         i = 1
 
         while i <= self.config.iterations:
@@ -1496,7 +1491,7 @@ class MotFluoresceExperiment(GenericExperiment):
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            self.scope.set_to_digitize()
+            self.scope.set_to_digitize(self.data_chs)
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
@@ -1516,8 +1511,9 @@ class MotFluoresceExperiment(GenericExperiment):
             
 
     def __run_with_cam(self):
-        try:# needs to be in a try except. If the camera isn't closed the computer will crash
+        try:# needs to be in a try except. If the camera isn't closed the computer will cras
             self.__configureCamera()
+            print("Camera configured and ready.")
             img_arrs = []
             i = 1
             while i <= self.config.iterations:
@@ -1586,8 +1582,6 @@ class MotFluoresceExperiment(GenericExperiment):
         super().daq_cards_off()
 
 
-
-
 class MotFluoresceDataProcessor():
     """
     Processes oscilloscope data: detects triggers in the marker channel,
@@ -1598,6 +1592,15 @@ class MotFluoresceDataProcessor():
         Initialize the data processor with the configuration object.
         """
         self.config = mot_fluoresce_config
+
+        self.samp_rate = self.config.scope_sample_rate
+        self.time_range = self.config.scope_time_range
+        self.centred_0 = self.config.scope_centered_0
+        self.trig_ch = self.config.scope_trigger_channel
+        self.trig_type= self.config.scope_trigger_type
+        self.trig_lvl = self.config.scope_trigger_level
+        self.data_chs = self.config.scope_data_channels
+        self.trigger_type= self.config.scope_trigger_type
 
         # Where should these values be set? In the configuration object?
         self.window = 500e-6  # 500 us window after each trigger
@@ -1641,8 +1644,9 @@ class MotFluoresceDataProcessor():
         Run the full processing and save the result.
         """
         # Extract the marker and PD data from the full DataFrame
-        marker_ch = 1# These should be set in the configuration object?
-        pd_ch = 3 #Or maybe somewhere else?
+        marker_ch = self.trig_ch
+        #assuming there are only two channels, the second is the data channel
+        pd_ch = self.data_chs[1]
         marker_data = pd.DataFrame()
         pd_data = pd.DataFrame()
         marker_data['Time (s)'] = full_data['Time (s)']
@@ -1653,9 +1657,10 @@ class MotFluoresceDataProcessor():
         trigger_times = self.detect_triggers(marker_data)
         # Extract readouts from the PD data based on the detected triggers
         processed_data = self.extract_readouts(pd_data, trigger_times)
-        # Save the processed data to a binary file CANN'T DO THIS YET AS MISSING A #DEPENDENCY
+        # Save the processed data to a binary file CANN'T DO THIS YET AS MISSING A DEPENDENCY
         #processed_data.reset_index(drop=True).to_feather(self.save_path)
-        print(f"Readouts saved to {self.save_path}")
+        #print(f"Readouts saved to {self.save_path}")
+        print("READOUTS NOT SAVED TO FILE AS MISSING DEPENDENCY")
 
 
     def iterations_avg(self):
@@ -1670,7 +1675,8 @@ class MotFluoresceDataProcessor():
         grouped_per_iter = [df.groupby('Trigger Time') for df in all_readouts]
 
         # Get the sorted list of unique trigger times (readout indices) from all iterations
-        readout_ids = sorted(pd.concat(all_readouts)['Trigger Time'].unique())
+        #readout_ids = sorted(pd.concat(all_readouts)['Trigger Time'].unique())
+        readout_ids = sorted(all_readouts[0]['Trigger Time'].unique())
 
         mean_readouts = []
         for rid in readout_ids:

@@ -324,6 +324,7 @@ class ExperimentConfigReader(object):
                 "time_range": float(scope['time_range']),
                 "centered_0": toBool(scope['centered_0']),
                 "data_channels": toIntList(scope['data_channels']),
+                "trigger_type": scope['trig_type']
                 }
         else:
             scope_settings_dict = None
