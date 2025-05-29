@@ -3,7 +3,7 @@ import os
 import time
 
 from Config import ConfigReader, DaqReader
-from ExperimentalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
+from ExperimentalRunner import AWGSequenceConfiguration, AwgConfiguration, Waveform
 from configobj import ConfigObj
 from lab_control_functions.awg_control_functions_psh import run_awg
 from lab_control_functions.awg_control_functions_single_psh import run_awg_single
@@ -38,11 +38,6 @@ if __name__ == '__main__':
                                     marker_width = eval(config['AWG']['marker width']),
                                     waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
     
-    # Same as above but for the tdc
-    tdc_config = TdcConfiguration(counter_channels = map(eval, config['TDC']['counter channels']),
-                                    marker_channel = int(config['TDC']['marker channel']),
-                                    timestamp_buffer_size = int(config['TDC']['timestamp buffer size'])) # Tamaño del búfer para almacenar marcas de tiempo.
-    
     # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
     waveforms = []
     for x,v in config['waveforms'].items():
@@ -59,15 +54,14 @@ if __name__ == '__main__':
          
 
     # Sets the general settings for the whole process as a photon production configuration
-    photon_production_config = PhotonProductionConfiguration(save_location = config['save location'],
+    photon_production_config = AWGSequenceConfiguration(save_location = config['save location'],
                                                                 mot_reload  = eval(config['mot reload']),
                                                                 iterations = int(config['iterations']),
                                                                 waveform_sequence = list(eval(config['waveform sequence'])),
                                                                 waveforms = waveforms,
                                                                 waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
                                                                 interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
-                                                                awg_configuration = awg_config,
-                                                                tdc_configuration = tdc_config)
+                                                                awg_configuration = awg_config)
     
 
     # Calls the configure_awg function with the values extracted from the config object
@@ -82,17 +76,13 @@ if __name__ == '__main__':
                                          marker_width = eval(config_single['AWG']['marker width']),
                                          waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
 
-    tdc_config_single = TdcConfiguration(counter_channels = map(eval, config_single['TDC']['counter channels']),
-                                         marker_channel = int(config_single['TDC']['marker channel']),
-                                         timestamp_buffer_size = int(config_single['TDC']['timestamp buffer size']))
-
     waveforms_single = []
     for x,v in config_single['waveforms'].items():
         waveforms_single.append(Waveform(fname = v['filename'],
                                          mod_frequency= float(v['modulation frequency']),
                                          phases=map(float, v['phases'])))
 
-    photon_production_config_single = PhotonProductionConfiguration(save_location = config_single['save location'],
+    photon_production_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
                                                                     mot_reload  = eval(config_single['mot reload']),
                                                                     iterations = int(config_single['iterations']),
                                                                     waveform_sequence = list(eval(config_single['waveform sequence'])),
@@ -100,7 +90,7 @@ if __name__ == '__main__':
                                                                     waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
                                                                     interleave_waveforms = toBool(config_single['interleave waveforms']),
                                                                     awg_configuration = awg_config_single,
-                                                                    tdc_configuration = tdc_config_single)
+                                                                    )
 
     rm = pyvisa.ResourceManager()
     awg = rm.open_resource("USB0::0x168C::0x1284::0000215582::0::INSTR")   

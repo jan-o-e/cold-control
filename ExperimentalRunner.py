@@ -4,7 +4,7 @@ configuration through to data acquisition.
 
 Created on 13 Aug 2016, Refactored on 22 May 2025
 
-@authors: Tom Barrett, Matt King
+@authors: Tom Barrett, Matt King, Jan Ole Ernst and Marina Llano Pineiro
 
 This module contains configuration classes that are used to store the parameters for a 
 particular experiment, usually loaded from a configuration file. It also contains 
@@ -28,9 +28,10 @@ import collections
 import _tkinter
 from typing import List, Tuple, Dict, Any
 import oscilloscope_manager as osc
-#import pyvisa as visa
+import pyvisa
+from configobj import ConfigObj
 from datetime import datetime
-
+import re, ast
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
@@ -43,11 +44,14 @@ from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
 from instruments.pyicic.IC_Exception import IC_Exception
 from instruments.pyicic.IC_Camera import IC_Camera
 from instruments.TF930 import TF930
+from lab_control_functions.awg_control_functions_psh import run_awg
+from lab_control_functions.awg_control_functions_single_psh import run_awg_single
 from Sequence import IntervalStyle, Sequence
-from sympy.physics.units import frequency
 from serial.serialutil import SerialException
 
-
+def toBool(string):
+    GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
+    return string.lower() in GLOB_TRUE_BOOL_STRINGS
 
 def make_property(attr_name):
     return property(
@@ -170,7 +174,6 @@ class ExperimentSessionConfig:
     daq_channel_update_steps = make_property('_daq_channel_update_steps')
     daq_channel_update_delay = make_property('_daq_channel_update_delay')
 
-
 class GenericConfiguration:
     """
     GenericConfiguration is a placeholder for any configuration that doesn't fit into the other categories.
@@ -213,12 +216,13 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - cam_dict: Dictionary containing camera configuration parameters (if use_cam is True)
      - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
     """
-    def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope,
+    def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope, use_awg,
                  cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
 
         self.use_scope = use_scope
         self.use_cam = use_cam
+        self.use_awg = use_awg
 
         if use_cam == True:
             self.cam_exposure = cam_dict["cam_exposure"]
@@ -238,6 +242,52 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_centered_0 = scope_dict["centered_0"]
             self.scope_data_channels = scope_dict["data_channels"]
 
+class AWGSequenceConfiguration(GenericConfiguration):
+    """
+    PhotonProductionConfiguration stores all configuration parameters
+    required for a photon production experiment.
+
+    This includes:
+    - Save location and MOT reload time
+    - Number of iterations
+    - A waveform sequence and its associated waveforms
+    - Interleaving and stitching behavior for waveforms
+    - Configuration objects for the AWG and TDC systems
+    """
+
+    def __init__(self,
+                 save_location,
+                 mot_reload,
+                 iterations,
+                 waveform_sequence,
+                 waveforms,
+                 interleave_waveforms,
+                 waveform_stitch_delays,
+                 awg_configuration,
+                 ):
+        
+        super().__init__(save_location, mot_reload, iterations)
+
+        self._waveform_sequence = waveform_sequence
+        self.waveforms: List[Waveform] = waveforms
+        self.interleave_waveforms: bool = interleave_waveforms
+        self.waveform_stitch_delays = waveform_stitch_delays
+        
+        self._awg_configuration: AwgConfiguration = awg_configuration
+
+    # --- waveform_sequence ---
+    @property
+    def waveform_sequence(self):
+        return self._waveform_sequence
+    @waveform_sequence.setter
+    def waveform_sequence(self, value):
+        print('Setting waveform sequence to', value, [type(x) for x in value])
+        self._waveform_sequence = value
+    @waveform_sequence.deleter
+    def waveform_sequence(self):
+        del self._waveform_sequence
+    
+    awg_configuration = make_property('_awg_configuration')
 
 class PhotonProductionConfiguration(GenericConfiguration):
     """
@@ -289,7 +339,6 @@ class PhotonProductionConfiguration(GenericConfiguration):
     
     awg_configuration = make_property('_awg_configuration')
     tdc_configuration = make_property('_tdc_configuration')
-
 
 class AbsorbtionImagingConfiguration(GenericConfiguration):
     '''
@@ -515,7 +564,6 @@ class GenericExperiment:
             thread.start()
         return thread
     
-
 class AbsorbtionImagingExperiment(GenericExperiment):
         
     shutter_lag = 4.8 #The camera response time to the trigger.  Hard coded as it is a physical camera property.
@@ -883,8 +931,6 @@ class AbsorbtionImagingExperiment(GenericExperiment):
     
         super().daq_cards_off()  
     
-
-
 class PhotonProductionExperiment(GenericExperiment):
     
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, photon_production_configuration:PhotonProductionConfiguration):
@@ -1345,7 +1391,6 @@ class PhotonProductionExperiment(GenericExperiment):
         print(f'Setting reload_time to {reload_time}ms')
         self.mot_reload_time = reload_time
         
-
 class MotFluoresceExperiment(GenericExperiment):
     """
     Experimental runner for the mot fluoresce experiment.
@@ -1376,6 +1421,8 @@ class MotFluoresceExperiment(GenericExperiment):
 
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                 mot_fluoresce_configuration:MotFluoresceConfiguration,
+                awg_config_path:str=None,
+                awg_single_config_path:str=None,
                 ic_imaging_control:IC_ImagingControl = None):
         
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
@@ -1387,6 +1434,67 @@ class MotFluoresceExperiment(GenericExperiment):
         print('MOT reload time (ms)', self.mot_reload)
         self.with_cam = self.mot_fluoresce_config.use_cam
         self.with_scope = self.mot_fluoresce_config.use_scope
+        self.with_awg = self.mot_fluoresce_config.use_awg
+
+        if self.with_awg:
+            config = ConfigObj(awg_config_path)     # permite acceder a los valores de configuración como un diccionario.
+            config_single = ConfigObj(awg_single_config_path) if awg_single_config_path else None
+            # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
+            self.awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
+                                            burst_count = int(config['AWG']['burst count']),
+                                            waveform_output_channels = list(config['AWG']['waveform output channels']),
+                                            waveform_output_channel_lags = map(float, config['AWG']['waveform output channel lags']),  # Retrasos asociados a los canales de salida.
+                                            marked_channels = list(config['AWG']['marked channels']),
+                                            marker_width = eval(config['AWG']['marker width']),
+                                            waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
+            
+            # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
+            waveforms = []
+            for x,v in config['waveforms'].items():
+                if v['phases']: 
+                    phases_str = ' '.join(v['phases'])
+                    phases_str = re.sub(r'\(([^)]+) ([^)]+)\)', r'(\1, \2)', phases_str)
+                    phases_str = phases_str.replace(') (', '), (')
+                    phases = ast.literal_eval(phases_str)
+                else:
+                    phases = [] 
+                waveforms.append(Waveform(fname = v['filename'],
+                                            mod_frequency= float(v['modulation frequency']),
+                                            phases = phases)) # map(float, v['phases']))) 
+
+            # Sets the general settings for the whole process as a photon production configuration
+            self.awg_sequence_config = AWGSequenceConfiguration(save_location = config['save location'],
+                                                                        mot_reload  = eval(config['mot reload']),
+                                                                        iterations = int(config['iterations']),
+                                                                        waveform_sequence = list(eval(config['waveform sequence'])),
+                                                                        waveforms = waveforms,
+                                                                        waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
+                                                                        interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
+                                                                        awg_configuration = self.awg_config)
+            
+            self.awg_config_single = AwgConfiguration(sample_rate = float(config_single['AWG']['sample rate']),
+                                         burst_count = int(config_single['AWG']['burst count']),
+                                         waveform_output_channels = list(config_single['AWG']['waveform output channels']),
+                                         waveform_output_channel_lags = map(float, config_single['AWG']['waveform output channel lags']),
+                                         marked_channels = list(config_single['AWG']['marked channels']),
+                                         marker_width = eval(config_single['AWG']['marker width']),
+                                         waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
+
+            waveforms_single = []
+            for x,v in config_single['waveforms'].items():
+                waveforms_single.append(Waveform(fname = v['filename'],
+                                                mod_frequency= float(v['modulation frequency']),
+                                                phases=map(float, v['phases'])))
+
+            self.awg_sequence_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
+                                                                            mot_reload  = eval(config_single['mot reload']),
+                                                                            iterations = int(config_single['iterations']),
+                                                                            waveform_sequence = list(eval(config_single['waveform sequence'])),
+                                                                            waveforms = waveforms_single,
+                                                                            waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
+                                                                            interleave_waveforms = toBool(config_single['interleave waveforms']),
+                                                                            awg_configuration = self.awg_config_single,
+                                                                            )
 
         if self.with_cam:
             if ic_imaging_control is None:
@@ -1475,15 +1583,30 @@ class MotFluoresceExperiment(GenericExperiment):
             self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
                                        centered_0=self.centred_0)
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
+    
+    def _configure_awg(self):
+        """
+        Configures the AWG for the experiment, loads data for all channels"""
+        rm = pyvisa.ResourceManager()
+        awg = rm.open_resource("USB0::0x168C::0x1284::0000215582::0::INSTR")   
+        awg.write(":SYSTem:REBoot") 
+        awg.close()
+
+        awg=run_awg_single(self.awg_config_single, self.photon_production_config_single)
+        awg_single=run_awg(self.awg_config, self.photon_production_config) 
 
 
     def __run_with_scope(self):
         """
         Private method to run the experiment with a scope.
         """
-        self.daq_controller.load(self.sequence.getArray())
-        self.daq_controller.writeChannelValues()
+        self.configure() # ensure the DAQ cards are configured and loaded with the sequence
         i = 1
+
+        if self.with_awg:
+            print("Configuring AWG")
+            self._configure_awg()
+            print("AWG configured")
 
         while i <= self.config.iterations:
             print(f"Iteration {i}")
@@ -1505,6 +1628,12 @@ class MotFluoresceExperiment(GenericExperiment):
     def __run_with_cam(self):
         try:# needs to be in a try except. If the camera isn't closed the computer will crash
             self.__configureCamera()
+            self.configure() # ensure the DAQ cards are configured and loaded with the sequence
+
+            if self.with_awg:
+                print("Configuring AWG")
+                self._configure_awg()
+                print("AWG configured")
             img_arrs = []
             i = 1
             while i <= self.config.iterations:
@@ -1571,9 +1700,6 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.clearCards()
         self.scope.quit()
         super().daq_cards_off()
-
-
-
 
 class PhotonProductionDataSaver(object):
     '''
@@ -1930,7 +2056,6 @@ class MOTFluorescenceDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
-
 """
 class PhotonProductionConfiguration(object):
     
@@ -2018,8 +2143,6 @@ class PhotonProductionConfiguration(object):
     tdc_configuration = property(get_tdc_configuration, set_tdc_configuration, del_tdc_configuration, "tdc_configuration's docstring")
     waveform_sequence = property(get_waveform_sequence, set_waveform_sequence, del_waveform_sequence, "waveform_sequence's docstring")
 #"""
-
-
 
 class ExperimentalAutomationRunner(object):
      
@@ -2153,9 +2276,6 @@ class ExperimentalAutomationRunner(object):
     def close(self):
         self._reset_daq_channel_static_values()
              
-
-
-       
 """
 class Waveform(object):
     
@@ -2247,7 +2367,6 @@ class Waveform(object):
     mod_frequency = property(get_mod_frequency, set_mod_frequency, None, None)
     phases = property(get_phases, set_phases, None, None)
 #"""
-
 
 class Waveform:
     def __init__(self, fname: str, mod_frequency: float, phases: List[Tuple[float, int]]):
@@ -2404,7 +2523,6 @@ class AwgConfiguration(object):
     waveform_output_channels = property(get_waveform_output_channels, set_waveform_output_channels, del_waveform_output_channels, "waveform_output_channels' docstring")
 #"""
 
-
 class AwgConfiguration:
     """
     Configuration for an Arbitrary Waveform Generator (AWG), including sample rate,
@@ -2480,7 +2598,6 @@ class TdcConfiguration(object):
     marker_channel = property(get_marker_channel, set_marker_channel, del_marker_channel, "marker_channel's docstring")
     timestamp_buffer_size = property(get_timestamp_buffer_size, set_timestamp_buffer_size, del_timestamp_buffer_size, "timestamp_buffer_size's docstring")
 #"""
-
 
 class TdcConfiguration:
     """
