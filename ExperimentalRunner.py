@@ -1592,15 +1592,14 @@ class MotFluoresceExperiment(GenericExperiment):
         awg.write(":SYSTem:REBoot") 
         awg.close()
 
-        awg=run_awg_single(self.awg_config_single, self.photon_production_config_single)
-        awg_single=run_awg(self.awg_config, self.photon_production_config) 
+        run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
+        run_awg(self.awg_config, self.awg_sequence_config) 
 
 
     def __run_with_scope(self):
         """
         Private method to run the experiment with a scope.
         """
-        self.configure() # ensure the DAQ cards are configured and loaded with the sequence
         i = 1
 
         if self.with_awg:
@@ -1628,7 +1627,6 @@ class MotFluoresceExperiment(GenericExperiment):
     def __run_with_cam(self):
         try:# needs to be in a try except. If the camera isn't closed the computer will crash
             self.__configureCamera()
-            self.configure() # ensure the DAQ cards are configured and loaded with the sequence
 
             if self.with_awg:
                 print("Configuring AWG")
