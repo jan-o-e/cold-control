@@ -1475,6 +1475,7 @@ class MotFluoresceExperiment(GenericExperiment):
             self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
                                        centered_0=self.centred_0)
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
+            #self.scope.set_to_run()
 
 
     def __run_with_scope(self):
