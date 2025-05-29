@@ -1490,7 +1490,7 @@ class MotFluoresceExperiment(GenericExperiment):
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            self.scope.set_to_digitize()
+            #self.scope.set_to_digitize()
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
