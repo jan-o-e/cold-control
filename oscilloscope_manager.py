@@ -321,3 +321,67 @@ class OscilloscopeManager:
         channels_str = "_".join(map(str, channels))
         filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
         return filename
+    
+    
+    def acquire_with_trigger_multichannel(self, channels, samp_rate=1e10, timebase_range=1e-8, save_file=False, window=00, centered_0=False):   
+        """
+        Function to sample data from multiple channels when a trigger has been manually set on the oscilloscope.
+        (Alternative to using the aux_triggered_multichannel function if it doesn't work).
+        WARNING: if the product of samp_rate and timebase_range is too large (>>1e3)
+        then too many samples will be collected and the program may crash.
+
+        Inputs:
+         - channel (list of int): List of channels to collect data from
+         - samp_rate (float): Rate at which samples are collected
+         - timebase_range (float): How long to collect samples for
+         - save_file (bool): Option to save the collected data in a csv file
+         - centered_0 (bool) : Option to center measurements on 0 (if we want to capture negative time values)
+         - window (string/float) : Name/number of the filenames 
+
+        Returns:
+         - collected_data (pd.DataFrame): Dataframe of time and voltage values at each sample
+        """
+
+        try:
+            self.scope.write('ACQUIRE:MODE HRESOLUTION')
+            self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}')
+            self.scope.write(f'TIMEBASE:RANGE {timebase_range}') 
+            self.scope.write(f'TIMEBASE:POSITION {timebase_range / 2}')
+            if centered_0:
+                self.scope.write(f"TIMEBASE:POSITION 0") 
+            self.scope.write('WAVEFORM:FORMAT WORD')
+            self.scope.write('WAVEFORM:STREAMING OFF')
+            #self.scope.write(':RUN')
+
+            collected_data = None
+            
+            for channel in channels:
+                # self.scope.write(f'DIGITIZE CHANNEL{channel}')
+                self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
+                self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
+
+                y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
+                y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
+                y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
+                y_data = y_data * y_incr + y_orig
+
+
+                if collected_data is None:
+                    x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
+                    x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
+                    num_points = int(self.scope.query('WAVEFORM:POINTS?'))
+                    time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
+                    collected_data = pd.DataFrame({'Time (s)': time_data})
+                
+                collected_data[f'Channel {channel} Voltage (V)'] = y_data
+            
+            if save_file:
+                channels_str = "_".join(map(str, channels))
+                filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
+                return collected_data, filename
+
+            return collected_data
+        
+        finally:
+            self.scope.write(":RUN")
+            print("Scope set to mode RUN.")
