@@ -7,8 +7,8 @@ from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 from instruments.WX218x.WX218x_DLL import (
     WX218x_OutputMode, WX218x_OperationMode, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_TraceMode
 )
-from ExperimentalRunner import PhotonProductionConfiguration, TdcConfiguration
-from ExperimentalRunner import AwgConfiguration, Waveform
+from ExperimentalConfigs import PhotonProductionConfiguration, TdcConfiguration
+from ExperimentalConfigs import AwgConfiguration, Waveform
 import matplotlib.pyplot as plt
 
 # Constants for marker configuration

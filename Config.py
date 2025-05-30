@@ -9,7 +9,7 @@ from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INP
     Channel_P2A
 from instruments.WX218x.WX218x_awg import Channel
 from Sequence import Sequence
-from ExperimentalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration,\
+from ExperimentalConfigs import AbsorbtionImagingConfiguration, PhotonProductionConfiguration,\
       AwgConfiguration, TdcConfiguration, Waveform, ExperimentSessionConfig , SingleExperimentConfig,\
       MotFluoresceConfiguration
 import time

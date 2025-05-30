@@ -24,9 +24,11 @@ from Sequence_UI import Sequence_UI
 from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
-from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment, ExperimentalAutomationRunner, PhotonProductionConfiguration, GenericConfiguration,\
-     AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration, MotFluoresceExperiment,\
-     GenericExperiment
+from ExperimentalConfigs import PhotonProductionConfiguration, GenericConfiguration,\
+     AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration
+
+from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment,\
+    ExperimentalAutomationRunner,  MotFluoresceExperiment, GenericExperiment
 
 from abcoll import Sequence
 from atom.event import Event
