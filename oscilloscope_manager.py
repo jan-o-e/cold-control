@@ -193,7 +193,7 @@ class OscilloscopeManager:
         """
         # Set the scope to single mode
         self.scope.write(':SINGLE')
-        self.scope.write(':RUN')
+        #self.scope.write(':RUN')
         print("Oscilloscope set to single mode.")
 
 
@@ -211,12 +211,16 @@ class OscilloscopeManager:
         Function to set the scope to digitize mode. This is the primary way to collect
         data from the scope. Use this before sending a trigger pulse to the scope.
         """
-        # HACK - This is allows all the channels to be digitized at once.
-        write_text = "DIGITIZE:"
-        for channel in channels:
-            write_text += f",CHANNEL{channel}"
+        # # HACK - This allows multiple channels to be digitized at once.
+        # write_text = "DIGITIZE:"
+        # for channel in channels:
+        #     write_text += f" CHANNEL{channel}"
         
-        self.scope.write(write_text) 
+        # self.scope.write(write_text) 
+        self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
+
+        # for channel in channels:
+        #     self.scope.write(f'DIGITIZE CHANNEL{channel}')
 
         print(f"Oscilloscope set to digitize mode for channels {channels}.")
 

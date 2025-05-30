@@ -60,87 +60,7 @@ def make_property(attr_name):
         fdel=lambda self: delattr(self, attr_name),
     )
 
-"""
-class ExperimentSessionConfig (object):
-    
-    def __init__(self,
-                 save_location,
-                 summary_fname,
-                 automated_experiment_configurations,
-                 daq_channel_update_steps,
-                 daq_channel_update_delay):
-        
-        self.save_location = save_location
-        self.summary_fname = summary_fname
-        self.automated_experiment_configurations = automated_experiment_configurations
-        self.daq_channel_update_steps = daq_channel_update_steps
-        self.daq_channel_update_delay = daq_channel_update_delay
 
-    def get_summary_fname(self):
-        return self.__summary_fname
-
-
-    def set_summary_fname(self, value):
-        self.__summary_fname = value
-
-
-    def del_summary_fname(self):
-        del self.__summary_fname
-
-
-    def get_daq_channel_update_steps(self):
-        return self.__daq_channel_update_steps
-
-
-    def get_daq_channel_update_delay(self):
-        return self.__daq_channel_update_delay
-
-
-    def set_daq_channel_update_steps(self, value):
-        self.__daq_channel_update_steps = value
-
-
-    def set_daq_channel_update_delay(self, value):
-        self.__daq_channel_update_delay = value
-
-
-    def del_daq_channel_update_steps(self):
-        del self.__daq_channel_update_steps
-
-
-    def del_daq_channel_update_delay(self):
-        del self.__daq_channel_update_delay
-
-
-    def get_save_location(self):
-        return self.__save_location
-
-
-    def get_automated_experiment_configurations(self):
-        return self.__automated_experiment_configurations
-
-
-    def set_save_location(self, value):
-        self.__save_location = value
-
-
-    def set_automated_experiment_configurations(self, value):
-        self.__automated_experiment_configurations = value
-
-
-    def del_save_location(self):
-        del self.__save_location
-
-
-    def del_automated_experiment_configurations(self):
-        del self.__automated_experiment_configurations
-
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    automated_experiment_configurations = property(get_automated_experiment_configurations, set_automated_experiment_configurations, del_automated_experiment_configurations, "automated_experiment_configurations's docstring")
-    daq_channel_update_steps = property(get_daq_channel_update_steps, set_daq_channel_update_steps, del_daq_channel_update_steps, "daq_channel_update_steps's docstring")
-    daq_channel_update_delay = property(get_daq_channel_update_delay, set_daq_channel_update_delay, del_daq_channel_update_delay, "daq_channel_update_delay's docstring")
-    summary_fname = property(get_summary_fname, set_summary_fname, del_summary_fname, "summary_fname's docstring")
-#"""
 
 class ExperimentSessionConfig:
     """
@@ -249,7 +169,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
 
 class AWGSequenceConfiguration(GenericConfiguration):
     """
-    PhotonProductionConfiguration stores all configuration parameters
+    AWGSequenceConfiguration stores all configuration parameters
     required for a photon production experiment.
 
     This includes:
@@ -407,76 +327,7 @@ class AbsorbtionImagingConfiguration(GenericConfiguration):
         self.save_processed_images = save_processed_images
         self.review_processed_images = review_processed_images
 
-"""
-class SingleExperimentConfig(object):
-    
-    def __init__(self,
-                 daq_channel_static_values,
-                 sequence_fname,
-                 sequence,
-                 iterations,
-                 mot_reload,
-                 modulation_frequencies
-                 ):
-        self.daq_channel_static_values = daq_channel_static_values
-        self.sequence_fname = sequence_fname
-        self.sequence = sequence
-        self.iterations = iterations
-        self.mot_reload = mot_reload
-        self.modulation_frequencies = modulation_frequencies
 
-    def get_daq_channel_static_values(self):
-        return self.__daq_channel_static_values
-
-
-    def get_sequence_fname(self):
-        return self.__sequence_fname
-
-
-    def get_iterations(self):
-        return self.__iterations
-
-
-    def get_mot_reload_time(self):
-        return self.__mot_reload_time
-
-
-    def set_daq_channel_static_values(self, value):
-        self.__daq_channel_static_values = value
-
-
-    def set_sequence_fname(self, value):
-        self.__sequence_fname = value
-
-
-    def set_iterations(self, value):
-        self.__iterations = value
-
-
-    def set_mot_reload_time(self, value):
-        self.__mot_reload_time = value
-
-
-    def del_daq_channel_static_values(self):
-        del self.__daq_channel_static_values
-
-
-    def del_sequence_fname(self):
-        del self.__sequence_fname
-
-
-    def del_iterations(self):
-        del self.__iterations
-
-
-    def del_mot_reload_time(self):
-        del self.__mot_reload_time
-
-    daq_channel_static_values = property(get_daq_channel_static_values, set_daq_channel_static_values, del_daq_channel_static_values, "daq_channel_static_values's docstring")
-    sequence_fname = property(get_sequence_fname, set_sequence_fname, del_sequence_fname, "sequence_fname's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    mot_reload_time = property(get_mot_reload_time, set_mot_reload_time, del_mot_reload_time, "mot_reload_time's docstring")
-#"""
 
 class SingleExperimentConfig(GenericConfiguration):
     """
@@ -1441,7 +1292,7 @@ class MotFluoresceExperiment(GenericExperiment):
 
         if self.with_awg:
             config = ConfigObj(mot_fluoresce_configuration.awg_config_path)     # permite acceder a los valores de configuración como un diccionario.
-            config_single = ConfigObj(mot_fluoresce_configuration.awg_single_config_path) if mot_fluoresce_configuration.awg_single_config_path else None
+            config_single = ConfigObj(mot_fluoresce_configuration.awg_config_path_single) if mot_fluoresce_configuration.awg_config_path_single else None
             # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
             self.awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
                                             burst_count = int(config['AWG']['burst count']),
@@ -1596,8 +1447,8 @@ class MotFluoresceExperiment(GenericExperiment):
         awg.write(":SYSTem:REBoot") 
         awg.close()
 
-        run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
-        run_awg(self.awg_config, self.awg_sequence_config) 
+        #run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
+        #run_awg(self.awg_config, self.awg_sequence_config) 
 
 
     def __run_with_scope(self):
@@ -1620,12 +1471,17 @@ class MotFluoresceExperiment(GenericExperiment):
             self._configure_awg()
             print("AWG configured")
 
+        #self.scope.set_to_run()
+
         while i <= self.config.iterations:
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
+            #self.scope.set_to_digitize(self.data_chs)
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
-
+            #self.scope.set_to_single()
             self.scope.set_to_digitize(self.data_chs)
+            #self.scope.set_to_single()
+
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
@@ -1638,6 +1494,8 @@ class MotFluoresceExperiment(GenericExperiment):
             full_name = os.path.join(directory, filename)
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
+
+            #self.scope.set_to_run()
 
             i += 1
 
@@ -2071,93 +1929,7 @@ class MOTFluorescenceDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
-"""
-class PhotonProductionConfiguration(object):
-    
-    def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
-                 waveform_sequence,
-                 waveforms,
-                 interleave_waveforms,
-                 waveform_stitch_delays,
-                 awg_configuration,
-                 tdc_configuration):
-        self.save_location = save_location
-        self.mot_reload = mot_reload
-        self.iterations = iterations
 
-        self.waveform_sequence = waveform_sequence
-        self.waveforms:List[Waveform] = waveforms
-        self.interleave_waveforms:bool = interleave_waveforms
-        self.waveform_stitch_delays = waveform_stitch_delays
-        
-        self.awg_configuration: AwgConfiguration = awg_configuration
-        self.tdc_configuration: TdcConfiguration = tdc_configuration
-
-    def get_waveform_sequence(self):
-        return self.__waveform_sequence
-
-    def set_waveform_sequence(self, value):
-        print('Setting waveform sequence to', value, [type(x) for x in value])
-        self.__waveform_sequence = value
-
-    def del_waveform_sequence(self):
-        del self.__waveform_sequence
-
-    def get_save_location(self):
-        return self.__save_location
-
-    def get_mot_reload(self):
-        return self.__mot_reload
-
-    def get_iterations(self):
-        return self.__iterations
-
-    def get_awg_configuration(self):
-        return self.__awg_configuration
-
-    def get_tdc_configuration(self):
-        return self.__tdc_configuration
-
-    def set_save_location(self, value):
-        self.__save_location = value
-
-    def set_mot_reload(self, value):
-        self.__mot_reload = value
-
-    def set_iterations(self, value):
-        self.__iterations = value
-
-    def set_awg_configuration(self, value):
-        self.__awg_configuration = value
-
-    def set_tdc_configuration(self, value):
-        self.__tdc_configuration = value
-
-    def del_save_location(self):
-        del self.__save_location
-
-    def del_mot_reload(self):
-        del self.__mot_reload
-
-    def del_iterations(self):
-        del self.__iterations
-
-    def del_awg_configuration(self):
-        del self.__awg_configuration
-
-    def del_tdc_configuration(self):
-        del self.__tdc_configuration
-
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    mot_reload = property(get_mot_reload, set_mot_reload, del_mot_reload, "mot_reload's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    awg_configuration = property(get_awg_configuration, set_awg_configuration, del_awg_configuration, "awg_configuration's docstring")
-    tdc_configuration = property(get_tdc_configuration, set_tdc_configuration, del_tdc_configuration, "tdc_configuration's docstring")
-    waveform_sequence = property(get_waveform_sequence, set_waveform_sequence, del_waveform_sequence, "waveform_sequence's docstring")
-#"""
 
 class ExperimentalAutomationRunner(object):
      
@@ -2291,97 +2063,7 @@ class ExperimentalAutomationRunner(object):
     def close(self):
         self._reset_daq_channel_static_values()
              
-"""
-class Waveform(object):
-    
-    def __init__(self, fname, mod_frequency, phases):
-        self.fname = fname
-        self.mod_frequency = mod_frequency
-        self.phases = sorted(phases, key=lambda x:x[1]) # Sort phases into the order that they need to be applied.
-        self.data = self.__load_data()
-        
-    def __load_data(self):
-        with open(self.fname, 'rt') as csvfile:
-            print('Loading waveform:', self.fname)
-            reader = csv.reader(csvfile, delimiter=',')
-            data = []
-            for row in reader:
-                if len(row) > 1:
-                    data += list(map(float, row))
-                else:
-                    data += float(row[0])
-        
-        return data
-        
-    def get(self, sample_rate, calibration_function = lambda level: level, constant_voltage=False, double_pass=True):
-        # Copy data to new object. We do not want to mutate original data.
-        mod_data = [calibration_function(x) for x in self.data]
-        if constant_voltage:
-            return mod_data
-        t_step = 2 * np.pi / sample_rate
-        phi = 0.0
-        if double_pass:
-            # Divided phases by two for double passed AOM.
-            phases = [(x[0] / 2, x[1]) for x in self.phases]  # Using list comprehension for clarity
-        next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-        for i in range(len(mod_data)):
-            # i here is the index of the phase list
-            if i == next_i_flip:
-                phi = next_phi
-                next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-            mod_data[i] = mod_data[i] * np.sin(i * t_step * self.mod_frequency + phi)
-        return mod_data
 
-
-    def get_marker_data(self, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0, n_pad_left=0):
-        '''
-        Returns a marker waveform.
-        '''
-        
-        # Use a np array for ease of setting array slices to contant values.
-        data = np.array( [marker_levels[0]] * (n_pad_left + len(self.data) + n_pad_right))
-        for pos in marker_positions:
-            pos = int(pos)  # Ensure pos is an integer
-            data[pos:pos+int(marker_width)] = marker_levels[1]
-        # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
-        # then the channel remains high at the end of the sequence. Don't know why...
-        if data[0]==1:
-            data[0]=0
-        # Convert np array to list for consitancy with the get() method.
-        return data.tolist()
-
-    def get_profile(self):
-        return self.data
-
-    def get_n_samples(self):
-        return len(self.data)
-
-    def get_t_length(self, sample_rate):
-        return len(self.data)*sample_rate
-
-    def get_fname(self):
-        return self.__fname
-
-    def get_mod_frequency(self):
-        return self.__mod_frequency
-
-    def get_phases(self):
-        return self.__phases
-
-    def set_fname(self, value):
-        self.__fname = value
-        self.data = self.__load_data()
-
-    def set_mod_frequency(self, value):
-        self.__mod_frequency = value
-
-    def set_phases(self, value):
-        self.__phases = sorted(value, key=lambda x:x[1])
-
-    fname = property(get_fname, set_fname, None, None)
-    mod_frequency = property(get_mod_frequency, set_mod_frequency, None, None)
-    phases = property(get_phases, set_phases, None, None)
-#"""
 
 class Waveform:
     def __init__(self, fname: str, mod_frequency: float, phases: List[Tuple[float, int]]):
@@ -2488,55 +2170,6 @@ class Waveform:
     def phases(self, value: List[Tuple[float, int]]):
         self.__phases = sorted(value, key=lambda x: x[1])
 
-"""
-class AwgConfiguration(object):
-    def __init__(self, 
-                 sample_rate,
-                 burst_count,
-                 waveform_output_channels,
-                 waveform_output_channel_lags,
-                 marked_channels,
-                 marker_width,
-                 waveform_aom_calibrations_locations):
-        self.sample_rate = sample_rate
-        self.burst_count = burst_count
-        self.waveform_output_channels = waveform_output_channels
-        self.waveform_output_channel_lags = waveform_output_channel_lags
-        self.marked_channels = marked_channels
-        self.marker_width = marker_width
-        self.waveform_aom_calibrations_locations = waveform_aom_calibrations_locations
-
-    def get_sample_rate(self):
-        return self.__sample_rate
-
-    def get_burst_count(self):
-        return self.__burst_count
-
-    def get_waveform_output_channels(self):
-        return self.__waveform_output_channels
-
-    def set_sample_rate(self, value):
-        self.__sample_rate = value
-
-    def set_burst_count(self, value):
-        self.__burst_count = value
-
-    def set_waveform_output_channels(self, value):
-        self.__waveform_output_channels = value
-
-    def del_sample_rate(self):
-        del self.__sample_rate
-
-    def del_burst_count(self):
-        del self.__burst_count
-
-    def del_waveform_output_channels(self):
-        del self.__waveform_output_channels
-
-    sample_rate = property(get_sample_rate, set_sample_rate, del_sample_rate, "sample_rate's docstring")
-    burst_count = property(get_burst_count, set_burst_count, del_burst_count, "burst_count's docstring")
-    waveform_output_channels = property(get_waveform_output_channels, set_waveform_output_channels, del_waveform_output_channels, "waveform_output_channels' docstring")
-#"""
 
 class AwgConfiguration:
     """
@@ -2572,47 +2205,7 @@ class AwgConfiguration:
         self._sample_rate = value
 
 
-"""
-class TdcConfiguration(object):
-    def __init__(self,
-                 counter_channels,
-                 marker_channel,
-                 timestamp_buffer_size):
-        self.counter_channels = counter_channels
-        self.marker_channel = marker_channel
-        self.timestamp_buffer_size = timestamp_buffer_size
 
-    def get_counter_channels(self):
-        return self.__counter_channels
-
-    def get_marker_channel(self):
-        return self.__marker_channel
-
-    def get_timestamp_buffer_size(self):
-        return self.__timestamp_buffer_size
-
-    def set_counter_channels(self, value):
-        self.__counter_channels = value
-
-    def set_marker_channel(self, value):
-        self.__marker_channel = value
-
-    def set_timestamp_buffer_size(self, value):
-        self.__timestamp_buffer_size = value
-
-    def del_counter_channels(self):
-        del self.__counter_channels
-
-    def del_marker_channel(self):
-        del self.__marker_channel
-
-    def del_timestamp_buffer_size(self):
-        del self.__timestamp_buffer_size
-
-    counter_channels = property(get_counter_channels, set_counter_channels, del_counter_channels, "counter_channels's docstring")
-    marker_channel = property(get_marker_channel, set_marker_channel, del_marker_channel, "marker_channel's docstring")
-    timestamp_buffer_size = property(get_timestamp_buffer_size, set_timestamp_buffer_size, del_timestamp_buffer_size, "timestamp_buffer_size's docstring")
-#"""
 
 class TdcConfiguration:
     """

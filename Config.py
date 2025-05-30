@@ -299,6 +299,7 @@ class ExperimentConfigReader(object):
         
         use_camera = toBool(self.config["use_cam"])
         use_scope = toBool(self.config["use_scope"])
+        use_awg = toBool(self.config["use_awg"])
 
         if use_camera:
             camera = self.config['camera_settings']
@@ -336,6 +337,7 @@ class ExperimentConfigReader(object):
                                 iterations= int(self.config['iterations']),
                                 use_cam=use_camera,
                                 use_scope=use_scope,
+                                use_awg=use_awg,
                                 cam_dict=camera_settings_dict,
                                 scope_dict=scope_settings_dict
                                 )
