@@ -1583,6 +1583,7 @@ class MotFluoresceExperiment(GenericExperiment):
             self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
                                        centered_0=self.centred_0)
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
+            #self.scope.set_to_run()
     
     def _configure_awg(self):
         """
@@ -1600,6 +1601,15 @@ class MotFluoresceExperiment(GenericExperiment):
         """
         Private method to run the experiment with a scope.
         """
+        self.daq_controller.load(self.sequence.getArray())
+        self.daq_controller.writeChannelValues()
+
+        # Create the filepath for the data
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_time = datetime.now().strftime("%H-%M-%S")
+        directory = os.path.join("data", current_date, current_time)
+        os.makedirs(directory, exist_ok=True) 
+
         i = 1
 
         if self.with_awg:
@@ -1612,7 +1622,7 @@ class MotFluoresceExperiment(GenericExperiment):
             print(f"loading mot for {self.config.mot_reload}ms")
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            self.scope.set_to_digitize()
+            self.scope.set_to_digitize(self.data_chs)
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
@@ -1620,8 +1630,12 @@ class MotFluoresceExperiment(GenericExperiment):
             self.daq_controller.writeChannelValues()
             
             print("collecting data")
-            filename = self.scope.acquire_slow_save_data(self.data_chs,window='A')
-            print(f"data saved to {filename}")
+            data = self.scope.acquire_slow_return_data(self.data_chs)
+            filename = f"iteration_{i}_data.csv"
+            full_name = os.path.join(directory, filename)
+            data.to_csv(full_name, index=False)# Saves the data
+            print(f"Data saved to {full_name}")
+
             i += 1
 
     def __run_with_cam(self):

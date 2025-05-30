@@ -223,25 +223,76 @@ class OscilloscopeManager:
 
 
 
-    def acquire_slow_return_data(self, channels, window=00):   
+    # def acquire_slow_return_data(self, channels, window=00):   
+    #     """
+    #     Function to sample data from multiple channels when a trigger has been manually 
+    #     set on the oscilloscope.
+        
+    #     Inputs:
+    #      - channels (list of int): List of channels to collect data from
+    #      - save_file (bool): Option to save the collected data in a csv file
+    #      - window (int): Name for saving the data
+
+    #     Returns:
+    #      - collected_data (pd.DataFrame): Datafram with time and voltage values for each channel
+    #     """
+    #     collected_data = None
+
+    #     if self.read_speed is None:
+    #         raise ValueError("Scope read speed not set. Please configure the scope first.")
+    #     elif self.read_speed is True:
+    #         print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
+
+    #     for channel in channels:
+    #         self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
+    #         self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
+
+    #         print(f"Collecting data from channel {channel}...")
+    #         y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
+    #         y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
+    #         y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
+    #         y_data = y_data * y_incr + y_orig
+
+    #         if len(y_data) == 0:
+    #             raise ValueError(f"No data collected from channel {channel}.")
+
+
+    #         if collected_data is None:
+    #             print("collecting time data")
+    #             x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
+    #             x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
+    #             num_points = int(self.scope.query('WAVEFORM:POINTS?'))
+    #             time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
+    #             collected_data = pd.DataFrame({'Time (s)': time_data})
+            
+    #         collected_data[f'Channel {channel} Voltage (V)'] = y_data
+
+        
+    
+    #     return collected_data
+
+
+    def acquire_slow_return_data(self, channels):   
         """
         Function to sample data from multiple channels when a trigger has been manually 
-        set on the oscilloscope.
+        set on the oscilloscope. This is a slower method of acquiring data, and is used
+        when the read speed is slow. It returns the data as a DataFrame rather than saving
+        it to a file.
         
         Inputs:
          - channels (list of int): List of channels to collect data from
-         - save_file (bool): Option to save the collected data in a csv file
          - window (int): Name for saving the data
 
         Returns:
-         - collected_data (pd.DataFrame): Datafram with time and voltage values for each channel
+         - filename (str): File path of the saved data
         """
-        collected_data = None
 
         if self.read_speed is None:
             raise ValueError("Scope read speed not set. Please configure the scope first.")
         elif self.read_speed is True:
-            print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
+            print("Warning: Scope is set to high speed.")
+
+        collected_data = None
 
         for channel in channels:
             self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
@@ -268,7 +319,8 @@ class OscilloscopeManager:
             collected_data[f'Channel {channel} Voltage (V)'] = y_data
 
         
-    
+        # channels_str = "_".join(map(str, channels))
+        # filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
         return collected_data
         
 
