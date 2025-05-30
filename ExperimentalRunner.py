@@ -1137,8 +1137,10 @@ class MotFluoresceExperiment(GenericExperiment):
         if self.with_scope:
             print("connecting to scope")
             self.scope = osc.OscilloscopeManager()
-            self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
-                                       centered_0=self.centred_0)
+            #self.scope.reset_scope()
+            self.scope.configure_scope(self.data_chs, samp_rate=self.samp_rate,
+                                       timebase_range=self.time_range, centered_0=self.centred_0)
+            
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
             #self.scope.set_to_run()
     
@@ -1182,6 +1184,7 @@ class MotFluoresceExperiment(GenericExperiment):
             #self.scope.set_to_digitize(self.data_chs)
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
             #self.scope.set_to_single()
+            self.scope.clear_scope()
             self.scope.set_to_digitize(self.data_chs)
             #self.scope.set_to_single()
 

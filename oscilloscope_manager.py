@@ -134,8 +134,8 @@ class OscilloscopeManager:
         plt.show()
 
 
-    def configure_scope(self, samp_rate=1e10, timebase_range=1e-8, centered_0=False,\
-                        high_speed = False):
+    def configure_scope(self, data_chs, samp_rate=1e10, timebase_range=1e-8, centered_0=False,\
+                        high_speed = False, high_impedance=True):
         """
         Function to configure the general scope settings.
         Inputs:
@@ -151,13 +151,16 @@ class OscilloscopeManager:
         print("configuring the scope settings")
         self.scope.write('ACQUIRE:MODE HRESOLUTION')
         self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}')
-        self.scope.write(f'TIMEBASE:RANGE {timebase_range}')
-
-        if centered_0:
-            self.scope.write(f"TIMEBASE:POSITION 0")
+        if not centered_0:
+            self.scope.write(':TIMBebase:REFerence LEFT')
         else:
-            self.scope.write(f'TIMEBASE:POSITION {timebase_range / 2}')
-
+            self.scope.write(f"TIMEBASE:POSITION 0")
+        self.scope.write(f'TIMEBASE:RANGE {timebase_range}')
+        
+        if high_impedance:
+            for channel in data_chs:
+                self.scope.write(f":CHANnel{channel}:INPut DC")
+        
         self.scope.write('WAVEFORM:FORMAT WORD')
         self.scope.write('WAVEFORM:STREAMING OFF')
         print("scope settings configured")
@@ -211,22 +214,39 @@ class OscilloscopeManager:
         Function to set the scope to digitize mode. This is the primary way to collect
         data from the scope. Use this before sending a trigger pulse to the scope.
         """
-        # # HACK - This allows multiple channels to be digitized at once.
-        write_text = "DIGITIZE:"
-        for channel in channels:
-            write_text += f" CHANNEL{channel},"
+        # # # HACK - This allows multiple channels to be digitized at once.
+        # write_text = "DIGITIZE:"
+        # for channel in channels:
+        #     write_text += f" CHANNEL{channel},"
 
-        write_text = write_text[:-1]  # Remove the last comma
+        # write_text = write_text[:-1]  # Remove the last comma
         
         # self.scope.write(write_text) 
-        #self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
+        # #self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
 
-        # for channel in channels:
-        #     self.scope.write(f'DIGITIZE CHANNEL{channel}')
+        # # for channel in channels:
+        # #     self.scope.write(f'DIGITIZE CHANNEL{channel}')
 
-        print(f"Oscilloscope set to digitize mode for channels {channels}.")
+        #print(f"Oscilloscope set to digitize mode for channels {channels}.")
+        query_result = self.scope.query(':DIGitize;*OPC?')
+        if query_result.strip() == '1':
+            print(f"Oscilloscope digitized channels {channels}.")
+        
+        return query_result.strip() == '1'
 
+    def reset_scope(self):
+        """
+        Function to reset the oscilloscope. This will clear all settings and data.
+        """
+        self.scope.clear()
+        self.scope.write('*RST')
 
+    def clear_scope(self):
+        """
+        Function to clear the oscilloscope. This will clear all settings and data.
+        """
+        self.scope.clear()
+        print("Oscilloscope cleared.")
 
 
     # def acquire_slow_return_data(self, channels, window=00):   
