@@ -217,6 +217,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
     """
     def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope, use_awg,
+                 awg_config_path_single:str = None, awg_config_path:str = None,
                  cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
 
@@ -241,6 +242,10 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_time_range = scope_dict["time_range"]
             self.scope_centered_0 = scope_dict["centered_0"]
             self.scope_data_channels = scope_dict["data_channels"]
+        
+        if self.use_awg:
+            self.awg_config_path_single = awg_config_path_single
+            self.awg_config_path = awg_config_path
 
 class AWGSequenceConfiguration(GenericConfiguration):
     """
@@ -1421,8 +1426,6 @@ class MotFluoresceExperiment(GenericExperiment):
 
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                 mot_fluoresce_configuration:MotFluoresceConfiguration,
-                awg_config_path:str=None,
-                awg_single_config_path:str=None,
                 ic_imaging_control:IC_ImagingControl = None):
         
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
@@ -1437,8 +1440,8 @@ class MotFluoresceExperiment(GenericExperiment):
         self.with_awg = self.mot_fluoresce_config.use_awg
 
         if self.with_awg:
-            config = ConfigObj(awg_config_path)     # permite acceder a los valores de configuración como un diccionario.
-            config_single = ConfigObj(awg_single_config_path) if awg_single_config_path else None
+            config = ConfigObj(mot_fluoresce_configuration.awg_config_path)     # permite acceder a los valores de configuración como un diccionario.
+            config_single = ConfigObj(mot_fluoresce_configuration.awg_single_config_path) if mot_fluoresce_configuration.awg_single_config_path else None
             # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
             self.awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
                                             burst_count = int(config['AWG']['burst count']),
