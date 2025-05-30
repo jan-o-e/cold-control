@@ -44,8 +44,8 @@ from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
 from instruments.pyicic.IC_Exception import IC_Exception
 from instruments.pyicic.IC_Camera import IC_Camera
 from instruments.TF930 import TF930
-from lab_control_functions.awg_control_functions_psh import run_awg
-from lab_control_functions.awg_control_functions_single_psh import run_awg_single
+#from lab_control_functions.awg_control_functions_psh import run_awg
+#from lab_control_functions.awg_control_functions_single_psh import run_awg_single
 from Sequence import IntervalStyle, Sequence
 from serial.serialutil import SerialException
 

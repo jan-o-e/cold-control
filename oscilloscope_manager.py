@@ -212,12 +212,14 @@ class OscilloscopeManager:
         data from the scope. Use this before sending a trigger pulse to the scope.
         """
         # # HACK - This allows multiple channels to be digitized at once.
-        # write_text = "DIGITIZE:"
-        # for channel in channels:
-        #     write_text += f" CHANNEL{channel}"
+        write_text = "DIGITIZE:"
+        for channel in channels:
+            write_text += f" CHANNEL{channel},"
+
+        write_text = write_text[:-1]  # Remove the last comma
         
         # self.scope.write(write_text) 
-        self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
+        #self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
 
         # for channel in channels:
         #     self.scope.write(f'DIGITIZE CHANNEL{channel}')
