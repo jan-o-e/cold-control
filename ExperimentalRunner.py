@@ -1183,25 +1183,24 @@ class MotFluoresceExperiment(GenericExperiment):
             print(f"loading mot for {self.config.mot_reload}ms")
             #self.scope.set_to_digitize(self.data_chs)
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
-            #self.scope.set_to_single()
-            self.scope.clear_scope()
-            self.scope.set_to_digitize(self.data_chs)
-            #self.scope.set_to_single()
+
+            self.scope.arm_scope()
 
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
             print("writing channel values")
             self.daq_controller.writeChannelValues()
+
+            self.scope.wait_for_acquisition()
             
             print("collecting data")
-            data = self.scope.acquire_slow_return_data(self.data_chs)
+            data = self.scope.read_slow_return_data(self.data_chs)
             filename = f"iteration_{i}_data.csv"
             full_name = os.path.join(directory, filename)
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
 
-            #self.scope.set_to_run()
 
             i += 1
 

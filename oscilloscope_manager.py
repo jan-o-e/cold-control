@@ -249,56 +249,9 @@ class OscilloscopeManager:
         print("Oscilloscope cleared.")
 
 
-    # def acquire_slow_return_data(self, channels, window=00):   
-    #     """
-    #     Function to sample data from multiple channels when a trigger has been manually 
-    #     set on the oscilloscope.
-        
-    #     Inputs:
-    #      - channels (list of int): List of channels to collect data from
-    #      - save_file (bool): Option to save the collected data in a csv file
-    #      - window (int): Name for saving the data
-
-    #     Returns:
-    #      - collected_data (pd.DataFrame): Datafram with time and voltage values for each channel
-    #     """
-    #     collected_data = None
-
-    #     if self.read_speed is None:
-    #         raise ValueError("Scope read speed not set. Please configure the scope first.")
-    #     elif self.read_speed is True:
-    #         print("Warning: Scope is set to high speed. Consider using acquire_slow_return_data() instead.")
-
-    #     for channel in channels:
-    #         self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
-    #         self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
-
-    #         print(f"Collecting data from channel {channel}...")
-    #         y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
-    #         y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-    #         y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-    #         y_data = y_data * y_incr + y_orig
-
-    #         if len(y_data) == 0:
-    #             raise ValueError(f"No data collected from channel {channel}.")
 
 
-    #         if collected_data is None:
-    #             print("collecting time data")
-    #             x_incr = float(self.scope.query('WAVEFORM:XINCREMENT?'))
-    #             x_orig = float(self.scope.query('WAVEFORM:XORIGIN?'))
-    #             num_points = int(self.scope.query('WAVEFORM:POINTS?'))
-    #             time_data = np.linspace(x_orig, x_orig + x_incr * (num_points - 1), num_points)
-    #             collected_data = pd.DataFrame({'Time (s)': time_data})
-            
-    #         collected_data[f'Channel {channel} Voltage (V)'] = y_data
-
-        
-    
-    #     return collected_data
-
-
-    def acquire_slow_return_data(self, channels):   
+    def read_slow_return_data(self, channels):   
         """
         Function to sample data from multiple channels when a trigger has been manually 
         set on the oscilloscope. This is a slower method of acquiring data, and is used
@@ -399,3 +352,95 @@ class OscilloscopeManager:
         channels_str = "_".join(map(str, channels))
         filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
         return filename
+    
+
+
+
+
+    def arm_scope(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
+        """
+        Function to arm the oscilloscope ready to collect data when it receives a trigger.
+        """
+
+        try:
+            self.scope.query(":ADER?") # [1, 6]
+        except Exception:
+            # Ignore if ADER? query fails initially (e.g., no event set)
+            pass # Out of scope for this simple example
+
+        self.scope.write(':SINGLE')
+
+        # --- Wait for Oscilloscope to become Armed ---
+        # Poll the Trigger Armed Event Register (:AER?) to know when the oscilloscope is ready for a trigger [1, 3, 32, 33]
+        # The :AER? query returns 1 when armed and clears the register upon reading [3, 33].
+        # Alternatively, you could check bit 5 (Wait Trig) of the Operation Status Register (:OPER?) [4, 32, 34].
+        # Or bit 7 (OPER) of the Status Byte (*STB?) using VISA's read_stb() [3, 30, 35].
+        # We will use :AER? as shown in the single-shot DUT example [1].
+
+        print("Waiting for oscilloscope to arm (polling :AER?)...\n") # [3]
+        StartTime = time.perf_counter()
+        armed_status = 0
+        acquisition_started = False
+
+        # Wait until armed (AER? returns 1) or timeout [1, 3]
+        while armed_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+            time.sleep(poll_interval_sec) # Pause to prevent excessive queries [1, 3-5, 7]
+            try:
+                # Query :AER?. It returns 1 when armed and is cleared upon reading [3, 33].
+                # We need to capture the 1 when it first appears.
+                armed_status_query_result = self.scope.query(":AER?")
+                armed_status = int(armed_status_query_result)
+                if armed_status == 1:
+                    acquisition_started = True # Armed state indicates acquisition is waiting for trigger
+                    break # Exit loop once armed
+            except Exception as e:
+                # Handle potential errors during query (e.g., instrument busy, communication issue)
+                print(f"Error during arming poll: {e}")
+                # Decide how to handle error - maybe attempt clear and retry, or exit
+                acquisition_started = False
+                break # Exit loop on error
+
+        if not acquisition_started:
+            print("Oscilloscope did not arm within the maximum wait time.")
+            # Decide on error handling: clear, close, exit
+            self.scope.clear() # [36-38]
+            self.scope.close() # [37-39]
+            raise  RuntimeError("Oscilloscope failed to arm within the specified time.")
+
+        print("Oscilloscope is armed and ready for trigger!")
+        return True
+    
+
+    def wait_for_acquisition(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
+        # --- Wait for Acquisition to Complete ---
+        # Now that the trigger pulse is sent, the oscilloscope should trigger and acquire data.
+        # Poll the Acquisition Done Event Register (:ADER?) to know when the acquisition is complete [1, 6].
+        # Alternatively, poll the Processing Done Event Register (:PDER?) if you need to wait for
+        # post-acquisition processing (like measurements or FFTs) as well [7, 13, 39-41].
+        # The single-shot DUT example uses :ADER? [1].
+
+        print("Waiting for acquisition to complete (polling :ADER?)...\n") # [13]
+        StartTime = time.perf_counter() # Reset timer for acquisition wait
+        acquisition_complete_status = 0
+
+        # Wait until acquisition is done (ADER? returns 1) or timeout [1, 6]
+        while acquisition_complete_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+            time.sleep(poll_interval_sec) # Pause [1, 6]
+            try:
+                # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
+                acquisition_complete_status_query_result = self.scope.query(":ADER?")
+                acquisition_complete_status = int(acquisition_complete_status_query_result)
+                if acquisition_complete_status == 1:
+                    break # Exit loop once acquisition is done
+            except Exception as e:
+                print(f"Error during completion poll: {e}")
+                break # Exit loop on error
+
+        if acquisition_complete_status != 1:
+            print("Acquisition did not complete within the maximum wait time.")
+            # Decide on error handling: clear, close, exit
+            self.scope.clear() # [36-38]
+            self.scope.close() # [37-39]
+            raise RuntimeError("Oscilloscope acquisition failed to complete within the specified time.")
+
+        print("Acquisition complete. Ready to retrieve data.") # [14]
