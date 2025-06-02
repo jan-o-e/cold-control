@@ -105,7 +105,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
     """
     def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope, use_awg,
-                 awg_config_path_single:str = None, awg_config_path:str = None,
+                 awg_dict:Dict = None, awg_config_path_single:str = None, awg_config_path:str = None,
                  cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
 
@@ -132,8 +132,14 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_data_channels = scope_dict["data_channels"]
         
         if self.use_awg:
-            self.awg_config_path_single = awg_config_path_single
-            self.awg_config_path = awg_config_path
+            self.awg_config_path_single = awg_dict["config_path_single"]
+            self.awg_config_path = awg_dict["config_path_full"]
+            self.awg_config = awg_dict["awg_config"]
+            self.awg_sequence_config = awg_dict["sequence_config"]
+            self.awg_config_single = awg_dict["awg_config_single"]
+            self.awg_sequence_config_single = awg_dict["sequence_config_single"]
+        else:
+            print("No AWG will be used.")
 
 class AWGSequenceConfiguration(GenericConfiguration):
     """

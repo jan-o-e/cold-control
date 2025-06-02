@@ -989,69 +989,17 @@ class MotFluoresceExperiment(GenericExperiment):
         self.iterations = self.mot_fluoresce_config.iterations
         self.mot_reload = self.mot_fluoresce_config.mot_reload # in ms
         print('MOT reload time (ms)', self.mot_reload)
+        
         self.with_cam = self.mot_fluoresce_config.use_cam
         self.with_scope = self.mot_fluoresce_config.use_scope
         self.with_awg = self.mot_fluoresce_config.use_awg
 
         if self.with_awg:
-            config = ConfigObj(mot_fluoresce_configuration.awg_config_path)     # permite acceder a los valores de configuración como un diccionario.
-            config_single = ConfigObj(mot_fluoresce_configuration.awg_config_path_single) if mot_fluoresce_configuration.awg_config_path_single else None
-            # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
-            self.awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
-                                            burst_count = int(config['AWG']['burst count']),
-                                            waveform_output_channels = list(config['AWG']['waveform output channels']),
-                                            waveform_output_channel_lags = map(float, config['AWG']['waveform output channel lags']),  # Retrasos asociados a los canales de salida.
-                                            marked_channels = list(config['AWG']['marked channels']),
-                                            marker_width = eval(config['AWG']['marker width']),
-                                            waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
-            
-            # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
-            waveforms = []
-            for x,v in config['waveforms'].items():
-                if v['phases']: 
-                    phases_str = ' '.join(v['phases'])
-                    phases_str = re.sub(r'\(([^)]+) ([^)]+)\)', r'(\1, \2)', phases_str)
-                    phases_str = phases_str.replace(') (', '), (')
-                    phases = ast.literal_eval(phases_str)
-                else:
-                    phases = [] 
-                waveforms.append(Waveform(fname = v['filename'],
-                                            mod_frequency= float(v['modulation frequency']),
-                                            phases = phases)) # map(float, v['phases']))) 
+            self.awg_config = self.mot_fluoresce_config.awg_config
+            self.awg_sequence_config = self.mot_fluoresce_config.awg_sequence_config
+            self.awg_config_single = self.mot_fluoresce_config.awg_config_single
+            self.awg_sequence_config_single = self.mot_fluoresce_config.awg_sequence_config_single
 
-            # Sets the general settings for the whole process as a photon production configuration
-            self.awg_sequence_config = AWGSequenceConfiguration(save_location = config['save location'],
-                                                                        mot_reload  = eval(config['mot reload']),
-                                                                        iterations = int(config['iterations']),
-                                                                        waveform_sequence = list(eval(config['waveform sequence'])),
-                                                                        waveforms = waveforms,
-                                                                        waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
-                                                                        interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
-                                                                        awg_configuration = self.awg_config)
-            
-            self.awg_config_single = AwgConfiguration(sample_rate = float(config_single['AWG']['sample rate']),
-                                         burst_count = int(config_single['AWG']['burst count']),
-                                         waveform_output_channels = list(config_single['AWG']['waveform output channels']),
-                                         waveform_output_channel_lags = map(float, config_single['AWG']['waveform output channel lags']),
-                                         marked_channels = list(config_single['AWG']['marked channels']),
-                                         marker_width = eval(config_single['AWG']['marker width']),
-                                         waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
-
-            waveforms_single = []
-            for x,v in config_single['waveforms'].items():
-                waveforms_single.append(Waveform(fname = v['filename'],
-                                                mod_frequency= float(v['modulation frequency']),
-                                                phases=map(float, v['phases'])))
-
-            self.awg_sequence_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
-                                                                            mot_reload  = eval(config_single['mot reload']),
-                                                                            iterations = int(config_single['iterations']),
-                                                                            waveform_sequence = list(eval(config_single['waveform sequence'])),
-                                                                            waveforms = waveforms_single,
-                                                                            waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
-                                                                            interleave_waveforms = toBool(config_single['interleave waveforms']),
-                                                                            awg_configuration = self.awg_config_single,
-                                                                            )
 
         if self.with_cam:
             if ic_imaging_control is None:

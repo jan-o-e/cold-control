@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 class OscilloscopeManager:
 
-    def __init__(self, scope_id='USB0::0x2A8D::0x900E::MY53450121::0::INSTR'):
+    def __init__(self, scope_id="USB0::0x0957::0x17A0::MY54280441::0::INSTR"):#'USB0::0x2A8D::0x900E::MY53450121::0::INSTR'):
         self.scope_id = scope_id
         self.read_speed = None
 
@@ -150,7 +150,7 @@ class OscilloscopeManager:
         
         print("configuring the scope settings")
         self.scope.write('ACQUIRE:MODE HRESOLUTION')
-        self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}')
+        #self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}') # 9000 series scope
         if not centered_0:
             self.scope.write(':TIMBebase:REFerence LEFT')
         else:
@@ -159,10 +159,11 @@ class OscilloscopeManager:
         
         if high_impedance:
             for channel in data_chs:
-                self.scope.write(f":CHANnel{channel}:INPut DC")
+                #self.scope.write(f":CHANnel{channel}:INPut DC") # 9000 series scope
+                self.scope.write(f":CHANnel{channel}:IMPedance ONEMeg")
         
         self.scope.write('WAVEFORM:FORMAT WORD')
-        self.scope.write('WAVEFORM:STREAMING OFF')
+        #self.scope.write('WAVEFORM:STREAMING OFF') # 9000 series scope
         print("scope settings configured")
 
 
@@ -175,7 +176,7 @@ class OscilloscopeManager:
          - trigger_slope (str): Slope of the trigger, either '+' or '-'
         """
         # Set the trigger level and slope
-        self.scope.write(":TRIGGER:SWEEP TRIGGERED")
+        self.scope.write(":TRIGGER:SWEEP NORMal")#TRIGGERED") for 9000 series scope
         self.scope.write(":TRIGGER:MODE EDGE")
         self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
         self.scope.write(f":TRIGGER:EDGE:LEVEL {trigger_level}")
@@ -187,26 +188,6 @@ class OscilloscopeManager:
         else:
             raise ValueError(f"Invalid value for trigger_slope: {trigger_slope}")
 
-
-
-    def set_to_single(self):
-        """
-        Function to set the scope to single mode.
-        TODO: Does this actually work?
-        """
-        # Set the scope to single mode
-        self.scope.write(':SINGLE')
-        #self.scope.write(':RUN')
-        print("Oscilloscope set to single mode.")
-
-
-    def set_to_run(self):
-        """
-        Function to set the scope to run mode. 
-        """
-        # Set the scope to run mode
-        self.scope.write(':RUN')
-        print("Oscilloscope set to run mode.")
     
 
     def set_to_digitize(self, channels=[1, 2]):
@@ -220,12 +201,6 @@ class OscilloscopeManager:
         #     write_text += f" CHANNEL{channel},"
 
         # write_text = write_text[:-1]  # Remove the last comma
-        
-        # self.scope.write(write_text) 
-        # #self.scope.write('DIGITIZE CHANNEL1, CHANNEL4')
-
-        # # for channel in channels:
-        # #     self.scope.write(f'DIGITIZE CHANNEL{channel}')
 
         #print(f"Oscilloscope set to digitize mode for channels {channels}.")
         query_result = self.scope.query(':DIGitize;*OPC?')
@@ -273,11 +248,17 @@ class OscilloscopeManager:
 
         collected_data = None
 
+        self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
+
+
         for channel in channels:
-            self.scope.write('WAVEFORM:BYTEORDER LSBFIRST')
             self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
+            # It might be worth using the :WAVeform:POINts command to reduce the number of points read from the scope
+            #self.scope.write(f'WAVEFORM:POINTS {num_points}')
 
             print(f"Collecting data from channel {channel}...")
+            preamble = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
+            print(f"Preamble info: {preamble}")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
             y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
@@ -298,8 +279,6 @@ class OscilloscopeManager:
             collected_data[f'Channel {channel} Voltage (V)'] = y_data
 
         
-        # channels_str = "_".join(map(str, channels))
-        # filename = self.save_data(collected_data, f"channels_{channels_str}_data", window)
         return collected_data
         
 
@@ -361,13 +340,6 @@ class OscilloscopeManager:
         """
         Function to arm the oscilloscope ready to collect data when it receives a trigger.
         """
-
-        try:
-            self.scope.query(":ADER?") # [1, 6]
-        except Exception:
-            # Ignore if ADER? query fails initially (e.g., no event set)
-            pass # Out of scope for this simple example
-
         self.scope.write(':SINGLE')
 
         # --- Wait for Oscilloscope to become Armed ---
@@ -380,7 +352,7 @@ class OscilloscopeManager:
         print("Waiting for oscilloscope to arm (polling :AER?)...\n") # [3]
         StartTime = time.perf_counter()
         armed_status = 0
-        acquisition_started = False
+        acq_started = False
 
         # Wait until armed (AER? returns 1) or timeout [1, 3]
         while armed_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
@@ -388,19 +360,19 @@ class OscilloscopeManager:
             try:
                 # Query :AER?. It returns 1 when armed and is cleared upon reading [3, 33].
                 # We need to capture the 1 when it first appears.
-                armed_status_query_result = self.scope.query(":AER?")
-                armed_status = int(armed_status_query_result)
+                query_result = self.scope.query(":AER?")
+                armed_status = int(query_result)
                 if armed_status == 1:
-                    acquisition_started = True # Armed state indicates acquisition is waiting for trigger
+                    acq_started = True # Armed state indicates acquisition is waiting for trigger
                     break # Exit loop once armed
             except Exception as e:
                 # Handle potential errors during query (e.g., instrument busy, communication issue)
                 print(f"Error during arming poll: {e}")
                 # Decide how to handle error - maybe attempt clear and retry, or exit
-                acquisition_started = False
+                acq_started = False
                 break # Exit loop on error
 
-        if not acquisition_started:
+        if not acq_started:
             print("Oscilloscope did not arm within the maximum wait time.")
             # Decide on error handling: clear, close, exit
             self.scope.clear() # [36-38]
@@ -419,24 +391,25 @@ class OscilloscopeManager:
         # post-acquisition processing (like measurements or FFTs) as well [7, 13, 39-41].
         # The single-shot DUT example uses :ADER? [1].
 
-        print("Waiting for acquisition to complete (polling :ADER?)...\n") # [13]
+        print("Waiting for acquisition to complete (polling :ACQ:COMP?)...\n") # [13]
         StartTime = time.perf_counter() # Reset timer for acquisition wait
-        acquisition_complete_status = 0
+        acq_complete = 0
 
-        # Wait until acquisition is done (ADER? returns 1) or timeout [1, 6]
-        while acquisition_complete_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+        # Wait until acquisition is done  or timeout [1, 6]
+        print(time.perf_counter()-StartTime)
+        while acq_complete != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
             time.sleep(poll_interval_sec) # Pause [1, 6]
             try:
                 # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
-                acquisition_complete_status_query_result = self.scope.query(":ADER?")
-                acquisition_complete_status = int(acquisition_complete_status_query_result)
-                if acquisition_complete_status == 1:
+                query_result = self.scope.query(":ACQuire:COMPlete?")
+                acq_complete = float(query_result) == float(100) # Check if acquisition is complete
+                if acq_complete:
                     break # Exit loop once acquisition is done
             except Exception as e:
                 print(f"Error during completion poll: {e}")
                 break # Exit loop on error
 
-        if acquisition_complete_status != 1:
+        if acq_complete != True:
             print("Acquisition did not complete within the maximum wait time.")
             # Decide on error handling: clear, close, exit
             self.scope.clear() # [36-38]
