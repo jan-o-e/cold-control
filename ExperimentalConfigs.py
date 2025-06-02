@@ -116,12 +116,12 @@ class MotFluoresceConfiguration(GenericConfiguration):
         if use_cam == True:
             self.cam_exposure = cam_dict["cam_exposure"]
             self.cam_gain = cam_dict["cam_gain"]
-            self.camera_trigger_channel = cam_dict["camera_trigger_channel"]
-            self.camera_trigger_level = cam_dict["camera_trigger_level"]
+            self.camera_trigger_channel = cam_dict["camera_trig_ch"]
+            self.camera_trigger_level = cam_dict["camera_trig_levs"]
             self.camera_pulse_width = cam_dict["camera_pulse_width"]
             self.save_images = cam_dict["save_images"]
         else:
-            print("No camera will be used. Functionality may not be fully implemented")
+            print("No camera will be used.")
 
         if self.use_scope:
             self.scope_trigger_channel = scope_dict["trigger_channel"]

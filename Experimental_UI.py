@@ -59,12 +59,9 @@ class Experimental_UI(tk.LabelFrame):
         self.daq_ui = daq_ui
         self.sequence_ui = sequence_ui
         self.absorbtion_imaging_config = ExperimentConfigReader(absorbtion_imaging_config_fname).get_absorbtion_imaging_configuration()
-        expt_config_reader = ExperimentConfigReader(experiment_config_fname)
+        self.expt_config_reader = ExperimentConfigReader(experiment_config_fname)
         self.photon_production_config: GenericConfiguration = None
-        if expt_config_reader.get_expt_type() == "photon production":
-            self.photon_production_config = expt_config_reader.get_photon_production_configuration()
-        elif expt_config_reader.get_expt_type() == "mot fluorescence":
-            self.photon_production_config = expt_config_reader.get_mot_flourescence_configuration()
+        self.photon_production_config = self.expt_config_reader.get_correct_config()
         self.ic_ic = ic_imaging_control
         
         '''Add buttons to set and run the experimental sequence'''
@@ -86,7 +83,7 @@ class Experimental_UI(tk.LabelFrame):
         
         icon = Image.open("icons/config_icon.png").resize((30,30))
         icon = ImageTk.PhotoImage(icon)
-        self.configure_photon_production_button = tk.Button(self, image=icon, width=25, height=25, command=self.photonProductionConfigButton, background='green2')
+        self.configure_photon_production_button = tk.Button(self, image=icon, width=25, height=25, command=self.experiment_config_button, background='green2')
         self.configure_photon_production_button.image = icon
         
         self.total_iterations_frame = Frame_ExperimentalParam(self, 'Num. iterations', initVal=self.photon_production_config.iterations, dataType=int,
@@ -513,24 +510,36 @@ class Experimental_UI(tk.LabelFrame):
         self.run_tone_awg = None
 
     
-    def photonProductionConfigButton(self):
+    def experiment_config_button(self):
         if isinstance(self.photon_production_config, PhotonProductionConfiguration):
             config_UI = Photon_production_configuration_UI(self,
-                                                        photon_production_configuration=self.photon_production_config
-                                                        )
+                            photon_production_configuration=self.photon_production_config)
             self.winfo_toplevel().wait_window(config_UI.top)
-            # If the user asked for their changes to be applied, set the absorbtion imaging config accordingly.
-            if config_UI.apply_changes:
-                self.photon_production_config = config_UI.photon_production_config
-                
-            self.total_iterations_frame.entryWid.delete(0, tk.END)
-            self.total_iterations_frame.entryWid.insert(0, self.photon_production_config.iterations)
-            self.reload_time_frame.entryWid.delete(0, tk.END)
-            self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload)
+            config_reader = None
+            expt_config = config_UI.photon_production_config
+
+        elif isinstance(self.photon_production_config, GenericConfiguration):
+            config_UI = GenericExperimentConfigUi(self, expt_config=self.photon_production_config,
+                                                  expt_config_reader=self.expt_config_reader)
+            self.winfo_toplevel().wait_window(config_UI.top)
+            config_reader = config_UI.conf_reader
+            expt_config = config_UI.experiment_config
+            
         else:
-            tkMessageBox.showwarning("Error", "Photon production config button not yet implemented for this experiment type.")
+            tkMessageBox.showwarning("Error", "Invalid photon production configuration type.")
             return
-           
+
+        # If the user asked for their changes to be applied, set the config accordingly.
+        if config_UI.apply_changes:
+            self.photon_production_config = expt_config
+            if config_reader is not None:
+                self.expt_config_reader = config_reader
+            
+        self.total_iterations_frame.entryWid.delete(0, tk.END)
+        self.total_iterations_frame.entryWid.insert(0, self.photon_production_config.iterations)
+        self.reload_time_frame.entryWid.delete(0, tk.END)
+        self.reload_time_frame.entryWid.insert(0, self.photon_production_config.mot_reload)
+        
     def absorbtionImagingConfigButton(self):
         config_UI = Absorbtion_imaging_configuration_UI(self,
                                                         absorbtion_imaging_configuration=self.absorbtion_imaging_config,
@@ -1555,6 +1564,124 @@ class Absorbtion_imaging_configuration_UI(object):
                     return
             elif apply_on_exit:
                 self.apply_changes = True
+        self.top.grab_release()
+        for wid in self.top.winfo_children():
+            wid.destroy()
+        self.top.destroy()
+
+
+class GenericExperimentConfigUi():
+    def __init__(self, parent, expt_config: GenericConfiguration,
+                  expt_config_reader: ExperimentConfigReader):
+        '''
+        This class provides a UI for allowing a generic experiment configuration to be
+        changed by loading a different config file. There are no options to modify the
+        config file in the UI but this can be done by editing the config file directly,
+        saving it and then reloading it into the UI.
+        '''
+        
+        
+        # A flag that denotes is the user confirms or cancels edits they make in this window when exiting.    
+        self.apply_changes = False
+        
+        self.experiment_config = self.conf = copy.copy(expt_config)
+        self.conf_reader = copy.copy(expt_config_reader)
+        self.top = self.configureWindow(parent)
+    
+        self.top.wm_title("Experiment configuration")
+        self.top.grab_set()     
+        # Changes the close button to call my close function.
+        self.top.protocol('WM_DELETE_WINDOW', self.closeWindow)
+        
+    def configureWindow(self, parent):
+        '''
+        Build all the widget enteries for this UI.
+        '''
+        top = tk.Toplevel(parent)
+        frame = tk.Frame(top)
+        
+        label_frame_font_opts = ("Helvetica", 12, "bold", "italic")
+        file_frame = tk.LabelFrame(top, text="Config File Locations", font=label_frame_font_opts)
+  
+        widgets = []
+        
+        frame = tk.LabelFrame(file_frame, text="Experimental Config", font=label_frame_font_opts)
+            
+        fname_frame = tk.Frame(frame)
+        
+        fname_wid = Frame_ExperimentalParam(fname_frame,
+                                                label='Config file location:',
+                                                initVal=self.conf_reader.fname,
+                                                dataType=str,
+                                                helpText='File path to the config file for this experiment.',
+                                                action=None,
+                                                state=tk.DISABLED)
+        fname_wid.pack(side=tk.LEFT)
+            
+        icon = Image.open("icons/folder_icon.png").resize((20,20))
+        icon = ImageTk.PhotoImage(icon)
+        load_config_button = tk.Button(fname_frame, image=icon,
+                                    command = lambda wid=fname_wid : self.load_config(wid),
+                                    height=16, width=16)
+        load_config_button.image = icon # store the image as a variable in the widget to prevent garbage collection.
+        load_config_button.pack(side=tk.RIGHT)
+            
+            
+        fname_frame.pack()
+            
+        widgets.append(frame)
+        
+        for wid in widgets:
+            wid.pack()
+        
+        button_frame = tk.Frame(top)
+        
+        apply_button = tk.Button(button_frame, text='Apply', command=self.apply, width=15, bg='green')
+        cancel_button = tk.Button(button_frame, text='Cancel', command=self.cancel, width=15, bg='red')
+        apply_button.grid(row=0, column=0, sticky=tk.E)
+        cancel_button.grid(row=1, column=0, sticky=tk.E)
+        
+        r=1
+        for frame in [file_frame, button_frame]:
+            frame.grid(row=r, column=0, sticky=tk.E+tk.W)
+            r += 1
+    
+        return top
+
+    def load_config(self, fname_wid):
+        fname = tkFileDialog.askopenfilename(master=self.top, title="Choose a config file",\
+                                            initialdir="configs")
+        
+        # Check for empty filenames (i.e. when the user cancelled the action)
+        if fname!= '':
+            self.conf_reader = ExperimentConfigReader(fname)
+            self.experiment_config: GenericConfiguration = None
+            self.experiment_config = self.conf_reader.get_correct_config()
+
+            fname_wid.updateEntry(fname)
+            
+        # Seems to be a tkinter bug that the parent is shown on top after a file dialog - so let's fix that
+        self.top.lift(self.top.master)
+    
+    def apply(self):
+        self.apply_changes = True
+        self.closeWindow(False)
+        
+    def cancel(self):
+        self.apply_changes = False
+        self.closeWindow(False)
+    
+    def closeWindow(self, ask_to_apply_changes = True):
+        """Close the top window."""
+        if ask_to_apply_changes:
+            apply_on_exit = tkMessageBox.askyesnocancel('Confirm exit',\
+                                'Would you like to apply your changes before you exit?',
+                                parent = self.top)
+            if apply_on_exit == None:
+                    return
+            elif apply_on_exit:
+                self.apply_changes = True 
+        
         self.top.grab_release()
         for wid in self.top.winfo_children():
             wid.destroy()

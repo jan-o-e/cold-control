@@ -222,7 +222,7 @@ class SequenceWriter(object):
         self.config.write()
 
 
-class ExperimentConfigReader(object):
+class ExperimentConfigReader():
     """
     A class to read experimental config files. First the get_expt_type() method should be 
     called to determine the type of experiment the config file is set up for. Then the 
@@ -248,7 +248,7 @@ class ExperimentConfigReader(object):
         try: expt_type = self.config['metadata']['experiment_type']
         except KeyError:
             print(r"To fix this error you probably need to add a 'metadata' section to the config file. See C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\pulse_shaping_expt\photon_prod_config.ini")
-            raise KeyError("No instruments specified in the config file.")
+            raise KeyError("No experiment type specified in the config file.")
         
         return expt_type.lower()
     
@@ -381,6 +381,24 @@ class ExperimentConfigReader(object):
                  save_raw_images = toBool(self.config['save_raw_images']),
                  save_processed_images = toBool(self.config['save_processed_images']),
                  review_processed_images = toBool(self.config['review_processed_images']))
+    
+
+    def get_correct_config(self):
+        """
+        Method to extract the correct configuration object based on the experiment type
+        specified in the config file.
+        """
+        
+        expt_type = self.get_expt_type()
+        
+        if expt_type == 'photon production':
+            return self.get_photon_production_configuration()
+        elif expt_type == 'mot fluorescence':
+            return self.get_mot_flourescence_configuration()
+        elif expt_type == 'absorbtion imaging':
+            return self.get_absorbtion_imaging_configuration()
+        else:
+            raise ValueError(f"Unknown experiment type: {expt_type}")
         
     
 class PhotonProductionWriter(object):
