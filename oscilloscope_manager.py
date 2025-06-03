@@ -259,10 +259,11 @@ class OscilloscopeManager:
             print(f"Collecting data from channel {channel}...")
             preamble = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
             print(f"Preamble info: {preamble}")
+            y_ref = int(preamble[9])
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
             y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
-            y_data = y_data * y_incr + y_orig
+            y_data = (y_data-y_ref) * y_incr + y_orig
 
             if len(y_data) == 0:
                 raise ValueError(f"No data collected from channel {channel}.")
