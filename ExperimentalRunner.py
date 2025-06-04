@@ -54,23 +54,8 @@ from serial.serialutil import SerialException
 from ExperimentalConfigs import GenericConfiguration, AbsorbtionImagingConfiguration,\
     PhotonProductionConfiguration, MotFluoresceConfiguration, AWGSequenceConfiguration,\
     ExperimentSessionConfig, SingleExperimentConfig, Waveform, AwgConfiguration
-    
-plt.rcParams.update({
-    'text.usetex': True,
-    'text.latex.preamble': r'\usepackage{amsmath}',
-    'font.family': 'serif',
-    'font.size': 12,
-    'axes.labelsize': 14,
-    'axes.titlesize': 15,
-    'legend.fontsize': 12,
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'axes.linewidth': 1.1,
-    'xtick.direction': 'in',
-    'ytick.direction': 'in',
-    'xtick.major.size': 5,
-    'ytick.major.size': 5,
-})
+
+
 
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
