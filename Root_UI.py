@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import messagebox as tkMessageBox
 import os
 import Styles
+import matplotlib as mpl
 
 from DAQ_UI import DAQ_UI
 from Sequence_UI import Sequence_UI
@@ -30,6 +31,8 @@ class ColdControl_UI(tk.Frame):
     '''
 
     def __init__(self, parent):
+        mpl.rcParams['text.usetex'] = False
+
         tk.Frame.__init__(self, parent)
         
         self.config_reader = ConfigReader(os.getcwd() + '/configs/rootConfig.ini')

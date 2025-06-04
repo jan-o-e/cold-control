@@ -4,7 +4,7 @@ configuration through to data acquisition.
 
 Created on 13 Aug 2016, Refactored on 22 May 2025
 
-@authors: Tom Barrett, Matt King, Jan Ole Ernst and Marina Llano Pineiro
+@authors: Tom Barrett, Matt King, Jan Ole Ernst and Marina Llano 
 
 This module contains configuration classes that are used to store the parameters for a 
 particular experiment, usually loaded from a configuration file. It also contains 
@@ -1150,11 +1150,11 @@ class MotFluoresceExperiment(GenericExperiment):
             #self.scope.set_to_digitize(self.data_chs)
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
+            print(self.scope.check_errors())
             self.scope.arm_scope()
 
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-        
             print("writing channel values")
             self.daq_controller.writeChannelValues()
 
@@ -1167,6 +1167,8 @@ class MotFluoresceExperiment(GenericExperiment):
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
 
+            #print("processing data")
+            #MotFluoresceDataProcessor.process_readouts(data)
 
             i += 1
 
@@ -1635,22 +1637,25 @@ class MotFluoresceDataProcessor(object):
             self.detect_triggers()
 
         time_array = self.data['Time (s)'].values
-        ch2_array = self.data['Channel 2 Voltage (V)'].values
-        ch4_array = self.data['Channel 4 Voltage (V)'].values
+        ch1_array = self.data['Channel 1 Voltage (V)'].values # scope trigger
+        ch2_array = self.data['Channel 2 Voltage (V)'].values # awg marker
+        ch4_array = self.data['Channel 4 Voltage (V)'].values # photodiode
 
         for t0 in self.trigger_times:
             # Before Imaging Trigger
             mask_pre = (time_array >= t0 - self.window) & (time_array < t0)
             time_pre = time_array[mask_pre] - t0
-            ch2_pre = ch2_array[mask_pre]
+            ch1_pre = ch1_array[mask_pre]
             ch4_pre = ch4_array[mask_pre]
 
-            self.plot_pre_trigger(time_pre, ch2_pre, ch4_pre, t0)
+            self.plot_pre_trigger(time_pre, ch1_pre, ch4_pre, t0) 
 
             # After Imaging Trigger
             mask_post = (time_array >= t0) & (time_array <= t0 + self.window)
             time_post = time_array[mask_post] - t0
             ch4_post = ch4_array[mask_post]
+
+            self.plot_post_trigger(time_post, ch2_array[mask_post], ch4_post, t0)
 
             ch4_smooth = pd.Series(ch4_post).rolling(window=15, center=True, min_periods=1).mean().values
 
@@ -1692,11 +1697,12 @@ class MotFluoresceDataProcessor(object):
     
     def plot_pre_trigger(self, time, ch1, ch4, t0):
         """
-        Generates and saves a plot of the average signals of channels 1 and 4 before the trigger, 
+        Generates and saves a plot of the average signals of channels 1 and 4 before the awg marker, 
         as a reference of what is happening before the imaging.
         """
         fig, ax1 = plt.subplots(figsize=(11, 5))
         ax1.plot(time, ch1, linewidth=1.5, color='tab:blue', label='CH 1')
+        
         ax1.set_xlabel(r'Time (s)')
         ax1.set_ylabel(r'Intensity (a.u.) CH 1', color='tab:blue')
         ax1.tick_params(axis='y', labelcolor='tab:blue')
@@ -1714,7 +1720,7 @@ class MotFluoresceDataProcessor(object):
 
     def plot_post_trigger(self, time, ch1, ch4, t0, window_size=64):
         """
-        Generates and saves a plot of CH1 and rolling-averaged CH4 after the trigger,
+        Generates and saves a plot of CH2 and rolling-averaged CH4 after the awg marker,
         to visualize what happens during/after the imaging.
         """
         mask_post = time >= t0
