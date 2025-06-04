@@ -25,12 +25,15 @@ import csv
 import glob
 import re
 import collections
+import pandas as pd
 import _tkinter
 from typing import List, Tuple, Dict, Any
 import oscilloscope_manager as osc
 import pyvisa
 from configobj import ConfigObj
+from numpy import trapz
 from datetime import datetime
+import matplotlib.pyplot as plt
 import re, ast
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
@@ -52,6 +55,22 @@ from ExperimentalConfigs import GenericConfiguration, AbsorbtionImagingConfigura
     PhotonProductionConfiguration, MotFluoresceConfiguration, AWGSequenceConfiguration,\
     ExperimentSessionConfig, SingleExperimentConfig, Waveform, AwgConfiguration
     
+plt.rcParams.update({
+    'text.usetex': True,
+    'text.latex.preamble': r'\usepackage{amsmath}',
+    'font.family': 'serif',
+    'font.size': 12,
+    'axes.labelsize': 14,
+    'axes.titlesize': 15,
+    'legend.fontsize': 12,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'axes.linewidth': 1.1,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'xtick.major.size': 5,
+    'ytick.major.size': 5,
+})
 
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
@@ -63,7 +82,6 @@ def make_property(attr_name):
         fset=lambda self, value: setattr(self, attr_name, value),
         fdel=lambda self: delattr(self, attr_name),
     )
-
 
 
 
@@ -1091,6 +1109,11 @@ class MotFluoresceExperiment(GenericExperiment):
             
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
             #self.scope.set_to_run()
+
+        if self.with_awg:
+            print("Configuring AWG")
+            self._configure_awg()
+            print("AWG configured")
     
     def _configure_awg(self):
         """
@@ -1118,11 +1141,6 @@ class MotFluoresceExperiment(GenericExperiment):
         os.makedirs(directory, exist_ok=True) 
 
         i = 1
-
-        if self.with_awg:
-            print("Configuring AWG")
-            self._configure_awg()
-            print("AWG configured")
 
         #self.scope.set_to_run()
 
@@ -1582,6 +1600,146 @@ class MOTFluorescenceDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
+
+class MotFluoresceDataProcessor(object):
+    """
+    Processes oscilloscope data: detects triggers in the marker channel,
+    extracts PD signal after each trigger, and saves all readouts in binary format.
+    """
+    def __init__(self, collected_data, window=500e-6, save_dir='outputs'):
+        """
+        Initialize with marker and PD data, window size, and save path.
+        """
+        self.data = collected_data
+        self.window = window
+        self.save_dir = save_dir
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.trigger_times = None
+        self.integrals_fl = []
+        self.ref_0 = []
+
+    def detect_triggers(self):
+        """
+        Detect all falling edges (triggers) in the marker channel.
+        """
+        signal = self.data['Channel 2 Voltage (V)'].values
+        trigger_val = (signal.max() + signal.min()) / 2
+        trigger_idxs = np.where((signal[:-1] > trigger_val) & (signal[1:] < trigger_val))[0] + 1
+        self.trigger_times = self.data['Time (s)'].iloc[trigger_idxs].values
+    
+    def process_readouts(self):
+        """
+        Processes the PD signals after each trigger and calculates the fluorescence integral.
+        """
+        if self.trigger_times is None:
+            self.detect_triggers()
+
+        time_array = self.data['Time (s)'].values
+        ch2_array = self.data['Channel 2 Voltage (V)'].values
+        ch4_array = self.data['Channel 4 Voltage (V)'].values
+
+        for t0 in self.trigger_times:
+            # Before Imaging Trigger
+            mask_pre = (time_array >= t0 - self.window) & (time_array < t0)
+            time_pre = time_array[mask_pre] - t0
+            ch2_pre = ch2_array[mask_pre]
+            ch4_pre = ch4_array[mask_pre]
+
+            self.plot_pre_trigger(time_pre, ch2_pre, ch4_pre, t0)
+
+            # After Imaging Trigger
+            mask_post = (time_array >= t0) & (time_array <= t0 + self.window)
+            time_post = time_array[mask_post] - t0
+            ch4_post = ch4_array[mask_post]
+
+            ch4_smooth = pd.Series(ch4_post).rolling(window=15, center=True, min_periods=1).mean().values
+
+            # Detection imaging start
+            mask_rise = (time >= 2.1e-3) & (time <= 2.3e-3)  # imaging starts at 2.1ms
+            ch3_smooth_rise = ch4_smooth[mask_rise]
+            time_rise = time[mask_rise]
+            deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
+
+            idx_rise_rel = np.argmax(deriv_rise)
+            idx_rise = time_rise.index[idx_rise_rel]
+            t_rise = time.iloc[idx_rise]
+
+            # Detection imaging end
+            t_drop = t_rise + 450e-6
+
+            # Fluorescence
+            mask_fl = (time_post >= t_rise) & (time_post <= t_drop)
+            time_fl = time_post[mask_fl]
+            ch4_fl = ch4_post[mask_fl]
+
+            # Reference (background noise)
+            t_start_ref = t_drop + 50e-6
+            t_end_ref = time_post[-1]
+            mask_ref = (time_post >= t_start_ref) & (time_post <= t_end_ref)
+            ch4_ref = ch4_post[mask_ref]
+            average = np.mean(ch4_ref)
+
+            # Integrated area
+            area = trapz(ch4_fl - average, time_fl)
+
+            self.integrals_fl.append(area)
+            self.ref_0.append(average)
+
+        today = datetime.datetime.now().strftime("%d-%m")
+        output_path = os.path.join(self.save_dir, f'integrated_area_{today}.csv')
+        integrals_fl_df = pd.DataFrame({'integral': self.integrals_fl, 'ref 0': self.ref_0})
+        integrals_fl_df.to_csv(output_path, index=False)
+    
+    def plot_pre_trigger(self, time, ch1, ch4, t0):
+        """
+        Generates and saves a plot of the average signals of channels 1 and 4 before the trigger, 
+        as a reference of what is happening before the imaging.
+        """
+        fig, ax1 = plt.subplots(figsize=(11, 5))
+        ax1.plot(time, ch1, linewidth=1.5, color='tab:blue', label='CH 1')
+        ax1.set_xlabel(r'Time (s)')
+        ax1.set_ylabel(r'Intensity (a.u.) CH 1', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+        ax2 = ax1.twinx()
+        ax2.plot(time, ch4, linewidth=1.5, color='tab:orange', label='CH 4')
+        ax2.set_ylabel(r'Intensity (a.u.) CH 4', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+        fig.suptitle(r'Average of CH1 and CH4 before Imaging')
+        fig.tight_layout()
+        plot_filename = os.path.join(self.save_dir, 'pre_imaging_average.png')
+        plt.savefig(plot_filename)
+        plt.close()
+
+    def plot_post_trigger(self, time, ch1, ch4, t0, window_size=64):
+        """
+        Generates and saves a plot of CH1 and rolling-averaged CH4 after the trigger,
+        to visualize what happens during/after the imaging.
+        """
+        mask_post = time >= t0
+        time_post = time[mask_post]
+        ch1_post = ch1[mask_post]
+        ch4_post = ch4[mask_post]
+
+        ch4_smoothed = pd.Series(ch4_post).rolling(window=window_size, center=True, min_periods=1).mean()
+
+        fig, ax1 = plt.subplots(figsize=(11, 5))
+        ax1.plot(time_post, ch1_post, linewidth=1.5, color='tab:blue', label='CH 1')
+        ax1.set_xlabel(r'Time (s)')
+        ax1.set_ylabel(r'Intensity (a.u.) CH 1', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+        ax2 = ax1.twinx()
+        ax2.plot(time_post, ch4_smoothed, linewidth=1.5, linestyle='--', color='tab:orange', label='CH 4 (smoothed)')
+        ax2.set_ylabel(r'Intensity (a.u.) CH 4 (smoothed)', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+        fig.suptitle(r'Signals after Trigger: CH1 and Smoothed CH4')
+        fig.tight_layout()
+        plot_filename = os.path.join(self.save_dir, 'post_imaging_plot.png')
+        plt.savefig(plot_filename)
+        plt.close()
 
 
 class ExperimentalAutomationRunner(object):

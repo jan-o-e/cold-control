@@ -33,7 +33,7 @@ if __name__ == '__main__':
     awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
                                     burst_count = int(config['AWG']['burst count']),
                                     waveform_output_channels = list(config['AWG']['waveform output channels']),
-                                    waveform_output_channel_lags = map(float, config['AWG']['waveform output channel lags']),  # Retrasos asociados a los canales de salida.
+                                    waveform_output_channel_lags = list(map(float, config['AWG']['waveform output channel lags'])),  # Retrasos asociados a los canales de salida.
                                     marked_channels = list(config['AWG']['marked channels']),
                                     marker_width = eval(config['AWG']['marker width']),
                                     waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
@@ -71,7 +71,7 @@ if __name__ == '__main__':
     awg_config_single = AwgConfiguration(sample_rate = float(config_single['AWG']['sample rate']),
                                          burst_count = int(config_single['AWG']['burst count']),
                                          waveform_output_channels = list(config_single['AWG']['waveform output channels']),
-                                         waveform_output_channel_lags = map(float, config_single['AWG']['waveform output channel lags']),
+                                         waveform_output_channel_lags = list(map(float, config_single['AWG']['waveform output channel lags'])),
                                          marked_channels = list(config_single['AWG']['marked channels']),
                                          marker_width = eval(config_single['AWG']['marker width']),
                                          waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     for x,v in config_single['waveforms'].items():
         waveforms_single.append(Waveform(fname = v['filename'],
                                          mod_frequency= float(v['modulation frequency']),
-                                         phases=map(float, v['phases'])))
+                                         phases=list(map(float, v['phases']))))
 
     photon_production_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
                                                                     mot_reload  = eval(config_single['mot reload']),
