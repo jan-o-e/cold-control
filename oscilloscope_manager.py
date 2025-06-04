@@ -126,28 +126,36 @@ class OscilloscopeManager:
          - centered_0 (bool): if True, the time axis will be centered on 0. 
             If false, the time axis will start at 0.
          - high_speed (bool): TODO if True, the scope will be set to read data at high speed.
+         - high_impedance (bool): If True, the scope will be set to high impedance mode for all channels.
         """
 
         self.read_speed = high_speed
-        
+        self.scope.write('*CLS')
         print("configuring the scope settings")
-        self.scope.write('ACQUIRE:TYPE HRESOLUTION')
-        self.scope.write('ACQuire:MODE RTIMe')
+        self.scope.write(':ACQUIRE:TYPE HRESOLUTION')
+        self.scope.write(':ACQUIRE:MODE RTIME')
 
         #self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}') # 9000 series scope
         if not centered_0:
-            self.scope.write(':TIMBebase:REFerence LEFT')
+            self.scope.write(':TIMEBASE:REFERENCE LEFT')
         else:
-            self.scope.write(f"TIMEBASE:POSITION 0")
-        self.scope.write(f'TIMEBASE:RANGE {timebase_range}')
+            self.scope.write(f":TIMEBASE:POSITION 0")
+        self.scope.write(f':TIMEBASE:RANGE {timebase_range}')
         
-        if high_impedance:
-            for channel in data_chs:
+        for channel in data_chs:
+            # Turn on the channel
+            self.scope.write(f':CHANNEL{channel}:DISPLAY ON')
+            if high_impedance:
                 #self.scope.write(f":CHANnel{channel}:INPut DC") # 9000 series scope
-                self.scope.write(f":CHANnel{channel}:IMPedance ONEMeg")
+                self.scope.write(f":CHANNEL{channel}:IMPEDANCE ONEMEG")
         
-        self.scope.write('WAVEFORM:FORMAT WORD')
+        self.scope.write(':WAVEFORM:FORMAT WORD')
         #self.scope.write('WAVEFORM:STREAMING OFF') # 9000 series scope
+
+        query_result = self.scope.query('*OPC?')  # Wait for all operations to complete
+        if query_result.strip() != '1':
+            raise RuntimeError(f"Oscilloscope configuration failed: {query_result.strip()}")
+
         print("scope settings configured")
 
 
@@ -159,8 +167,9 @@ class OscilloscopeManager:
          - trigger_level (float): Voltage level at which to trigger
          - trigger_slope (str): Slope of the trigger, either '+' or '-'
         """
-        self.scope.write(":TRIGGER:SWEEP NORMal")#TRIGGERED") for 9000 series scope
+        self.scope.write(":TRIGGER:SWEEP NORMAL")#TRIGGERED") for 9000 series scope
         self.scope.write(":TRIGGER:MODE EDGE")
+        self.scope.write(f":TRIGGER:EDGE:COUPling DC")  # Set coupling to DC
         self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
         self.scope.write(f":TRIGGER:EDGE:LEVEL {trigger_level}")
         
@@ -170,6 +179,12 @@ class OscilloscopeManager:
             self.scope.write(":TRIGGER:EDGE:SLOPE NEGATIVE")
         else:
             raise ValueError(f"Invalid value for trigger_slope: {trigger_slope}")
+        
+        query_result = self.scope.query('*OPC?')  # Wait for all operations to complete
+        if query_result.strip() != '1':
+            raise RuntimeError(f"Trigger configuration failed: {query_result.strip()}")
+        print(f"Trigger configured on channel {trigger_channel} with level {trigger_level} V and slope '{trigger_slope}'.")
+
 
     
 
@@ -244,6 +259,10 @@ class OscilloscopeManager:
         for channel in channels:
             self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
             print(f"Collecting data from channel {channel}...")
+
+            #check status of the channel
+            channel_status = self.scope.query(f':STATus? CHANnel{channel}')
+            print(f"Channel {channel} status: {channel_status.strip()}")
 
             preamble_str = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
             print(f"Preamble info: {preamble_str}")
@@ -339,40 +358,34 @@ class OscilloscopeManager:
 
     def arm_scope(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
         """
-        Function to arm the oscilloscope ready to collect data when it receives a trigger.
+        Arms the oscilloscope and waits until it's ready to capture a triggered acquisition.
+        Uses :OPER:COND? to poll the acquisition status (bit 3 == 1 when armed).
         """
-        self.scope.write(':SINGLE')
 
-        # --- Wait for Oscilloscope to become Armed ---
-        # Poll the Trigger Armed Event Register (:AER?) to know when the oscilloscope is ready for a trigger
-        # The :AER? query returns 1 when armed and clears the register upon reading as shown in the single-shot DUT example
+        self.scope.write(":SINGLE")
+        print("Waiting for oscilloscope to arm (polling :OPER:COND?)...") 
 
-        print("Waiting for oscilloscope to arm (polling :AER?)...") 
-        StartTime = time.perf_counter()
-        armed_status = 0
+        start_time = time.perf_counter()
         acq_started = False
 
-        # Wait until armed (AER? returns 1) or timeout
-        while armed_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+        while (time.perf_counter() - start_time) <= max_acq_wait_sec:
             try:
-                # Query :AER?. It returns 1 when armed and is cleared upon reading
-                query_result = self.scope.query(":AER?")
-                armed_status = int(query_result)
-                if armed_status == 1:
+                oper_cond = int(self.scope.query(":OPER:COND?").strip())
+                # Bit 3 (0b1000 = 8) is set when scope is armed
+                if oper_cond & 8:
                     acq_started = True
-                    break 
+                    break
             except Exception as e:
                 print(f"Error during arming poll: {e}")
                 acq_started = False
-                break 
-            time.sleep(poll_interval_sec) # Pause to prevent excessive queries 
-
+                break
+            time.sleep(poll_interval_sec)
 
         if not acq_started:
             print("Oscilloscope did not arm within the maximum wait time.")
             self.scope.clear()
             self.scope.close()
-            raise  RuntimeError("Oscilloscope failed to arm within the specified time.")
+            raise RuntimeError("Oscilloscope failed to arm within the specified time.")
 
         print("Oscilloscope is armed and ready for trigger!")
         return True

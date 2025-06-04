@@ -1142,35 +1142,35 @@ class MotFluoresceExperiment(GenericExperiment):
 
         i = 1
 
-        #self.scope.set_to_run()
+        try:
+            while i <= self.config.iterations:
+                print(f"Iteration {i}")
+                print(f"loading mot for {self.config.mot_reload}ms")
+                #self.scope.set_to_digitize(self.data_chs)
+                sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-        while i <= self.config.iterations:
-            print(f"Iteration {i}")
-            print(f"loading mot for {self.config.mot_reload}ms")
-            #self.scope.set_to_digitize(self.data_chs)
-            sleep(self.config.mot_reload*10**-3) # convert from ms to s
+                print(self.scope.check_errors())
+                self.scope.arm_scope()
 
-            print(self.scope.check_errors())
-            self.scope.arm_scope()
+                print("playing sequence")
+                self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+                print("writing channel values")
+                self.daq_controller.writeChannelValues()
 
-            print("playing sequence")
-            self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
-            print("writing channel values")
-            self.daq_controller.writeChannelValues()
+                self.scope.wait_for_acquisition()
+                
+                print("collecting data")
+                data = self.scope.read_slow_return_data(self.data_chs)
+                filename = f"iteration_{i}_data.csv"
+                full_name = os.path.join(directory, filename)
+                data.to_csv(full_name, index=False)# Saves the data
+                print(f"Data saved to {full_name}")
+                #print("processing data")
+                #MotFluoresceDataProcessor.process_readouts(data)
+                i += 1
 
-            self.scope.wait_for_acquisition()
-            
-            print("collecting data")
-            data = self.scope.read_slow_return_data(self.data_chs)
-            filename = f"iteration_{i}_data.csv"
-            full_name = os.path.join(directory, filename)
-            data.to_csv(full_name, index=False)# Saves the data
-            print(f"Data saved to {full_name}")
-
-            #print("processing data")
-            #MotFluoresceDataProcessor.process_readouts(data)
-
-            i += 1
+        finally:
+            self.close()
 
     def __run_with_cam(self):
         try:# needs to be in a try except. If the camera isn't closed the computer will crash
@@ -1244,7 +1244,10 @@ class MotFluoresceExperiment(GenericExperiment):
             print('...closed')
 
         self.daq_controller.clearCards()
-        self.scope.quit()
+        if self.with_scope:
+            print('closing scope...')
+            self.scope.quit()
+            print('...closed scope')
         super().daq_cards_off()
 
 class PhotonProductionDataSaver(object):
