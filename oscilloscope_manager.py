@@ -27,7 +27,7 @@ class OscilloscopeManager:
         try:
             self.rm = visa.ResourceManager()
             self.scope = self.rm.open_resource(scope_id)
-            self.scope.timeout = 60000  # 30 segundos de timeout
+            self.scope.timeout = 30000  # 30 segundos de timeout
             print("Connected to the oscilloscope:", self.scope.query("*IDN?"))
 
         except visa.Error as e:
