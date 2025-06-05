@@ -233,7 +233,7 @@ class Experimental_UI(tk.LabelFrame):
         Note for completeness: to avoid timing issues between taking/saving the data, the PhotonProductionExperiment
         spawns a new thread to save every iterations data to file.
         '''
-        loaded_experiment.configure()
+        #loaded_experiment.configure() # The experiment should configure itself, so this is not needed.
         
         if liveUI: 
             experiment_live_ui = Photon_produduction_live_UI(self,

@@ -114,12 +114,13 @@ class GenericExperiment:
         '''
         Run the experiment with the experimental loop in a separate thread.
         '''
-        def run_and_close():
-            self.run()
-            self.close()
+        # def run_and_close():
+        #     self.run()
+        #     self.close()
+        # the experiment should close itself in run() method, so we don't need to close it here.
         
         thread = threading.Thread(name='Cold Control Experiment Thread',
-                                  target=run_and_close)
+                                  target=self.run)
         
         if start_thread:
             thread.start()
@@ -1079,7 +1080,7 @@ class MotFluoresceExperiment(GenericExperiment):
 
     def configure(self):
         """
-        Configures the experiment. This method should called before the experiment is run.
+        Configures the experiment.
         """
         super().daq_cards_on()
         self.daq_controller.load(self.sequence.getArray())
@@ -1155,60 +1156,62 @@ class MotFluoresceExperiment(GenericExperiment):
             i += 1
 
     def __run_with_cam(self):
-        try:# needs to be in a try except. If the camera isn't closed the computer will crash
-            self.__configureCamera()
+        # needs to be in a try except. If the camera isn't closed the computer will crash
+        self.__configureCamera()
 
-            if self.with_awg:
-                print("Configuring AWG")
-                self._configure_awg()
-                print("AWG configured")
-            img_arrs = []
-            i = 1
-            while i <= self.config.iterations:
-                print(f"Iteration {i}")
-                print(f"loading mot for {self.config.mot_reload}ms")
-                sleep(self.config.mot_reload*10**-3) # convert from ms to s
+        if self.with_awg:
+            print("Configuring AWG")
+            self._configure_awg()
+            print("AWG configured")
+        img_arrs = []
+        i = 1
+        while i <= self.config.iterations:
+            print(f"Iteration {i}")
+            print(f"loading mot for {self.config.mot_reload}ms")
+            sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-                print("playing sequence")
-                self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
+            print("playing sequence")
+            self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
 
-                # Grab image and save as bmp
-                self.cam.wait_til_frame_ready(self.cam_frame_timeout)    
-                data = self.cam.get_image_data()
-                img = Image.frombuffer('RGB', (data[1], data[2]), data[0], 'raw', 'RGB',\
-                                       0,1).convert('L').transpose(Image.FLIP_TOP_BOTTOM)
-                img_arrs.append(np.array(img))
+            # Grab image and save as bmp
+            self.cam.wait_til_frame_ready(self.cam_frame_timeout)    
+            data = self.cam.get_image_data()
+            img = Image.frombuffer('RGB', (data[1], data[2]), data[0], 'raw', 'RGB',\
+                                    0,1).convert('L').transpose(Image.FLIP_TOP_BOTTOM)
+            img_arrs.append(np.array(img))
 
-                # Save the images
-                current_date = datetime.now().strftime("%Y-%m-%d")
-                current_time = datetime.now().strftime("%H-%M-%S")
-                directory = os.path.join(self.save_location, current_date)
-                os.makedirs(directory, exist_ok=True) 
+            # Save the images
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            current_time = datetime.now().strftime("%H-%M-%S")
+            directory = os.path.join(self.save_location, current_date)
+            os.makedirs(directory, exist_ok=True) 
 
-                if self.save_images:
-                    # Creates full file name including time and parent folders
-                    full_name = os.path.join(directory, current_time)
-                    img.save(f"{full_name}.bmp", "bmp")
+            if self.save_images:
+                # Creates full file name including time and parent folders
+                full_name = os.path.join(directory, current_time)
+                img.save(f"{full_name}.bmp", "bmp")
 
-                self.cam.reset_frame_ready()
-                print("writing channel values")
-                self.daq_controller.writeChannelValues()
+            self.cam.reset_frame_ready()
+            print("writing channel values")
+            self.daq_controller.writeChannelValues()
 
-                i += 1
-        finally:
-            self.close()
+            i += 1
 
 
     def run(self):
         """
         Runs the experiment. This is called by the run_in_thread method.
         """
-        if not self.with_cam and self.with_scope:
-            self.__run_with_scope()
-        elif self.with_cam and not self.with_scope:
-            self.__run_with_cam()
-        else:
-            raise ValueError("Either a camera or a scope must be used, but not both.")
+        try:
+            self.configure()
+            if not self.with_cam and self.with_scope:
+                self.__run_with_scope()
+            elif self.with_cam and not self.with_scope:
+                self.__run_with_cam()
+        except Exception as e:
+            print(f"An error occurred during the experiment: {e}")
+        finally:
+            self.close()
 
 
     def close(self):
@@ -1247,9 +1250,7 @@ class MotFluoresceSweepExperiment():
             print(f"Running experiment with configuration: {i}")
             # Create a new MotFluoresceExperiment with the current configuration
             experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config)
-            experiment.configure()
             experiment.run()
-            experiment.close()
             print(f"Experiment {i} completed and closed.")
 
 
