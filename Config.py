@@ -1,9 +1,9 @@
 '''
 Created on 22 Apr 2016
 
-@author: Tom Barrett
+@author: Tom Barrett, Jan Ole Ernst
 '''
-
+from copy import deepcopy
 from configobj import ConfigObj
 from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INPUT_LINE, Channel_P1A, Channel_P1B, Channel_P1C, Channel_P1CL, Channel_P1CH,\
     Channel_P2A
@@ -17,6 +17,7 @@ import os
 from mock import patch
 import numpy as np
 import re, ast
+from typing import Dict, List
 
 GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
 
@@ -425,6 +426,19 @@ class ExperimentConfigReader():
         
         
         return mot_fluoresce_config
+    
+    def modify_awg_sequence_config(base_config: AWGSequenceConfiguration,
+                               waveform_csvs: Dict[int, str],
+                               mod_freqs: Dict[int, float]) -> AWGSequenceConfiguration:
+        new_config = deepcopy(base_config)
+
+        for idx, wf in enumerate(new_config.waveforms):
+            if idx in waveform_csvs:
+                wf.fname = waveform_csvs[idx]
+            if idx in mod_freqs:
+                wf.mod_frequency = mod_freqs[idx]
+
+        return new_config
     
     def get_absorbtion_imaging_configuration(self):
         

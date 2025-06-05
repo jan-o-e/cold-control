@@ -53,7 +53,8 @@ from Sequence import IntervalStyle, Sequence
 from serial.serialutil import SerialException
 from ExperimentalConfigs import GenericConfiguration, AbsorbtionImagingConfiguration,\
     PhotonProductionConfiguration, MotFluoresceConfiguration, AWGSequenceConfiguration,\
-    ExperimentSessionConfig, SingleExperimentConfig, Waveform, AwgConfiguration
+    ExperimentSessionConfig, SingleExperimentConfig, Waveform, AwgConfiguration,\
+    MotFluoresceConfigurationSweep
 
 
 
@@ -1226,6 +1227,32 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.clearCards()
         self.scope.quit()
         super().daq_cards_off()
+
+
+class MotFluoresceSweepExperiment():
+    def __init__(self, sweep_config:MotFluoresceConfigurationSweep,
+                 daq_controller:DAQ_controller, sequence:Sequence):
+        self.sweep_config = sweep_config
+        self.daq_controller = daq_controller
+        self.sequence = sequence
+
+
+    def run(self):
+        """
+        This method should create and run a MotFluoresceExperiment for each sweep point
+        """
+
+        for i, config in enumerate(self.sweep_config):
+            print(f"Running experiment with configuration: {i}")
+            # Create a new MotFluoresceExperiment with the current configuration
+            experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config)
+            experiment.configure()
+            experiment.run()
+            experiment.close()
+            print(f"Experiment {i} completed and closed.")
+
+
+
 
 class PhotonProductionDataSaver(object):
     '''
