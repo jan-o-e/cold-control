@@ -69,8 +69,6 @@ def make_property(attr_name):
     )
 
 
-
-
 class GenericExperiment:
     '''
     A generic base class for all experiments.  This is not intended to be used directly, but is what other experiments should inherit from.
@@ -1407,7 +1405,6 @@ class PhotonProductionDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
-
 class MOTFluorescenceDataSaver(object):
     '''
     This object takes raw data from the PD Measuring MOT fluorescnece, parses it into our desired format and saves
@@ -1584,7 +1581,6 @@ class MOTFluorescenceDataSaver(object):
             print('__log: closed log file')
         else:
             print('__log: Can not write. No log file exists.')
-
 
 class MotFluoresceDataProcessor(object):
     """
