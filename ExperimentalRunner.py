@@ -4,7 +4,7 @@ configuration through to data acquisition.
 
 Created on 13 Aug 2016, Refactored on 22 May 2025
 
-@authors: Tom Barrett, Matt King
+@authors: Tom Barrett, Matt King, Jan Ole Ernst and Marina Llano Pineiro
 
 This module contains configuration classes that are used to store the parameters for a 
 particular experiment, usually loaded from a configuration file. It also contains 
@@ -25,13 +25,16 @@ import csv
 import glob
 import re
 import collections
+import pandas as pd
 import _tkinter
 from typing import List, Tuple, Dict, Any
 import oscilloscope_manager as osc
-#import pyvisa as visa
+import pyvisa
+from configobj import ConfigObj
+from numpy import trapz
 from datetime import datetime
-import pandas as pd
-
+import matplotlib.pyplot as plt
+import re, ast
 
 from DAQ import DAQ_controller, DaqPlayException, DAQ_channel
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
@@ -44,11 +47,19 @@ from instruments.pyicic.IC_ImagingControl import IC_ImagingControl
 from instruments.pyicic.IC_Exception import IC_Exception
 from instruments.pyicic.IC_Camera import IC_Camera
 from instruments.TF930 import TF930
+from lab_control_functions.awg_control_functions_psh import run_awg
+from lab_control_functions.awg_control_functions_single_psh import run_awg_single
 from Sequence import IntervalStyle, Sequence
-from sympy.physics.units import frequency
 from serial.serialutil import SerialException
+from ExperimentalConfigs import GenericConfiguration, AbsorbtionImagingConfiguration,\
+    PhotonProductionConfiguration, MotFluoresceConfiguration, AWGSequenceConfiguration,\
+    ExperimentSessionConfig, SingleExperimentConfig, Waveform, AwgConfiguration
 
 
+
+def toBool(string):
+    GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
+    return string.lower() in GLOB_TRUE_BOOL_STRINGS
 
 def make_property(attr_name):
     return property(
@@ -57,410 +68,6 @@ def make_property(attr_name):
         fdel=lambda self: delattr(self, attr_name),
     )
 
-"""
-class ExperimentSessionConfig (object):
-    
-    def __init__(self,
-                 save_location,
-                 summary_fname,
-                 automated_experiment_configurations,
-                 daq_channel_update_steps,
-                 daq_channel_update_delay):
-        
-        self.save_location = save_location
-        self.summary_fname = summary_fname
-        self.automated_experiment_configurations = automated_experiment_configurations
-        self.daq_channel_update_steps = daq_channel_update_steps
-        self.daq_channel_update_delay = daq_channel_update_delay
-
-    def get_summary_fname(self):
-        return self.__summary_fname
-
-
-    def set_summary_fname(self, value):
-        self.__summary_fname = value
-
-
-    def del_summary_fname(self):
-        del self.__summary_fname
-
-
-    def get_daq_channel_update_steps(self):
-        return self.__daq_channel_update_steps
-
-
-    def get_daq_channel_update_delay(self):
-        return self.__daq_channel_update_delay
-
-
-    def set_daq_channel_update_steps(self, value):
-        self.__daq_channel_update_steps = value
-
-
-    def set_daq_channel_update_delay(self, value):
-        self.__daq_channel_update_delay = value
-
-
-    def del_daq_channel_update_steps(self):
-        del self.__daq_channel_update_steps
-
-
-    def del_daq_channel_update_delay(self):
-        del self.__daq_channel_update_delay
-
-
-    def get_save_location(self):
-        return self.__save_location
-
-
-    def get_automated_experiment_configurations(self):
-        return self.__automated_experiment_configurations
-
-
-    def set_save_location(self, value):
-        self.__save_location = value
-
-
-    def set_automated_experiment_configurations(self, value):
-        self.__automated_experiment_configurations = value
-
-
-    def del_save_location(self):
-        del self.__save_location
-
-
-    def del_automated_experiment_configurations(self):
-        del self.__automated_experiment_configurations
-
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    automated_experiment_configurations = property(get_automated_experiment_configurations, set_automated_experiment_configurations, del_automated_experiment_configurations, "automated_experiment_configurations's docstring")
-    daq_channel_update_steps = property(get_daq_channel_update_steps, set_daq_channel_update_steps, del_daq_channel_update_steps, "daq_channel_update_steps's docstring")
-    daq_channel_update_delay = property(get_daq_channel_update_delay, set_daq_channel_update_delay, del_daq_channel_update_delay, "daq_channel_update_delay's docstring")
-    summary_fname = property(get_summary_fname, set_summary_fname, del_summary_fname, "summary_fname's docstring")
-#"""
-
-class ExperimentSessionConfig:
-    """
-    ExperimentSessionConfig manages high-level configuration for an automated experimental session.
-    Previously called ExperimentalAutomationConfiguration.
-
-    This includes:
-    - The location where experiment data and summaries should be saved
-    - A list of individual experiment configurations to run
-    - Parameters controlling how frequently DAQ channels are updated
-
-    Intended to coordinate and control the behavior of a full session involving multiple experiments.
-    """
-    def __init__(self,
-                 save_location,
-                 summary_fname,
-                 automated_experiment_configurations,
-                 daq_channel_update_steps,
-                 daq_channel_update_delay):
-        
-        self._save_location = save_location
-        self._summary_fname = summary_fname
-        self._automated_experiment_configurations = automated_experiment_configurations
-        self._daq_channel_update_steps = daq_channel_update_steps
-        self._daq_channel_update_delay = daq_channel_update_delay
-
-
-    summary_fname = make_property('_summary_fname')
-    save_location = make_property('_save_location')
-    automated_experiment_configurations = make_property('_automated_experiment_configurations')
-    daq_channel_update_steps = make_property('_daq_channel_update_steps')
-    daq_channel_update_delay = make_property('_daq_channel_update_delay')
-
-
-class GenericConfiguration:
-    """
-    GenericConfiguration is a placeholder for any configuration that doesn't fit into the other categories.
-    This class is not intended to be used directly but serves as a base for other configuration classes.
-    """
-    def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,):
-        
-        self._save_location = save_location
-        self._mot_reload = mot_reload# in milliseconds
-        self._iterations = iterations
-
-    save_location = make_property('_save_location')
-    mot_reload = make_property('_mot_reload')
-    iterations = make_property('_iterations')
-
-    def set_mot_reload(self, value):
-        """Sets the value of the MOT reload time in milliseconds."""
-        self._mot_reload = value
-    
-    def set_iterations(self, value):
-        self._iterations = value
-
-class MotFluoresceConfiguration(GenericConfiguration):
-    """
-    Configuration for a MOT fluorescence experiment. More details can be found in the MotFluoresceExperiment class.
-    
-    The data used to configure the experiment should be loaded from a configuration file with (currently) the 
-    "ExperimentConfigReader" class and the get_mot_fluoresce_config method. This class must be passed to the 
-    MotFluoresceExperiment class to run the experiment.
-
-    inputs:
-     - save_location: The location to save the data collected in the experiment
-     - mot_reload: The time in milliseconds to wait for the MOT to reload
-     - iterations: The number of times to repeat the experiment
-     - use_cam: Boolean to determine whether to use the camera for imaging
-     - use_scope: Boolean to determine whether to use the scope for data acquisition
-     - cam_dict: Dictionary containing camera configuration parameters (if use_cam is True)
-     - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
-    """
-    def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope,
-                 cam_dict:Dict = None, scope_dict:Dict = None):
-        super().__init__(save_location, mot_reload, iterations)
-
-        self.use_scope = use_scope
-        self.use_cam = use_cam
-
-        if use_cam == True:
-            self.cam_exposure = cam_dict["cam_exposure"]
-            self.cam_gain = cam_dict["cam_gain"]
-            self.camera_trigger_channel = cam_dict["camera_trigger_channel"]
-            self.camera_trigger_level = cam_dict["camera_trigger_level"]
-            self.camera_pulse_width = cam_dict["camera_pulse_width"]
-            self.save_images = cam_dict["save_images"]
-        else:
-            print("No camera will be used. Functionality may not be fully implemented")
-
-        if self.use_scope:
-            self.scope_trigger_channel = scope_dict["trigger_channel"]
-            self.scope_trigger_level = scope_dict["trigger_level"]
-            self.scope_sample_rate = scope_dict["sample_rate"]
-            self.scope_time_range = scope_dict["time_range"]
-            self.scope_centered_0 = scope_dict["centered_0"]
-            self.scope_data_channels = scope_dict["data_channels"]
-            self.scope_trigger_type = scope_dict["trigger_type"]
-
-
-class PhotonProductionConfiguration(GenericConfiguration):
-    """
-    PhotonProductionConfiguration stores all configuration parameters
-    required for a photon production experiment.
-
-    This includes:
-    - Save location and MOT reload time
-    - Number of iterations
-    - A waveform sequence and its associated waveforms
-    - Interleaving and stitching behavior for waveforms
-    - Configuration objects for the AWG and TDC systems
-    """
-
-    def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
-                 waveform_sequence,
-                 waveforms,
-                 interleave_waveforms,
-                 waveform_stitch_delays,
-                 awg_configuration,
-                 tdc_configuration):
-        
-        super().__init__(save_location, mot_reload, iterations)
-
-        self._waveform_sequence = waveform_sequence
-        self.waveforms: List[Waveform] = waveforms
-        self.interleave_waveforms: bool = interleave_waveforms
-        self.waveform_stitch_delays = waveform_stitch_delays
-        
-        self._awg_configuration: AwgConfiguration = awg_configuration
-        self._tdc_configuration: TdcConfiguration = tdc_configuration
-
-
-    # --- waveform_sequence ---
-    @property
-    def waveform_sequence(self):
-        return self._waveform_sequence
-    @waveform_sequence.setter
-    def waveform_sequence(self, value):
-        print('Setting waveform sequence to', value, [type(x) for x in value])
-        self._waveform_sequence = value
-    @waveform_sequence.deleter
-    def waveform_sequence(self):
-        del self._waveform_sequence
-
-    
-    awg_configuration = make_property('_awg_configuration')
-    tdc_configuration = make_property('_tdc_configuration')
-
-
-class AbsorbtionImagingConfiguration(GenericConfiguration):
-    '''
-    This object stores and presents for editing the settings for absorbtion imaging experiments.
-        
-        scan_abs_img_freq - TODO
-        abs_img_freq_ch - TODO
-        abs_img_freqs - TODO
-        camera_trig_ch, imag_power_ch - The DAQ channels that trigger the camera and control the imaging light power.
-        camera_pulse_width, imag_pulse_width - How long to make the trigger pulse and absorbtion imaging flash in microseconds.
-        t_imgs - The times at which to take images (in microseconds where 0 is the beginning of the sequence).
-        mot_reload_time - The MOT reload time in ms
-        bkg_off_channels - A list of channels (specified by channel number) to turn off during background pictures.
-        n_backgrounds - The number of background images to take for each absorbtion image.
-        cam_gain - The gain setting for the camera when taking the picture.
-        cam_exposure - How long the camera exposure should be.  Passes as an integer x which corresponds to an exposure time of 1/x seconds.
-        save_location - The folder to save images to as 'save_location/{date}/{time}/'
-        save_raw_images - Boolean determining whether the raw images (i.e. processed absorbtion images and all background contributing to 
-                          the background average) are saved.
-        save_processed_images - Boolean determining whether the processed images (i.e. absorbtion images after background subtraction and
-                                average backgrounds) are automatically saved.
-        review_processed_images - Boolean determining whether the Absorbtion_imaging_review_UI is launched after the images are processed
-                                  to allow the user to review the images, add notes and decide whether to save or not. Note that since the
-                                  user is given the chance to review the processed images, the option to automatically save them is disabled
-                                  when review_processed_images=True.
-    '''
-        
-    def __init__(self,
-                 scan_abs_img_freq, abs_img_freq_ch, abs_img_freqs,
-                 camera_trig_ch, imag_power_ch, 
-                 camera_trig_levs, imag_power_levs, 
-                 camera_pulse_width, imag_pulse_width,
-                 t_imgs, 
-                 mot_reload, 
-                 n_backgrounds, bkg_off_channels, 
-                 cam_gain, cam_exposure, 
-                 cam_gain_lims, cam_exposure_lims,
-                 save_location,
-                 save_raw_images, save_processed_images, review_processed_images, iterations=1):
-        super().__init__(save_location, mot_reload, iterations)
-        
-        self.scan_abs_img_freq = scan_abs_img_freq
-        self.abs_img_freq_ch = abs_img_freq_ch
-        self.abs_img_freqs = abs_img_freqs
-        self.camera_trig_ch = camera_trig_ch
-        self.imag_power_ch = imag_power_ch
-        self.camera_trig_levs = camera_trig_levs
-        self.imag_power_levs = imag_power_levs
-        self.camera_pulse_width = camera_pulse_width
-        self.imag_pulse_width = imag_pulse_width
-        self.t_imgs = t_imgs
-        self.mot_reload_time = mot_reload
-        self.n_backgrounds = n_backgrounds
-        self.bkg_off_channels = bkg_off_channels
-        self.cam_gain = cam_gain
-        self.cam_exposure = cam_exposure
-        self.cam_gain_lims = cam_gain_lims
-        self.cam_exposure_lims = cam_exposure_lims
-        self.save_location = save_location
-        self.save_raw_images = save_raw_images
-        self.save_processed_images = save_processed_images
-        self.review_processed_images = review_processed_images
-
-"""
-class SingleExperimentConfig(object):
-    
-    def __init__(self,
-                 daq_channel_static_values,
-                 sequence_fname,
-                 sequence,
-                 iterations,
-                 mot_reload,
-                 modulation_frequencies
-                 ):
-        self.daq_channel_static_values = daq_channel_static_values
-        self.sequence_fname = sequence_fname
-        self.sequence = sequence
-        self.iterations = iterations
-        self.mot_reload = mot_reload
-        self.modulation_frequencies = modulation_frequencies
-
-    def get_daq_channel_static_values(self):
-        return self.__daq_channel_static_values
-
-
-    def get_sequence_fname(self):
-        return self.__sequence_fname
-
-
-    def get_iterations(self):
-        return self.__iterations
-
-
-    def get_mot_reload_time(self):
-        return self.__mot_reload_time
-
-
-    def set_daq_channel_static_values(self, value):
-        self.__daq_channel_static_values = value
-
-
-    def set_sequence_fname(self, value):
-        self.__sequence_fname = value
-
-
-    def set_iterations(self, value):
-        self.__iterations = value
-
-
-    def set_mot_reload_time(self, value):
-        self.__mot_reload_time = value
-
-
-    def del_daq_channel_static_values(self):
-        del self.__daq_channel_static_values
-
-
-    def del_sequence_fname(self):
-        del self.__sequence_fname
-
-
-    def del_iterations(self):
-        del self.__iterations
-
-
-    def del_mot_reload_time(self):
-        del self.__mot_reload_time
-
-    daq_channel_static_values = property(get_daq_channel_static_values, set_daq_channel_static_values, del_daq_channel_static_values, "daq_channel_static_values's docstring")
-    sequence_fname = property(get_sequence_fname, set_sequence_fname, del_sequence_fname, "sequence_fname's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    mot_reload_time = property(get_mot_reload_time, set_mot_reload_time, del_mot_reload_time, "mot_reload_time's docstring")
-#"""
-
-class SingleExperimentConfig(GenericConfiguration):
-    """
-    SingleExperimentConfig defines the configuration for a single automated experiment run.
-    Previously called AutomatedExperimentConfiguration.
-
-    This includes:
-    - Static DAQ channel values
-    - The filename and contents of the experiment sequence
-    - The number of times to repeat the experiment
-    - The MOT (Magneto-Optical Trap) reload time
-    - Frequencies used for modulation during the experiment
-
-    Intended to be used as part of a larger experiment session, or independently for individual runs.
-    """
-    def __init__(self,
-                 daq_channel_static_values,
-                 sequence_fname,
-                 sequence,
-                 iterations,
-                 mot_reload,
-                 modulation_frequencies,
-                 save_location=None):
-        
-        self._daq_channel_static_values = daq_channel_static_values
-        self._sequence_fname = sequence_fname
-        self._sequence = sequence
-        self._modulation_frequencies = modulation_frequencies
-        super().__init__(save_location, mot_reload, iterations)
-
-    daq_channel_static_values = make_property('_daq_channel_static_values')
-    sequence_fname = make_property('_sequence_fname')
-    iterations = make_property('_iterations')
-    mot_reload_time = make_property('_mot_reload_time')
-    sequence = make_property('_sequence')
-    modulation_frequencies = make_property('_modulation_frequencies')
 
 class GenericExperiment:
     '''
@@ -517,7 +124,6 @@ class GenericExperiment:
             thread.start()
         return thread
     
-
 class AbsorbtionImagingExperiment(GenericExperiment):
         
     shutter_lag = 4.8 #The camera response time to the trigger.  Hard coded as it is a physical camera property.
@@ -885,8 +491,6 @@ class AbsorbtionImagingExperiment(GenericExperiment):
     
         super().daq_cards_off()  
     
-
-
 class PhotonProductionExperiment(GenericExperiment):
     
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, photon_production_configuration:PhotonProductionConfiguration):
@@ -1347,7 +951,6 @@ class PhotonProductionExperiment(GenericExperiment):
         print(f'Setting reload_time to {reload_time}ms')
         self.mot_reload_time = reload_time
         
-
 class MotFluoresceExperiment(GenericExperiment):
     """
     Experimental runner for the mot fluoresce experiment.
@@ -1387,8 +990,17 @@ class MotFluoresceExperiment(GenericExperiment):
         self.iterations = self.mot_fluoresce_config.iterations
         self.mot_reload = self.mot_fluoresce_config.mot_reload # in ms
         print('MOT reload time (ms)', self.mot_reload)
+        
         self.with_cam = self.mot_fluoresce_config.use_cam
         self.with_scope = self.mot_fluoresce_config.use_scope
+        self.with_awg = self.mot_fluoresce_config.use_awg
+
+        if self.with_awg:
+            self.awg_config = self.mot_fluoresce_config.awg_config
+            self.awg_sequence_config = self.mot_fluoresce_config.awg_sequence_config
+            self.awg_config_single = self.mot_fluoresce_config.awg_config_single
+            self.awg_sequence_config_single = self.mot_fluoresce_config.awg_sequence_config_single
+
 
         if self.with_cam:
             if ic_imaging_control is None:
@@ -1473,47 +1085,81 @@ class MotFluoresceExperiment(GenericExperiment):
         if self.with_scope:
             print("connecting to scope")
             self.scope = osc.OscilloscopeManager()
-            self.scope.configure_scope(samp_rate=self.samp_rate, timebase_range=self.time_range,
-                                       centered_0=self.centred_0)
+            #self.scope.reset_scope()
+            self.scope.configure_scope(self.data_chs, samp_rate=self.samp_rate,
+                                       timebase_range=self.time_range, centered_0=self.centred_0)
+            
             self.scope.configure_trigger(self.trig_ch, self.trig_lvl)
+            #self.scope.set_to_run()
 
-            # This sets up the data processor to process the data collected from the scope.
-            self.data_processor = MotFluoresceDataProcessor(self.mot_fluoresce_config)
+        if self.with_awg:
+            print("Configuring AWG")
+            self._configure_awg()
+            print("AWG configured")
+    
+    def _configure_awg(self):
+        """
+        Configures the AWG for the experiment, loads data for all channels"""
+        rm = pyvisa.ResourceManager()
+        awg = rm.open_resource("USB0::0x168C::0x1284::0000215582::0::INSTR")   
+        awg.write(":SYSTem:REBoot") 
+        awg.close()
+
+        run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
+        run_awg(self.awg_config, self.awg_sequence_config) 
+
 
     def __run_with_scope(self):
         """
         Private method to run the experiment with a scope.
         """
+        self.daq_controller.load(self.sequence.getArray())
+        self.daq_controller.writeChannelValues()
+
+        # Create the filepath for the data
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        current_time = datetime.now().strftime("%H-%M-%S")
+        directory = os.path.join("data", current_date, current_time)
+        os.makedirs(directory, exist_ok=True) 
+
         i = 1
+
+        #self.scope.set_to_run()
 
         while i <= self.config.iterations:
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
+            #self.scope.set_to_digitize(self.data_chs)
             sleep(self.config.mot_reload*10**-3) # convert from ms to s
 
-            self.scope.set_to_digitize(self.data_chs)
+            self.scope.arm_scope()
+
             print("playing sequence")
             self.daq_controller.play(float(self.sequence.t_step), clearCards=False)
         
             print("writing channel values")
             self.daq_controller.writeChannelValues()
+
+            self.scope.wait_for_acquisition()
             
             print("collecting data")
-            dataframe = self.scope.acquire_slow_return_data(self.data_chs)
-            # Pass the dataframe to the data processor
-            self.data_processor.process_and_save(dataframe)
-            print("data collected and processed")
-            i += 1
+            data = self.scope.read_slow_return_data(self.data_chs)
+            filename = f"iteration_{i}_data.csv"
+            full_name = os.path.join(directory, filename)
+            data.to_csv(full_name, index=False)# Saves the data
+            print(f"Data saved to {full_name}")
 
-        self.data_processor.iterations_avg()
-        self.data_processor.save_mean_data()
-        print("Experiment completed.")
-            
+
+            i += 1
 
     def __run_with_cam(self):
         try:# needs to be in a try except. If the camera isn't closed the computer will cras
             self.__configureCamera()
-            print("Camera configured and ready.")
+
+            if self.with_awg:
+                print("Configuring AWG")
+                self._configure_awg()
+                print("AWG configured")
             img_arrs = []
             i = 1
             while i <= self.config.iterations:
@@ -1580,133 +1226,6 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.clearCards()
         self.scope.quit()
         super().daq_cards_off()
-
-
-class MotFluoresceDataProcessor():
-    """
-    Processes oscilloscope data: detects triggers in the marker channel,
-    extracts PD signal after each trigger, and saves all readouts in binary format.
-    """
-    def __init__(self, mot_fluoresce_config:MotFluoresceConfiguration):
-        """
-        Initialize the data processor with the configuration object.
-        """
-        self.config = mot_fluoresce_config
-
-        self.samp_rate = self.config.scope_sample_rate
-        self.time_range = self.config.scope_time_range
-        self.centred_0 = self.config.scope_centered_0
-        self.trig_ch = self.config.scope_trigger_channel
-        self.trig_type= self.config.scope_trigger_type
-        self.trig_lvl = self.config.scope_trigger_level
-        self.data_chs = self.config.scope_data_channels
-        self.trigger_type= self.config.scope_trigger_type
-
-        # Where should these values be set? In the configuration object?
-        self.window = 500e-6  # 500 us window after each trigger
-        self.save_path = self.config.save_location
-        self.all_dataframes = []  # Will hold all readouts
-        self.mean_data = None  # Will hold the mean readouts across iterations
-    
-
-    def detect_triggers(self, data_marker):
-        """
-        Detect all falling edges (triggers) in the marker channel.
-        """
-        signal = data_marker['Voltage (V)'].values
-        trigger_val = (signal.max() + signal.min()) / 2
-        trigger_idxs = np.where((signal[:-1] > trigger_val) & (signal[1:] < trigger_val))[0] + 1
-        trigger_times = data_marker['Time (s)'].iloc[trigger_idxs].values
-        return trigger_times
-
-    def extract_readouts(self, pd_data, trig_times):
-        """
-        Extract PD signal after each trigger and store all readouts in a DataFrame.
-        """
-        time_array = pd_data['Time (s)'].values
-        pd_array = pd_data['Voltage (V)'].values
-
-        readout = []
-        for t0 in trig_times:
-            mask = (time_array >= t0) & (time_array <= t0 + self.window)
-            pd_time = time_array[mask] - t0  # relative time to trigger
-            pd_signal = pd_array[mask]
-            df_temp = pd.DataFrame({'Time (s)': pd_time, 'PD Signal': pd_signal, 'Trigger Time': t0})
-            readout.append(df_temp)
-
-        df_all = pd.concat(readout, ignore_index=True)
-        self.all_dataframes.append(df_all)
-        return df_all
-
-
-    def process_and_save(self, full_data):
-        """
-        Run the full processing and save the result.
-        """
-        # Extract the marker and PD data from the full DataFrame
-        marker_ch = self.trig_ch
-        #assuming there are only two channels, the second is the data channel
-        pd_ch = self.data_chs[1]
-        marker_data = pd.DataFrame()
-        pd_data = pd.DataFrame()
-        marker_data['Time (s)'] = full_data['Time (s)']
-        pd_data['Time (s)'] = full_data['Time (s)']
-        marker_data['Voltage (V)'] = full_data[f'Channel {marker_ch} Voltage (V)']
-        pd_data['Voltage (V)'] = full_data[f'Channel {pd_ch} Voltage (V)']
-        # Detect triggers in the marker channel
-        trigger_times = self.detect_triggers(marker_data)
-        # Extract readouts from the PD data based on the detected triggers
-        processed_data = self.extract_readouts(pd_data, trigger_times)
-        # Save the processed data to a binary file CANN'T DO THIS YET AS MISSING A DEPENDENCY
-        #processed_data.reset_index(drop=True).to_feather(self.save_path)
-        #print(f"Readouts saved to {self.save_path}")
-        print("READOUTS NOT SAVED TO FILE AS MISSING DEPENDENCY")
-
-
-    def iterations_avg(self):
-        """
-        Given a list of df_all DataFrames (one per iteration), compute the mean PD Signal
-        for each readout index (Trigger Time) across all iterations.
-        Returns a DataFrame with columns: 'Time (s)', 'Mean PD Signal', 'Readout Index'
-        """
-        all_readouts = self.all_dataframes
-
-        # Group each iteration's df_all by 'Trigger Time'
-        grouped_per_iter = [df.groupby('Trigger Time') for df in all_readouts]
-
-        # Get the sorted list of unique trigger times (readout indices) from all iterations
-        #readout_ids = sorted(pd.concat(all_readouts)['Trigger Time'].unique())
-        readout_ids = sorted(all_readouts[0]['Trigger Time'].unique())
-
-        mean_readouts = []
-        for rid in readout_ids:
-            # For each readout index, collect the DataFrame for this readout from every iteration
-            readout_list = [g.get_group(rid).set_index('Time (s)')['PD Signal'] for g in grouped_per_iter]
-            # Concatenate along columns (axis=1)
-            readout_matrix = pd.concat(readout_list, axis=1)
-            # Compute the mean row-wise (across iterations)
-            mean_signal = readout_matrix.mean(axis=1)
-            mean_df = pd.DataFrame({'Time (s)': mean_signal.index, 'Mean PD Signal': mean_signal.values, 'Readout Index': rid})
-            mean_readouts.append(mean_df)
-
-        # Concatenate all mean readouts into a single DataFrame
-        mean_readouts_df = pd.concat(mean_readouts, ignore_index=True)
-        self.mean_data = mean_readouts_df
-
-    def save_mean_data(self):
-        """
-        Save the mean readouts DataFrame to a csv file.
-        """
-        #save to csv file
-        if self.mean_data is not None:
-            mean_save_path = os.path.join(self.save_path, 'mean_readouts.csv')
-            self.mean_data.to_csv(mean_save_path, index=False)
-            print(f"Mean readouts saved to {mean_save_path}")
-        else:
-            raise ValueError("Mean data has not been computed yet. Call iterations_avg() first.")
-
-
-
 
 class PhotonProductionDataSaver(object):
     '''
@@ -1885,7 +1404,6 @@ class PhotonProductionDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
-
 class MOTFluorescenceDataSaver(object):
     '''
     This object takes raw data from the PD Measuring MOT fluorescnece, parses it into our desired format and saves
@@ -2063,95 +1581,145 @@ class MOTFluorescenceDataSaver(object):
         else:
             print('__log: Can not write. No log file exists.')
 
+class MotFluoresceDataProcessor(object):
+    """
+    Processes oscilloscope data: detects triggers in the marker channel,
+    extracts PD signal after each trigger, and saves all readouts in binary format.
+    """
+    def __init__(self, collected_data, window=500e-6, save_dir='outputs'):
+        """
+        Initialize with marker and PD data, window size, and save path.
+        """
+        self.data = collected_data
+        self.window = window
+        self.save_dir = save_dir
+        os.makedirs(self.save_dir, exist_ok=True)
+        self.trigger_times = None
+        self.integrals_fl = []
+        self.ref_0 = []
 
-"""
-class PhotonProductionConfiguration(object):
+    def detect_triggers(self):
+        """
+        Detect all falling edges (triggers) in the marker channel.
+        """
+        signal = self.data['Channel 2 Voltage (V)'].values
+        trigger_val = (signal.max() + signal.min()) / 2
+        trigger_idxs = np.where((signal[:-1] > trigger_val) & (signal[1:] < trigger_val))[0] + 1
+        self.trigger_times = self.data['Time (s)'].iloc[trigger_idxs].values
     
-    def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
-                 waveform_sequence,
-                 waveforms,
-                 interleave_waveforms,
-                 waveform_stitch_delays,
-                 awg_configuration,
-                 tdc_configuration):
-        self.save_location = save_location
-        self.mot_reload = mot_reload
-        self.iterations = iterations
+    def process_readouts(self):
+        """
+        Processes the PD signals after each trigger and calculates the fluorescence integral.
+        """
+        if self.trigger_times is None:
+            self.detect_triggers()
 
-        self.waveform_sequence = waveform_sequence
-        self.waveforms:List[Waveform] = waveforms
-        self.interleave_waveforms:bool = interleave_waveforms
-        self.waveform_stitch_delays = waveform_stitch_delays
-        
-        self.awg_configuration: AwgConfiguration = awg_configuration
-        self.tdc_configuration: TdcConfiguration = tdc_configuration
+        time_array = self.data['Time (s)'].values
+        ch2_array = self.data['Channel 2 Voltage (V)'].values
+        ch4_array = self.data['Channel 4 Voltage (V)'].values
 
-    def get_waveform_sequence(self):
-        return self.__waveform_sequence
+        for t0 in self.trigger_times:
+            # Before Imaging Trigger
+            mask_pre = (time_array >= t0 - self.window) & (time_array < t0)
+            time_pre = time_array[mask_pre] - t0
+            ch2_pre = ch2_array[mask_pre]
+            ch4_pre = ch4_array[mask_pre]
 
-    def set_waveform_sequence(self, value):
-        print('Setting waveform sequence to', value, [type(x) for x in value])
-        self.__waveform_sequence = value
+            self.plot_pre_trigger(time_pre, ch2_pre, ch4_pre, t0)
 
-    def del_waveform_sequence(self):
-        del self.__waveform_sequence
+            # After Imaging Trigger
+            mask_post = (time_array >= t0) & (time_array <= t0 + self.window)
+            time_post = time_array[mask_post] - t0
+            ch4_post = ch4_array[mask_post]
 
-    def get_save_location(self):
-        return self.__save_location
+            ch4_smooth = pd.Series(ch4_post).rolling(window=15, center=True, min_periods=1).mean().values
 
-    def get_mot_reload(self):
-        return self.__mot_reload
+            # Detection imaging start
+            mask_rise = (time >= 2.1e-3) & (time <= 2.3e-3)  # imaging starts at 2.1ms
+            ch3_smooth_rise = ch4_smooth[mask_rise]
+            time_rise = time[mask_rise]
+            deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
 
-    def get_iterations(self):
-        return self.__iterations
+            idx_rise_rel = np.argmax(deriv_rise)
+            idx_rise = time_rise.index[idx_rise_rel]
+            t_rise = time.iloc[idx_rise]
 
-    def get_awg_configuration(self):
-        return self.__awg_configuration
+            # Detection imaging end
+            t_drop = t_rise + 450e-6
 
-    def get_tdc_configuration(self):
-        return self.__tdc_configuration
+            # Fluorescence
+            mask_fl = (time_post >= t_rise) & (time_post <= t_drop)
+            time_fl = time_post[mask_fl]
+            ch4_fl = ch4_post[mask_fl]
 
-    def set_save_location(self, value):
-        self.__save_location = value
+            # Reference (background noise)
+            t_start_ref = t_drop + 50e-6
+            t_end_ref = time_post[-1]
+            mask_ref = (time_post >= t_start_ref) & (time_post <= t_end_ref)
+            ch4_ref = ch4_post[mask_ref]
+            average = np.mean(ch4_ref)
 
-    def set_mot_reload(self, value):
-        self.__mot_reload = value
+            # Integrated area
+            area = trapz(ch4_fl - average, time_fl)
 
-    def set_iterations(self, value):
-        self.__iterations = value
+            self.integrals_fl.append(area)
+            self.ref_0.append(average)
 
-    def set_awg_configuration(self, value):
-        self.__awg_configuration = value
+        today = datetime.datetime.now().strftime("%d-%m")
+        output_path = os.path.join(self.save_dir, f'integrated_area_{today}.csv')
+        integrals_fl_df = pd.DataFrame({'integral': self.integrals_fl, 'ref 0': self.ref_0})
+        integrals_fl_df.to_csv(output_path, index=False)
+    
+    def plot_pre_trigger(self, time, ch1, ch4, t0):
+        """
+        Generates and saves a plot of the average signals of channels 1 and 4 before the trigger, 
+        as a reference of what is happening before the imaging.
+        """
+        fig, ax1 = plt.subplots(figsize=(11, 5))
+        ax1.plot(time, ch1, linewidth=1.5, color='tab:blue', label='CH 1')
+        ax1.set_xlabel(r'Time (s)')
+        ax1.set_ylabel(r'Intensity (a.u.) CH 1', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
 
-    def set_tdc_configuration(self, value):
-        self.__tdc_configuration = value
+        ax2 = ax1.twinx()
+        ax2.plot(time, ch4, linewidth=1.5, color='tab:orange', label='CH 4')
+        ax2.set_ylabel(r'Intensity (a.u.) CH 4', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
 
-    def del_save_location(self):
-        del self.__save_location
+        fig.suptitle(r'Average of CH1 and CH4 before Imaging')
+        fig.tight_layout()
+        plot_filename = os.path.join(self.save_dir, 'pre_imaging_average.png')
+        plt.savefig(plot_filename)
+        plt.close()
 
-    def del_mot_reload(self):
-        del self.__mot_reload
+    def plot_post_trigger(self, time, ch1, ch4, t0, window_size=64):
+        """
+        Generates and saves a plot of CH1 and rolling-averaged CH4 after the trigger,
+        to visualize what happens during/after the imaging.
+        """
+        mask_post = time >= t0
+        time_post = time[mask_post]
+        ch1_post = ch1[mask_post]
+        ch4_post = ch4[mask_post]
 
-    def del_iterations(self):
-        del self.__iterations
+        ch4_smoothed = pd.Series(ch4_post).rolling(window=window_size, center=True, min_periods=1).mean()
 
-    def del_awg_configuration(self):
-        del self.__awg_configuration
+        fig, ax1 = plt.subplots(figsize=(11, 5))
+        ax1.plot(time_post, ch1_post, linewidth=1.5, color='tab:blue', label='CH 1')
+        ax1.set_xlabel(r'Time (s)')
+        ax1.set_ylabel(r'Intensity (a.u.) CH 1', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
 
-    def del_tdc_configuration(self):
-        del self.__tdc_configuration
+        ax2 = ax1.twinx()
+        ax2.plot(time_post, ch4_smoothed, linewidth=1.5, linestyle='--', color='tab:orange', label='CH 4 (smoothed)')
+        ax2.set_ylabel(r'Intensity (a.u.) CH 4 (smoothed)', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
 
-    save_location = property(get_save_location, set_save_location, del_save_location, "save_location's docstring")
-    mot_reload = property(get_mot_reload, set_mot_reload, del_mot_reload, "mot_reload's docstring")
-    iterations = property(get_iterations, set_iterations, del_iterations, "iterations's docstring")
-    awg_configuration = property(get_awg_configuration, set_awg_configuration, del_awg_configuration, "awg_configuration's docstring")
-    tdc_configuration = property(get_tdc_configuration, set_tdc_configuration, del_tdc_configuration, "tdc_configuration's docstring")
-    waveform_sequence = property(get_waveform_sequence, set_waveform_sequence, del_waveform_sequence, "waveform_sequence's docstring")
-#"""
-
+        fig.suptitle(r'Signals after Trigger: CH1 and Smoothed CH4')
+        fig.tight_layout()
+        plot_filename = os.path.join(self.save_dir, 'post_imaging_plot.png')
+        plt.savefig(plot_filename)
+        plt.close()
 
 
 class ExperimentalAutomationRunner(object):
@@ -2286,355 +1854,3 @@ class ExperimentalAutomationRunner(object):
     def close(self):
         self._reset_daq_channel_static_values()
              
-
-
-       
-"""
-class Waveform(object):
-    
-    def __init__(self, fname, mod_frequency, phases):
-        self.fname = fname
-        self.mod_frequency = mod_frequency
-        self.phases = sorted(phases, key=lambda x:x[1]) # Sort phases into the order that they need to be applied.
-        self.data = self.__load_data()
-        
-    def __load_data(self):
-        with open(self.fname, 'rt') as csvfile:
-            print('Loading waveform:', self.fname)
-            reader = csv.reader(csvfile, delimiter=',')
-            data = []
-            for row in reader:
-                if len(row) > 1:
-                    data += list(map(float, row))
-                else:
-                    data += float(row[0])
-        
-        return data
-        
-    def get(self, sample_rate, calibration_function = lambda level: level, constant_voltage=False, double_pass=True):
-        # Copy data to new object. We do not want to mutate original data.
-        mod_data = [calibration_function(x) for x in self.data]
-        if constant_voltage:
-            return mod_data
-        t_step = 2 * np.pi / sample_rate
-        phi = 0.0
-        if double_pass:
-            # Divided phases by two for double passed AOM.
-            phases = [(x[0] / 2, x[1]) for x in self.phases]  # Using list comprehension for clarity
-        next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-        for i in range(len(mod_data)):
-            # i here is the index of the phase list
-            if i == next_i_flip:
-                phi = next_phi
-                next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-            mod_data[i] = mod_data[i] * np.sin(i * t_step * self.mod_frequency + phi)
-        return mod_data
-
-
-    def get_marker_data(self, marker_positions=[], marker_levels=(0,1), marker_width=50, n_pad_right=0, n_pad_left=0):
-        '''
-        Returns a marker waveform.
-        '''
-        
-        # Use a np array for ease of setting array slices to contant values.
-        data = np.array( [marker_levels[0]] * (n_pad_left + len(self.data) + n_pad_right))
-        for pos in marker_positions:
-            pos = int(pos)  # Ensure pos is an integer
-            data[pos:pos+int(marker_width)] = marker_levels[1]
-        # This is a big fix. If the first element of the sequence is 1 (i.e. max high level)
-        # then the channel remains high at the end of the sequence. Don't know why...
-        if data[0]==1:
-            data[0]=0
-        # Convert np array to list for consitancy with the get() method.
-        return data.tolist()
-
-    def get_profile(self):
-        return self.data
-
-    def get_n_samples(self):
-        return len(self.data)
-
-    def get_t_length(self, sample_rate):
-        return len(self.data)*sample_rate
-
-    def get_fname(self):
-        return self.__fname
-
-    def get_mod_frequency(self):
-        return self.__mod_frequency
-
-    def get_phases(self):
-        return self.__phases
-
-    def set_fname(self, value):
-        self.__fname = value
-        self.data = self.__load_data()
-
-    def set_mod_frequency(self, value):
-        self.__mod_frequency = value
-
-    def set_phases(self, value):
-        self.__phases = sorted(value, key=lambda x:x[1])
-
-    fname = property(get_fname, set_fname, None, None)
-    mod_frequency = property(get_mod_frequency, set_mod_frequency, None, None)
-    phases = property(get_phases, set_phases, None, None)
-#"""
-
-
-class Waveform:
-    def __init__(self, fname: str, mod_frequency: float, phases: List[Tuple[float, int]]):
-        self.__fname = fname
-        self.__mod_frequency = mod_frequency
-        self.__phases = sorted(phases, key=lambda x: x[1])  # Sort by index
-        self.data = self.__load_data()
-
-    def __load_data(self) -> List[float]:
-        """Loads waveform data from a CSV file."""
-        with open(self.__fname, 'rt') as csvfile:
-            print('Loading waveform:', self.__fname)
-            reader = csv.reader(csvfile, delimiter=',')
-            data = []
-            for row in reader:
-                if len(row) > 1:
-                    data += list(map(float, row))
-                else:
-                    data += float(row[0])
-        return data
-
-    def get(self, sample_rate: float, calibration_function=lambda level: level,
-            constant_voltage=False, double_pass=True) -> List[float]:
-        """
-        Returns the modulated waveform data.
-
-        - Applies the calibration function.
-        - If constant_voltage is False, applies sinusoidal modulation.
-        """
-        mod_data = [calibration_function(x) for x in self.data]
-        if constant_voltage:
-            return mod_data
-
-        t_step = 2 * np.pi / sample_rate
-        phi = 0.0
-        if double_pass:
-            # Divided phases by two for double passed AOM.
-            phases = [(x[0] / 2 if double_pass else x[0], x[1]) for x in self.__phases]
-        next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-
-        for i in range(len(mod_data)):
-            if i == next_i_flip:
-                phi = next_phi
-                next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-            mod_data[i] *= np.sin(i * t_step * self.__mod_frequency + phi)
-
-        return mod_data
-
-    def get_marker_data(self, marker_positions=[], marker_levels=(0, 1),
-                        marker_width=50, n_pad_right=0, n_pad_left=0) -> List[int]:
-        """
-        Returns a marker waveform.
-
-        Pads with zeros on both sides, and marks selected positions with high levels.
-        """
-        data = np.array([marker_levels[0]] * (n_pad_left + len(self.data) + n_pad_right))
-        for pos in marker_positions:
-            pos = int(pos)
-            data[pos:pos + int(marker_width)] = marker_levels[1]
-
-        # Fix for high-start issue
-        if data[0] == 1:
-            data[0] = 0
-
-        return data.tolist()
-
-    def get_profile(self) -> List[float]:
-        """Returns the raw waveform data."""
-        return self.data
-
-    def get_n_samples(self) -> int:
-        """Returns the number of samples in the waveform."""
-        return len(self.data)
-
-    def get_t_length(self, sample_rate: float) -> float:
-        """Returns the duration of the waveform at a given sample rate."""
-        return len(self.data) * sample_rate
-    
-    def set_mod_frequency(self, value: float):
-        """Sets the modulation frequency."""
-        self.__mod_frequency = value
-
-    # --- Properties ---
-
-    @property
-    def fname(self) -> str:
-        return self.__fname
-    @fname.setter
-    def fname(self, value: str):
-        self.__fname = value
-        self.data = self.__load_data()
-    
-    @property
-    def mod_frequency(self) -> float:
-        return self.__mod_frequency
-    @mod_frequency.setter
-    def mod_frequency(self, value: float):
-        self.__mod_frequency = value
-
-    @property
-    def phases(self) -> List[Tuple[float, int]]:
-        return self.__phases
-    @phases.setter
-    def phases(self, value: List[Tuple[float, int]]):
-        self.__phases = sorted(value, key=lambda x: x[1])
-
-"""
-class AwgConfiguration(object):
-    def __init__(self, 
-                 sample_rate,
-                 burst_count,
-                 waveform_output_channels,
-                 waveform_output_channel_lags,
-                 marked_channels,
-                 marker_width,
-                 waveform_aom_calibrations_locations):
-        self.sample_rate = sample_rate
-        self.burst_count = burst_count
-        self.waveform_output_channels = waveform_output_channels
-        self.waveform_output_channel_lags = waveform_output_channel_lags
-        self.marked_channels = marked_channels
-        self.marker_width = marker_width
-        self.waveform_aom_calibrations_locations = waveform_aom_calibrations_locations
-
-    def get_sample_rate(self):
-        return self.__sample_rate
-
-    def get_burst_count(self):
-        return self.__burst_count
-
-    def get_waveform_output_channels(self):
-        return self.__waveform_output_channels
-
-    def set_sample_rate(self, value):
-        self.__sample_rate = value
-
-    def set_burst_count(self, value):
-        self.__burst_count = value
-
-    def set_waveform_output_channels(self, value):
-        self.__waveform_output_channels = value
-
-    def del_sample_rate(self):
-        del self.__sample_rate
-
-    def del_burst_count(self):
-        del self.__burst_count
-
-    def del_waveform_output_channels(self):
-        del self.__waveform_output_channels
-
-    sample_rate = property(get_sample_rate, set_sample_rate, del_sample_rate, "sample_rate's docstring")
-    burst_count = property(get_burst_count, set_burst_count, del_burst_count, "burst_count's docstring")
-    waveform_output_channels = property(get_waveform_output_channels, set_waveform_output_channels, del_waveform_output_channels, "waveform_output_channels' docstring")
-#"""
-
-
-class AwgConfiguration:
-    """
-    Configuration for an Arbitrary Waveform Generator (AWG), including sample rate,
-    output channels, timing lags, marker widths, and calibration locations.
-    """
-    def __init__(self,
-                 sample_rate: float,
-                 burst_count: int,
-                 waveform_output_channels: List[int],
-                 waveform_output_channel_lags: List[float],
-                 marked_channels: List[int],
-                 marker_width: int,
-                 waveform_aom_calibrations_locations: Dict[int, Any]):
-        self._sample_rate = sample_rate
-        self._burst_count = burst_count
-        self._waveform_output_channels = waveform_output_channels
-
-        self.waveform_output_channel_lags = waveform_output_channel_lags
-        self.marked_channels = marked_channels
-        self.marker_width = marker_width
-        self.waveform_aom_calibrations_locations = waveform_aom_calibrations_locations
-
-
-    sample_rate = make_property('_sample_rate')
-    burst_count = make_property('_burst_count')
-    waveform_output_channels = make_property('_waveform_output_channels')
-
-    def set_burst_count(self, value: int):
-        self._burst_count = value
-
-    def set_sample_rate(self, value: float):
-        self._sample_rate = value
-
-
-"""
-class TdcConfiguration(object):
-    def __init__(self,
-                 counter_channels,
-                 marker_channel,
-                 timestamp_buffer_size):
-        self.counter_channels = counter_channels
-        self.marker_channel = marker_channel
-        self.timestamp_buffer_size = timestamp_buffer_size
-
-    def get_counter_channels(self):
-        return self.__counter_channels
-
-    def get_marker_channel(self):
-        return self.__marker_channel
-
-    def get_timestamp_buffer_size(self):
-        return self.__timestamp_buffer_size
-
-    def set_counter_channels(self, value):
-        self.__counter_channels = value
-
-    def set_marker_channel(self, value):
-        self.__marker_channel = value
-
-    def set_timestamp_buffer_size(self, value):
-        self.__timestamp_buffer_size = value
-
-    def del_counter_channels(self):
-        del self.__counter_channels
-
-    def del_marker_channel(self):
-        del self.__marker_channel
-
-    def del_timestamp_buffer_size(self):
-        del self.__timestamp_buffer_size
-
-    counter_channels = property(get_counter_channels, set_counter_channels, del_counter_channels, "counter_channels's docstring")
-    marker_channel = property(get_marker_channel, set_marker_channel, del_marker_channel, "marker_channel's docstring")
-    timestamp_buffer_size = property(get_timestamp_buffer_size, set_timestamp_buffer_size, del_timestamp_buffer_size, "timestamp_buffer_size's docstring")
-#"""
-
-
-class TdcConfiguration:
-    """
-    Configuration for a Time-to-Digital Converter (TDC), including the channels used for
-    counting events, the marker channel for synchronization, and the timestamp buffer size.
-    """
-    def __init__(self,
-                 counter_channels: List[int],
-                 marker_channel: int,
-                 timestamp_buffer_size: int):
-        self._counter_channels = counter_channels
-        self._marker_channel = marker_channel
-        self._timestamp_buffer_size = timestamp_buffer_size
-
-    counter_channels = make_property('_counter_channels')
-    marker_channel = make_property('_marker_channel')
-    timestamp_buffer_size = make_property('_timestamp_buffer_size')
-
-    def set_counter_channels(self, value: List[int]):
-        self._counter_channels = value
-    
-    def set_marker_channel(self, value: int):
-        self._marker_channel = value
-

@@ -4,8 +4,8 @@ import os
 import numpy as np
 import glob
 import re
-from ExperimentalRunner import PhotonProductionConfiguration
-from ExperimentalRunner import AwgConfiguration, Waveform
+from ExperimentalConfigs import AWGSequenceConfiguration
+from ExperimentalConfigs import AwgConfiguration, Waveform
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 from instruments.WX218x.WX218x_DLL import (
     WX218x_OutputMode, WX218x_OperationMode, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_TraceMode
@@ -176,7 +176,7 @@ def load_marker_data(awg: WX218x_awg, awg_ch, marker_data, marker_width):
 
 
 
-def run_awg_single(awg_config: AwgConfiguration, photon_config: PhotonProductionConfiguration):
+def run_awg_single(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguration):
     """
     Configures the AWG for a single-channel experiment.
     """

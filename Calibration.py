@@ -25,7 +25,7 @@ Load required classes for awg driven AOM calibration
 '''
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 from instruments.WX218x.WX218x_DLL import WX218x_OperationMode, WX218x_Waveform, WX218x_OutputMode
-from ExperimentalRunner import Waveform
+from ExperimentalConfigs import Waveform
     
 class CalibrationException(Exception):
     
@@ -560,7 +560,7 @@ def test_stirap_aom_freq_response(level=0.5,
     '''
     from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
     from instruments.WX218x.WX218x_DLL import WX218x_OperationMode, WX218x_Waveform, WX218x_OutputMode
-    from ExperimentalRunner import Waveform
+    from ExperimentalConfigs import Waveform
 
     class testWaveform(Waveform):
         '''

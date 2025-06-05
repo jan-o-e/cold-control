@@ -3,7 +3,7 @@ import os
 import time
 
 from Config import ConfigReader, DaqReader
-from ExperimentalRunner import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
+from ExperimentalConfigs import PhotonProductionConfiguration, AwgConfiguration, TdcConfiguration, Waveform
 from configobj import ConfigObj
 from lab_control_functions.awg_control_functions import run_awg
 

@@ -3,8 +3,8 @@ import os
 import numpy as np
 import glob
 import re
-from ExperimentalRunner import PhotonProductionConfiguration
-from ExperimentalRunner import AwgConfiguration, Waveform
+from ExperimentalConfigs import AWGSequenceConfiguration
+from ExperimentalConfigs import AwgConfiguration, Waveform
 from instruments.WX218x.WX218x_awg import WX218x_awg, Channel
 from instruments.WX218x.WX218x_DLL import (
     WX218x_OutputMode, WX218x_OperationMode, WX218x_TriggerMode, WX218x_TriggerSlope, WX218x_TraceMode
@@ -22,7 +22,7 @@ MARKER_WF_HIGH = 1
 MARKER_WIDTH_FACTOR = 10**-6
 ABSOLUTE_OFFSET_FACTOR = 10**-6
 # Increasing DEFAULT_MARKER_OFFSET makes the marker pulses happen later.
-DEFAULT_MARKER_OFFSET = 50  # TO DO: MAKE A LIST TO VARY MARKER DELAYS INDEPENDENTLY   si surt 0 en marker channel es aixoooo
+DEFAULT_MARKER_OFFSET = 4150  # TO DO: MAKE A LIST TO VARY MARKER DELAYS INDEPENDENTLY   si surt 0 en marker channel es aixoooo
 
 
 MARKER_WF_LEVS = (MARKER_WF_LOW, MARKER_WF_HIGH)
@@ -229,11 +229,11 @@ def write_channels(awg_chs, _rel_offsets, _wf_data, _awg:WX218x_awg):
         # Roll channel data to account for relative offsets (e.g. AOM lags)
         # print(data)
         print('Rolling {0} forward by {1} points'.format(channel, rel_offset))
-        plt.plot(data)
-        plt.title('Channel {0} data'.format(channel))
-        plt.show(block=False)
-        plt.pause(1)
-        plt.close()
+        #plt.plot(data)
+        #plt.title('Channel {0} data'.format(channel))
+        # plt.show(block=False)
+        # plt.pause(1)
+        # plt.close()
 
 
         data = np.roll(np.array(data), rel_offset).tolist()        
@@ -248,7 +248,7 @@ def write_channels(awg_chs, _rel_offsets, _wf_data, _awg:WX218x_awg):
         _awg.configure_arb_gain(channel, 2)
 
 
-def run_awg(awg_config: AwgConfiguration, photon_config: PhotonProductionConfiguration):
+def run_awg(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguration):
     """
     Main function to configure the AWG for the experiment.
     Input args:

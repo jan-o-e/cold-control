@@ -9,13 +9,14 @@ from DAQ import DAQ_controller, DAQ_card, DAQ_channel, DAQ_dio, OUTPUT_LINE, INP
     Channel_P2A
 from instruments.WX218x.WX218x_awg import Channel
 from Sequence import Sequence
-from ExperimentalRunner import AbsorbtionImagingConfiguration, PhotonProductionConfiguration,\
+from ExperimentalConfigs import AbsorbtionImagingConfiguration, PhotonProductionConfiguration,\
       AwgConfiguration, TdcConfiguration, Waveform, ExperimentSessionConfig , SingleExperimentConfig,\
-      MotFluoresceConfiguration
+      MotFluoresceConfiguration, AWGSequenceConfiguration
 import time
 import os
 from mock import patch
 import numpy as np
+import re, ast
 
 GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
 
@@ -222,7 +223,7 @@ class SequenceWriter(object):
         self.config.write()
 
 
-class ExperimentConfigReader(object):
+class ExperimentConfigReader():
     """
     A class to read experimental config files. First the get_expt_type() method should be 
     called to determine the type of experiment the config file is set up for. Then the 
@@ -248,7 +249,7 @@ class ExperimentConfigReader(object):
         try: expt_type = self.config['metadata']['experiment_type']
         except KeyError:
             print(r"To fix this error you probably need to add a 'metadata' section to the config file. See C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\configs\sequence\pulse_shaping_expt\photon_prod_config.ini")
-            raise KeyError("No instruments specified in the config file.")
+            raise KeyError("No experiment type specified in the config file.")
         
         return expt_type.lower()
     
@@ -299,6 +300,7 @@ class ExperimentConfigReader(object):
         
         use_camera = toBool(self.config["use_cam"])
         use_scope = toBool(self.config["use_scope"])
+        use_awg = toBool(self.config["use_awg"])
 
         if use_camera:
             camera = self.config['camera_settings']
@@ -329,6 +331,84 @@ class ExperimentConfigReader(object):
         else:
             scope_settings_dict = None
 
+        if use_awg:
+            awg = self.config['awg_settings']
+            config_path = awg["config_path"]
+            config_path_single = awg["config_path_single"]
+
+            config = ConfigObj(config_path)
+            config_single = ConfigObj(config_path_single) if config_path_single else None
+            # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
+            awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
+                                            burst_count = int(config['AWG']['burst count']),
+                                            waveform_output_channels = list(config['AWG']['waveform output channels']),
+                                            waveform_output_channel_lags = map(float, config['AWG']['waveform output channel lags']),  # Retrasos asociados a los canales de salida.
+                                            marked_channels = list(config['AWG']['marked channels']),
+                                            marker_width = eval(config['AWG']['marker width']),
+                                            waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
+            
+            # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
+            waveforms = []
+            for x,v in config['waveforms'].items():
+                if v['phases']: 
+                    phases_str = ' '.join(v['phases'])
+                    phases_str = re.sub(r'\(([^)]+) ([^)]+)\)', r'(\1, \2)', phases_str)
+                    phases_str = phases_str.replace(') (', '), (')
+                    phases = ast.literal_eval(phases_str)
+                else:
+                    phases = [] 
+                waveforms.append(Waveform(fname = v['filename'],
+                                            mod_frequency= float(v['modulation frequency']),
+                                            phases = phases)) # map(float, v['phases']))) 
+
+            # Sets the general settings for the whole process as a photon production configuration
+            awg_sequence_config = AWGSequenceConfiguration(save_location = config['save location'],
+                                                                        mot_reload  = eval(config['mot reload']),
+                                                                        iterations = int(config['iterations']),
+                                                                        waveform_sequence = list(eval(config['waveform sequence'])),
+                                                                        waveforms = waveforms,
+                                                                        waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
+                                                                        interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
+                                                                        awg_configuration = awg_config)
+            
+            awg_config_single = AwgConfiguration(sample_rate = float(config_single['AWG']['sample rate']),
+                                         burst_count = int(config_single['AWG']['burst count']),
+                                         waveform_output_channels = list(config_single['AWG']['waveform output channels']),
+                                         waveform_output_channel_lags = map(float, config_single['AWG']['waveform output channel lags']),
+                                         marked_channels = list(config_single['AWG']['marked channels']),
+                                         marker_width = eval(config_single['AWG']['marker width']),
+                                         waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
+
+            waveforms_single = []
+            for x,v in config_single['waveforms'].items():
+                waveforms_single.append(Waveform(fname = v['filename'],
+                                                mod_frequency= float(v['modulation frequency']),
+                                                phases=map(float, v['phases'])))
+
+            awg_sequence_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
+                                                                            mot_reload  = eval(config_single['mot reload']),
+                                                                            iterations = int(config_single['iterations']),
+                                                                            waveform_sequence = list(eval(config_single['waveform sequence'])),
+                                                                            waveforms = waveforms_single,
+                                                                            waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
+                                                                            interleave_waveforms = toBool(config_single['interleave waveforms']),
+                                                                            awg_configuration = awg_config_single,
+                                                                            )
+
+
+
+            awg_settings_dict = {\
+                "config_path_single": config_path_single,
+                "config_path_full": config_path,
+                "sequence_config": awg_sequence_config,
+                "sequence_config_single": awg_sequence_config_single,
+                "awg_config": awg_config,
+                "awg_config_single": awg_config_single
+                }
+            
+        else:
+            awg_settings_dict = None
+
 
         
         mot_fluoresce_config = \
@@ -337,8 +417,10 @@ class ExperimentConfigReader(object):
                                 iterations= int(self.config['iterations']),
                                 use_cam=use_camera,
                                 use_scope=use_scope,
+                                use_awg=use_awg,
                                 cam_dict=camera_settings_dict,
-                                scope_dict=scope_settings_dict
+                                scope_dict=scope_settings_dict,
+                                awg_dict=awg_settings_dict,
                                 )
         
         
@@ -380,6 +462,24 @@ class ExperimentConfigReader(object):
                  save_raw_images = toBool(self.config['save_raw_images']),
                  save_processed_images = toBool(self.config['save_processed_images']),
                  review_processed_images = toBool(self.config['review_processed_images']))
+    
+
+    def get_correct_config(self):
+        """
+        Method to extract the correct configuration object based on the experiment type
+        specified in the config file.
+        """
+        
+        expt_type = self.get_expt_type()
+        
+        if expt_type == 'photon production':
+            return self.get_photon_production_configuration()
+        elif expt_type == 'mot fluorescence':
+            return self.get_mot_flourescence_configuration()
+        elif expt_type == 'absorbtion imaging':
+            return self.get_absorbtion_imaging_configuration()
+        else:
+            raise ValueError(f"Unknown experiment type: {expt_type}")
         
     
 class PhotonProductionWriter(object):
