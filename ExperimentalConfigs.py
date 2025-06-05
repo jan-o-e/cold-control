@@ -155,28 +155,32 @@ class MotFluoresceConfigurationSweep:
 
     def __init__(self, base_config: MotFluoresceConfiguration,
                  waveform_csvs_ch1: List[str], waveform_csvs_ch2: List[str],
-                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float]):
+                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float], iterations: int):
+        
         self.configs = []
+        print("Creating all MOT fluorescence configurations for the sweep...")
 
-        for csv1 in waveform_csvs_ch1:
-            for csv2 in waveform_csvs_ch2:
-                for freq1 in mod_freqs_ch1:
-                    for freq2 in mod_freqs_ch2:
-                        # Modify waveforms in full AWG sequence configs
-                        modified_sequence_config = self.modify_awg_sequence_config(
-                            base_config.awg_sequence_config,
-                            waveform_csvs={
-                                0: csv1,
-                                1: csv2
-                            },
-                            mod_freqs={
-                                0: freq1,
-                                1: freq2
-                            })
+        for i in range(iterations):
+            for csv1 in waveform_csvs_ch1:
+                for csv2 in waveform_csvs_ch2:
+                    for freq1 in mod_freqs_ch1:
+                        for freq2 in mod_freqs_ch2:
+                            # Modify waveforms in full AWG sequence configs
+                            new_config = deepcopy(base_config)
+                            modified_sequence_config = self.modify_awg_sequence_config(
+                                new_config.awg_sequence_config,
+                                waveform_csvs={
+                                    0: csv1,
+                                    1: csv2
+                                },
+                                mod_freqs={
+                                    0: freq1,
+                                    1: freq2
+                                })
 
-                        # Clone base config and update AWG fields
-                        new_config = deepcopy(base_config)
-                        new_config.awg_sequence_config = modified_sequence_config
+                            # Clone base config and update AWG fields
+                            new_config.awg_sequence_config = modified_sequence_config
+                            new_config.save_location = f"{base_config.save_location}\\modified_{csv1}_{csv2}_{freq1}_{freq2}\\shot{i}.csv"
                         #new_config.awg_sequence_config_single = modified_sequence_config_single
                         #new_config.awg_config_path = f"modified_from_{csv1}_{csv2}_{freq1}_{freq2}"
                         #new_config.awg_config_path_single = f"modified_single_{csv1}_{csv2}_{freq1}_{freq2}"
@@ -201,6 +205,7 @@ class MotFluoresceConfigurationSweep:
                 wf.mod_frequency = mod_freqs[idx]
 
         return new_config
+    
 
     #this can be used as follows:
     # base_config = MotFluoresceConfiguration(...)

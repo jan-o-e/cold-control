@@ -983,7 +983,7 @@ class MotFluoresceExperiment(GenericExperiment):
 
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                 mot_fluoresce_configuration:MotFluoresceConfiguration,
-                ic_imaging_control:IC_ImagingControl = None):
+                ic_imaging_control:IC_ImagingControl = None, save_with_time=True):
         
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
         # the configuration object is a MotFluoresceConfiguration object and called self.config
@@ -996,6 +996,10 @@ class MotFluoresceExperiment(GenericExperiment):
         self.with_cam = self.mot_fluoresce_config.use_cam
         self.with_scope = self.mot_fluoresce_config.use_scope
         self.with_awg = self.mot_fluoresce_config.use_awg
+
+        self.save_with_time = save_with_time
+        if self.save_with_time and self.iterations != 1:
+            raise ValueError("Cannot save with time if iterations is not 1. Set save_with_time to False or iterations to 1.")
 
         if self.with_awg:
             self.awg_config = self.mot_fluoresce_config.awg_config
@@ -1120,9 +1124,12 @@ class MotFluoresceExperiment(GenericExperiment):
         self.daq_controller.writeChannelValues()
 
         # Create the filepath for the data
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        current_time = datetime.now().strftime("%H-%M-%S")
-        directory = os.path.join("data", current_date, current_time)
+        if self.save_with_time:
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            current_time = datetime.now().strftime("%H-%M-%S")
+            directory = os.path.join(self.save_location, current_date, current_time)
+        else:
+            directory = self.save_location
         os.makedirs(directory, exist_ok=True) 
 
         i = 1
@@ -1147,7 +1154,10 @@ class MotFluoresceExperiment(GenericExperiment):
             
             print("collecting data")
             data = self.scope.read_slow_return_data(self.data_chs)
-            filename = f"iteration_{i}_data.csv"
+            if self.save_with_time:
+                filename = f"iteration_{i}_data.csv"
+            else:
+                filename = ""
             full_name = os.path.join(directory, filename)
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
@@ -1249,7 +1259,8 @@ class MotFluoresceSweepExperiment():
         for i, config in enumerate(self.sweep_config):
             print(f"Running experiment with configuration: {i}")
             # Create a new MotFluoresceExperiment with the current configuration
-            experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config)
+            experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config,
+                                                save_with_time=False)
             experiment.run()
             print(f"Experiment {i} completed and closed.")
 
