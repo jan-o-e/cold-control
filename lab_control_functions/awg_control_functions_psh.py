@@ -229,11 +229,11 @@ def write_channels(awg_chs, _rel_offsets, _wf_data, _awg:WX218x_awg):
         # Roll channel data to account for relative offsets (e.g. AOM lags)
         # print(data)
         print('Rolling {0} forward by {1} points'.format(channel, rel_offset))
-        plt.plot(data)
-        plt.title('Channel {0} data'.format(channel))
-        plt.show(block=False)
-        plt.pause(1)
-        plt.close()
+        #plt.plot(data)
+        #plt.title('Channel {0} data'.format(channel))
+        # plt.show(block=False)
+        # plt.pause(1)
+        # plt.close()
 
 
         data = np.roll(np.array(data), rel_offset).tolist()        

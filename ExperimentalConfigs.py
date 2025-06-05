@@ -105,7 +105,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
      - scope_dict: Dictionary containing scope configuration parameters (if use_scope is True)
     """
     def __init__(self, save_location, mot_reload, iterations, use_cam, use_scope, use_awg,
-                 awg_dict:Dict = None, awg_config_path_single:str = None, awg_config_path:str = None,
+                 awg_dict:Dict = None,
                  cam_dict:Dict = None, scope_dict:Dict = None):
         super().__init__(save_location, mot_reload, iterations)
 
