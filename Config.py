@@ -16,6 +16,7 @@ import time
 import os
 from mock import patch
 import numpy as np
+import glob
 import re, ast
 from typing import Dict, List
 
@@ -425,7 +426,34 @@ class ExperimentConfigReader():
         
         
         return mot_fluoresce_config
-    
+
+
+    def get_mot_flourescence_configuration_sweep(self):
+        """
+        Method to extract the MOT fluorescence configuration for sweep experiments.
+        Returns:
+            freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
+            freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
+            pulse_files_1 (list[str]): List of CSV file paths in pulses_1 directory.
+            pulse_files_2 (list[str]): List of CSV file paths in pulses_2 directory.
+        """
+
+        def generate_freq_list(section):
+            start = float(self.config[section]['start'])
+            stop = float(self.config[section]['stop'])
+            step = float(self.config[section]['step'])
+            return list(np.round(np.arange(start, stop + step, step)).astype(int))
+
+        def get_csv_files(section):
+            directory = self.config[section]['directory_path'].strip('"').strip("'")
+            return glob.glob(os.path.join(directory, '*.csv'))
+
+        freq_list_1 = generate_freq_list('freq_1')
+        freq_list_2 = generate_freq_list('freq_2')
+        pulse_files_1 = get_csv_files('pulses_1')
+        pulse_files_2 = get_csv_files('pulses_2')
+
+        return  pulse_files_1, pulse_files_2,freq_list_1, freq_list_2
 
     
     def get_absorbtion_imaging_configuration(self):
