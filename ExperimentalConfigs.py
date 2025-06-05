@@ -13,7 +13,7 @@ import threading
 import csv
 from typing import List, Tuple, Dict, Any
 from copy import deepcopy
-from Config import modify_awg_sequence_config
+#from Config import modify_awg_sequence_config
 
 
 def toBool(string):
@@ -163,20 +163,20 @@ class MotFluoresceConfigurationSweep:
                 for freq1 in mod_freqs_ch1:
                     for freq2 in mod_freqs_ch2:
                         # Modify waveforms in full AWG sequence configs
-                        modified_sequence_config = modify_awg_sequence_config(
-                            base_config.awg_sequence_config,
-                            waveform_csvs={
-                                0: csv1,
-                                1: csv2
-                            },
-                            mod_freqs={
-                                0: freq1,
-                                1: freq2
-                            })
+                        # modified_sequence_config = modify_awg_sequence_config(
+                        #     base_config.awg_sequence_config,
+                        #     waveform_csvs={
+                        #         0: csv1,
+                        #         1: csv2
+                        #     },
+                        #     mod_freqs={
+                        #         0: freq1,
+                        #         1: freq2
+                        #     })
 
-                        # Clone base config and update AWG fields
-                        new_config = deepcopy(base_config)
-                        new_config.awg_sequence_config = modified_sequence_config
+                        # # Clone base config and update AWG fields
+                        # new_config = deepcopy(base_config)
+                        # new_config.awg_sequence_config = modified_sequence_config
                         #new_config.awg_sequence_config_single = modified_sequence_config_single
                         #new_config.awg_config_path = f"modified_from_{csv1}_{csv2}_{freq1}_{freq2}"
                         #new_config.awg_config_path_single = f"modified_single_{csv1}_{csv2}_{freq1}_{freq2}"
