@@ -998,8 +998,8 @@ class MotFluoresceExperiment(GenericExperiment):
         self.with_awg = self.mot_fluoresce_config.use_awg
 
         self.save_with_time = save_with_time
-        if self.save_with_time and self.iterations != 1:
-            raise ValueError("Cannot save with time if iterations is not 1. Set save_with_time to False or iterations to 1.")
+        #if self.save_with_time and self.iterations != 1:
+        #    raise ValueError("Cannot save with time if iterations is not 1. Set save_with_time to False or iterations to 1.")
 
         if self.with_awg:
             self.awg_config = self.mot_fluoresce_config.awg_config
@@ -1122,6 +1122,11 @@ class MotFluoresceExperiment(GenericExperiment):
         """
         self.daq_controller.load(self.sequence.getArray())
         self.daq_controller.writeChannelValues()
+        print("DAQ controller loaded and channel values written.")
+
+        save_dir = self.save_location
+        if save_dir.endswith(".csv"):
+            save_dir = os.path.dirname(save_dir)  # Get parent folder if it's a full file path
 
         # Create the filepath for the data
         if self.save_with_time:
@@ -1131,11 +1136,11 @@ class MotFluoresceExperiment(GenericExperiment):
         else:
             directory = self.save_location
         os.makedirs(directory, exist_ok=True) 
+        print(f"Data will be saved to {directory}")
 
         i = 1
 
         #self.scope.set_to_run()
-
         while i <= self.config.iterations:
             print(f"Iteration {i}")
             print(f"loading mot for {self.config.mot_reload}ms")
@@ -1154,10 +1159,7 @@ class MotFluoresceExperiment(GenericExperiment):
             
             print("collecting data")
             data = self.scope.read_slow_return_data(self.data_chs)
-            if self.save_with_time:
-                filename = f"iteration_{i}_data.csv"
-            else:
-                filename = ""
+            filename=f"iteration_{i}_data.csv"
             full_name = os.path.join(directory, filename)
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
@@ -1260,7 +1262,7 @@ class MotFluoresceSweepExperiment():
             print(f"Running experiment with configuration: {i}")
             # Create a new MotFluoresceExperiment with the current configuration
             experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config,
-                                                save_with_time=False)
+                                                save_with_time=True)
             experiment.run()
             print(f"Experiment {i} completed and closed.")
 

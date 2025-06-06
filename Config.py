@@ -432,28 +432,47 @@ class ExperimentConfigReader():
         """
         Method to extract the MOT fluorescence configuration for sweep experiments.
         Returns:
+            pulse_file_pairs (list[tuple[str, str]]): List of (channel_1, channel_2) CSV file paths from subdirectories.
             freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
             freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
-            pulse_files_1 (list[str]): List of CSV file paths in pulses_1 directory.
-            pulse_files_2 (list[str]): List of CSV file paths in pulses_2 directory.
         """
 
         def generate_freq_list(section):
             start = float(self.config[section]['start'])
             stop = float(self.config[section]['stop'])
             step = float(self.config[section]['step'])
+
+            if step == 0:
+                return [int(round(start))]
+            
             return list(np.round(np.arange(start, stop + step, step)).astype(int))
 
-        def get_csv_files(section):
-            directory = self.config[section]['directory_path'].strip('"').strip("'")
-            return glob.glob(os.path.join(directory, '*.csv'))
+        def get_pulse_file_pairs():
+            base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
+            pulse_file_pairs = []
+
+            subdirs = sorted([
+                os.path.join(base_dir, d) for d in os.listdir(base_dir)
+                if os.path.isdir(os.path.join(base_dir, d))
+            ])
+
+            for subdir in subdirs:
+                csv_files = sorted(glob.glob(os.path.join(subdir, '*.csv')))
+                if len(csv_files) != 2:
+                    raise ValueError(f"Expected 2 CSV files in {subdir}, found {len(csv_files)}")
+                if self.config['pulse_directories']['channel_1'] == 'pump':
+                    pulse_file_pairs.append((csv_files[0], csv_files[1]))
+                else:
+                    pulse_file_pairs.append((csv_files[1], csv_files[0]))
+
+            return pulse_file_pairs
 
         freq_list_1 = generate_freq_list('freq_1')
         freq_list_2 = generate_freq_list('freq_2')
-        pulse_files_1 = get_csv_files('pulses_1')
-        pulse_files_2 = get_csv_files('pulses_2')
+        pulse_pairs = get_pulse_file_pairs()
+        num_shots = int(self.config['duration']['num_shots'])
 
-        return  pulse_files_1, pulse_files_2,freq_list_1, freq_list_2
+        return pulse_pairs, freq_list_1, freq_list_2, num_shots
 
     
     def get_absorbtion_imaging_configuration(self):
