@@ -8,12 +8,14 @@ which will run the experiment with the specified configuration.
 created: 2025-05-30
 
 """
+from __future__ import annotations
 import numpy as np
 import threading
 import csv
+import os
+import re
 from typing import List, Tuple, Dict, Any
 from copy import deepcopy
-#from Config import modify_awg_sequence_config
 
 
 def toBool(string):
@@ -27,7 +29,11 @@ def make_property(attr_name):
         fdel=lambda self: delattr(self, attr_name),
     )
 
-
+def sanitize_filename(name: str) -> str:
+    # Remove extension
+    name = os.path.splitext(name)[0]
+    # Remove all non-alphanumeric or underscore characters
+    return re.sub(r'[^A-Za-z0-9_]+', '_', name)
 
 class ExperimentSessionConfig:
     """
@@ -153,34 +159,53 @@ class MotFluoresceConfiguration(GenericConfiguration):
 
 class MotFluoresceConfigurationSweep:
 
-    def __init__(self, base_config: MotFluoresceConfiguration,
-                 waveform_csvs_ch1: List[str], waveform_csvs_ch2: List[str],
-                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float]):
+    def __init__(self, base_config: 'MotFluoresceConfiguration',
+                 pulse_pairs: List[Tuple[str, str]],
+                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float],
+                 iterations: int):
+        
         self.configs = []
+        print("Creating all MOT fluorescence configurations for the sweep...")
 
-        for csv1 in waveform_csvs_ch1:
-            for csv2 in waveform_csvs_ch2:
+        for i in range(iterations):
+            for csv1, csv2 in pulse_pairs:
                 for freq1 in mod_freqs_ch1:
                     for freq2 in mod_freqs_ch2:
-                        # Modify waveforms in full AWG sequence configs
-                        # modified_sequence_config = modify_awg_sequence_config(
-                        #     base_config.awg_sequence_config,
-                        #     waveform_csvs={
-                        #         0: csv1,
-                        #         1: csv2
-                        #     },
-                        #     mod_freqs={
-                        #         0: freq1,
-                        #         1: freq2
-                        #     })
+                        # Clone and modify base configuration
+                        new_config = deepcopy(base_config)
 
-                        # # Clone base config and update AWG fields
-                        # new_config = deepcopy(base_config)
-                        # new_config.awg_sequence_config = modified_sequence_config
-                        #new_config.awg_sequence_config_single = modified_sequence_config_single
-                        #new_config.awg_config_path = f"modified_from_{csv1}_{csv2}_{freq1}_{freq2}"
-                        #new_config.awg_config_path_single = f"modified_single_{csv1}_{csv2}_{freq1}_{freq2}"
+                        # Modify waveform and frequency settings
+                        modified_sequence_config = self.modify_awg_sequence_config(
+                            base_config=new_config.awg_sequence_config,
+                            waveform_csvs={
+                                1: csv1,
+                                2: csv2
+                            },
+                            mod_freqs={
+                                1: freq1,
+                                2: freq2
+                            })
 
+                        # Update the new config with modified sequence
+                        new_config.awg_sequence_config = modified_sequence_config
+                        #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
+
+                        csv1_clean = sanitize_filename(os.path.basename(csv1))
+                        csv2_clean = sanitize_filename(os.path.basename(csv2))
+
+                        new_config.save_location = (
+                            f"{base_config.save_location}\\"
+                            f"sweeped_{csv1_clean}_{csv2_clean}_"
+                            f"{int(freq1/1e6)}_{int(freq2/1e6)}\\shot{i}"
+                        )
+
+                        if not os.path.exists(base_config.save_location):
+                            raise FileNotFoundError(f"Base save location does not exist: {base_config.save_location}")
+                        
+                        # Ensure the directory exists
+                        save_dir = os.path.dirname(new_config.save_location)
+                        os.makedirs(save_dir, exist_ok=True)
+                      
                         self.configs.append(new_config)
 
     def __iter__(self):
@@ -188,6 +213,21 @@ class MotFluoresceConfigurationSweep:
 
     def __len__(self):
         return len(self.configs)
+    
+    @staticmethod
+    def modify_awg_sequence_config(*, base_config: AWGSequenceConfiguration,
+                                waveform_csvs: Dict[int, str],
+                                mod_freqs: Dict[int, float]) -> AWGSequenceConfiguration:
+        new_config = deepcopy(base_config)
+
+        for idx, wf in enumerate(new_config.waveforms):
+            if idx in waveform_csvs:
+                wf.fname = waveform_csvs[idx]
+            if idx in mod_freqs:
+                wf.mod_frequency = mod_freqs[idx]
+
+        return new_config
+    
 
     #this can be used as follows:
     # base_config = MotFluoresceConfiguration(...)

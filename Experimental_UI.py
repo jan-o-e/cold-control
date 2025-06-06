@@ -25,10 +25,12 @@ from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
 from DAQ import DaqPlayException
 from ExperimentalConfigs import PhotonProductionConfiguration, GenericConfiguration,\
-     AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration
+     AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration,\
+     MotFluoresceConfigurationSweep
 
 from ExperimentalRunner import PhotonProductionExperiment, AbsorbtionImagingExperiment,\
-    ExperimentalAutomationRunner,  MotFluoresceExperiment, GenericExperiment
+    ExperimentalAutomationRunner,  MotFluoresceExperiment, GenericExperiment,\
+    MotFluoresceSweepExperiment
 
 from abcoll import Sequence
 from atom.event import Event
@@ -117,6 +119,16 @@ class Experimental_UI(tk.LabelFrame):
             self.configure_flash_channel_button = tk.Button(self, image=icon, width=25, height=25, command=self.configure_flash_channel, background='light salmon')
             self.configure_flash_channel_button.image = icon
         self.flash_channel_config = {"channel":-1, "duration":1, "low_val":0, "high_val":10, "repeats":10}
+
+        # Run sweep button and settings
+        with Image.open("icons/play_icon.png") as img:
+            icon = ImageTk.PhotoImage(img.resize((30,30)))
+            self.fluoresce_sweep_btn = tk.Button(self, image=icon, text="Run MOT Fluoresce Sweep", command=self.fluoresce_sweep, background='green2', **butt_opts)
+            self.fluoresce_sweep_btn.image = icon # store the image as a variable in the widget to prevent garbage collection.
+        # with Image.open("icons/config_icon.png") as img:
+        #     icon = ImageTk.PhotoImage(img.resize((30,30)))
+        #     self.config_fluoresce_sweep_btn = tk.Button(self, image=icon, width=25, height=25, command=self.configure_fluoresce_sweep, background='green4')
+        #     self.config_fluoresce_sweep_btn.image = icon
         
         
         self.set_seq_button.grid(row=0,column=0,**grid_opts)
@@ -132,6 +144,9 @@ class Experimental_UI(tk.LabelFrame):
         self.configure_abs_img_button.grid(row=1,column=3, **grid_opts)
         self.flash_channel_button.grid(row=2,column=2, **grid_opts)
         self.configure_flash_channel_button.grid(row=2,column=3, **grid_opts)
+
+        self.fluoresce_sweep_btn.grid(row=3,column=2, **grid_opts)
+        #self.config_fluoresce_sweep_btn.grid(row=3,column=3, **grid_opts)
         
         self.grid_columnconfigure(0, weight=1, uniform='button_col')
         self.grid_columnconfigure(1, weight=1)
@@ -233,7 +248,7 @@ class Experimental_UI(tk.LabelFrame):
         Note for completeness: to avoid timing issues between taking/saving the data, the PhotonProductionExperiment
         spawns a new thread to save every iterations data to file.
         '''
-        loaded_experiment.configure()
+        #loaded_experiment.configure() # The experiment should configure itself, so this is not needed.
         
         if liveUI: 
             experiment_live_ui = Photon_produduction_live_UI(self,
@@ -249,14 +264,10 @@ class Experimental_UI(tk.LabelFrame):
             experiment_live_ui.poll_live_data()
             # Wait for the live window to close!
             self.winfo_toplevel().wait_window(experiment_live_ui)
-            
-            
         # Wait for the experimental thread to finish - though if the window is
         # shut the photon_production_experiment really should be done!
         experiment_thread.join()
-        
 #         photon_production_experiment.close()
-        
 #         experiment_live_ui.closeWindow()
 
     def runSeq(self, liveUI=True, autoCloseLiveUI=False):
@@ -274,7 +285,6 @@ class Experimental_UI(tk.LabelFrame):
                                                     sequence=self.sequence_ui.sequence,
                                                     photon_production_configuration=self.photon_production_config)
             
-
         elif isinstance(self.photon_production_config, MotFluoresceConfiguration):
             if self.photon_production_config.use_cam:
                 if self.parent.camera_live:
@@ -291,11 +301,31 @@ class Experimental_UI(tk.LabelFrame):
             # The mot fluoresce experiment is a special case where the Live UI is not set up.
             liveUI = False
             autoCloseLiveUI = False
-
         else:
             raise Exception('Invalid experiment type specified.  Must be either PhotonProductionExperiment or MotFluoresceExperiment.')
-
         self.runExperiment(experiment, liveUI, autoCloseLiveUI)
+
+
+    def fluoresce_sweep(self):
+        # If run tone is on, turn it off!
+        for state, button in zip(self.run_tone_output_states, self.run_tone_buttons):
+            if state:
+                button.invoke()
+                
+        fname = tkFileDialog.askopenfilename(master=self, title="Choose an MOT Fluoresce Sweep Configuration",
+                                             initialdir=os.path.join(os.getcwd(),"/configs/"))
+        if fname!= '':
+            parameter_lists = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
+            #Number of iterations needs to be pased from config
+            sweep_config = MotFluoresceConfigurationSweep(self.photon_production_config,
+                                                          parameter_lists[0], parameter_lists[1],parameter_lists[2],parameter_lists[3])
+            sweep_experiment = MotFluoresceSweepExperiment(sweep_config,
+                                                           self.daq_ui.daq_controller,
+                                                           self.sequence_ui.sequence)
+            
+            print("Running MOT Fluoresce Sweep experiment")
+            sweep_experiment.run()
+
             
     def runAutomatedExp(self, liveUI=True):
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an Experimental Automation Configuration",
