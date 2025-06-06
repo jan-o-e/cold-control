@@ -16,7 +16,7 @@ import os
 import re
 from typing import List, Tuple, Dict, Any
 from copy import deepcopy
-
+from datetime import datetime
 
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
@@ -163,6 +163,11 @@ class MotFluoresceConfigurationSweep:
                  pulse_pairs: List[Tuple[str, str]],
                  mod_freqs_ch1: List[float], mod_freqs_ch2: List[float],
                  iterations: int):
+        now = datetime.now()
+        self.current_date = now.strftime("%Y-%m-%d")
+        self.current_time = now.strftime("%H-%M-%S")
+        print(f"[DEBUG] Fecha congelada: {self.current_date}")
+        print(f"[DEBUG] Hora congelada: {self.current_time}")
         
         self.configs = []
         print("Creating all MOT fluorescence configurations for the sweep...")
@@ -193,10 +198,12 @@ class MotFluoresceConfigurationSweep:
                         csv1_clean = sanitize_filename(os.path.basename(csv1))
                         csv2_clean = sanitize_filename(os.path.basename(csv2))
 
-                        new_config.save_location = (
-                            f"{base_config.save_location}\\"
-                            f"sweeped_{csv1_clean}_{csv2_clean}_"
-                            f"{int(freq1/1e6)}_{int(freq2/1e6)}\\shot{i}"
+                        new_config.save_location = os.path.join(
+                            base_config.save_location,
+                            self.current_date,
+                            self.current_time,
+                            f"sweeped_{csv1_clean}_{csv2_clean}_{int(freq1/1e6)}_{int(freq2/1e6)}",
+                            f"shot{i}"
                         )
 
                         if not os.path.exists(base_config.save_location):

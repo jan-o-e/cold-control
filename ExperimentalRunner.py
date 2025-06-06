@@ -1000,6 +1000,8 @@ class MotFluoresceExperiment(GenericExperiment):
         self.save_with_time = save_with_time
         #if self.save_with_time and self.iterations != 1:
         #    raise ValueError("Cannot save with time if iterations is not 1. Set save_with_time to False or iterations to 1.")
+        self.current_date = datetime.now().strftime("%Y-%m-%d")
+        self.current_time = datetime.now().strftime("%H-%M-%S")
 
         if self.with_awg:
             self.awg_config = self.mot_fluoresce_config.awg_config
@@ -1128,12 +1130,7 @@ class MotFluoresceExperiment(GenericExperiment):
             save_dir = os.path.dirname(save_dir)  # Get parent folder if it's a full file path
 
         # Create the filepath for the data
-        if self.save_with_time:
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            current_time = datetime.now().strftime("%H-%M-%S")
-            directory = os.path.join(self.save_location, current_date, current_time)
-        else:
-            directory = self.save_location
+        directory = self.save_location
         os.makedirs(directory, exist_ok=True) 
         print(f"Data will be saved to {directory}")
 
