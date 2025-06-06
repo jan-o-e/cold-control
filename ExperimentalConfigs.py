@@ -160,9 +160,8 @@ class MotFluoresceConfiguration(GenericConfiguration):
 class MotFluoresceConfigurationSweep:
 
     def __init__(self, base_config: 'MotFluoresceConfiguration',
-                 pulse_pairs: List[Tuple[str, str]],
-                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float],
-                 iterations: int):
+                 sweep_type: int = 0, sweep_dict: Dict[str, Any] = None):
+        
         now = datetime.now()
         self.current_date = now.strftime("%Y-%m-%d")
         self.current_time = now.strftime("%H-%M-%S")
@@ -172,48 +171,61 @@ class MotFluoresceConfigurationSweep:
         self.configs = []
         print("Creating all MOT fluorescence configurations for the sweep...")
 
-        for i in range(iterations):
-            for csv1, csv2 in pulse_pairs:
-                for freq1 in mod_freqs_ch1:
-                    for freq2 in mod_freqs_ch2:
-                        # Clone and modify base configuration
-                        new_config = deepcopy(base_config)
+        if sweep_type == 0:
+            # Sweep over all combinations of pulse pairs and modulation frequencies
+            if sweep_dict is None:
+                raise ValueError("sweep_dict must be provided for sweep_type 0")
+            pulse_pairs: List[Tuple[str, str]] = sweep_dict['pulse_pairs']
+            mod_freqs_ch1: List[float] = sweep_dict['mod_freqs_ch1']
+            mod_freqs_ch2: List[float] = sweep_dict['mod_freqs_ch2']
+            iterations: int = sweep_dict['iterations']
 
-                        # Modify waveform and frequency settings
-                        modified_sequence_config = self.modify_awg_sequence_config(
-                            base_config=new_config.awg_sequence_config,
-                            waveform_csvs={
-                                1: csv1,
-                                2: csv2
-                            },
-                            mod_freqs={
-                                1: freq1,
-                                2: freq2
-                            })
+            for i in range(iterations):
+                for csv1, csv2 in pulse_pairs:
+                    for freq1 in mod_freqs_ch1:
+                        for freq2 in mod_freqs_ch2:
+                            # Clone and modify base configuration
+                            new_config = deepcopy(base_config)
 
-                        # Update the new config with modified sequence
-                        new_config.awg_sequence_config = modified_sequence_config
-                        #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
+                            # Modify waveform and frequency settings
+                            modified_sequence_config = self.modify_awg_sequence_config(
+                                base_config=new_config.awg_sequence_config,
+                                waveform_csvs={
+                                    1: csv1,
+                                    2: csv2
+                                },
+                                mod_freqs={
+                                    1: freq1,
+                                    2: freq2
+                                })
 
-                        csv1_clean = sanitize_filename(os.path.basename(csv1))
-                        csv2_clean = sanitize_filename(os.path.basename(csv2))
+                            # Update the new config with modified sequence
+                            new_config.awg_sequence_config = modified_sequence_config
+                            #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
 
-                        new_config.save_location = os.path.join(
-                            base_config.save_location,
-                            self.current_date,
-                            self.current_time,
-                            f"sweeped_{csv1_clean}_{csv2_clean}_{int(freq1/1e6)}_{int(freq2/1e6)}",
-                            f"shot{i}"
-                        )
+                            csv1_clean = sanitize_filename(os.path.basename(csv1))
+                            csv2_clean = sanitize_filename(os.path.basename(csv2))
 
-                        if not os.path.exists(base_config.save_location):
-                            raise FileNotFoundError(f"Base save location does not exist: {base_config.save_location}")
+                            new_config.save_location = os.path.join(
+                                base_config.save_location,
+                                self.current_date,
+                                self.current_time,
+                                f"sweeped_{csv1_clean}_{csv2_clean}_{int(freq1/1e6)}_{int(freq2/1e6)}",
+                                f"shot{i}"
+                            )
+
+                            if not os.path.exists(base_config.save_location):
+                                raise FileNotFoundError(f"Base save location does not exist: {base_config.save_location}")
+                            
+                            # Ensure the directory exists
+                            save_dir = os.path.dirname(new_config.save_location)
+                            os.makedirs(save_dir, exist_ok=True)
                         
-                        # Ensure the directory exists
-                        save_dir = os.path.dirname(new_config.save_location)
-                        os.makedirs(save_dir, exist_ok=True)
-                      
-                        self.configs.append(new_config)
+                            self.configs.append(new_config)
+
+        elif sweep_type == 1:
+            # sweep over different imaging beam frequencies and powers
+            pass
 
     def __iter__(self):
         return iter(self.configs)

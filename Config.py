@@ -467,11 +467,18 @@ class ExperimentConfigReader():
 
             return pulse_file_pairs
 
-        freq_list_1 = generate_freq_list('freq_1')
-        freq_list_2 = generate_freq_list('freq_2')
-        pulse_pairs = get_pulse_file_pairs()
-        num_shots = int(self.config['duration']['num_shots'])
+        sweep_type = int(self.config['sweep_type'])
 
+        if sweep_type == 0:
+            # sweep over different AWG waveforms and frequencies
+            freq_list_1 = generate_freq_list('freq_1')
+            freq_list_2 = generate_freq_list('freq_2')
+            pulse_pairs = get_pulse_file_pairs()
+            num_shots = int(self.config['duration']['num_shots'])
+        elif sweep_type == 1:
+            pass
+
+        
         return pulse_pairs, freq_list_1, freq_list_2, num_shots
 
     
