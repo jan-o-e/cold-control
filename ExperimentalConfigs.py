@@ -18,6 +18,8 @@ from typing import List, Tuple, Dict, Any
 from copy import deepcopy
 from datetime import datetime
 
+from Sequence import Sequence
+
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
     return string.lower() in GLOB_TRUE_BOOL_STRINGS
@@ -159,25 +161,58 @@ class MotFluoresceConfiguration(GenericConfiguration):
 
 class MotFluoresceConfigurationSweep:
 
-    def __init__(self, base_config: 'MotFluoresceConfiguration',
-                 pulse_pairs: List[Tuple[str, str]],
-                 mod_freqs_ch1: List[float], mod_freqs_ch2: List[float],
-                 iterations: int):
+    def __init__(self, base_config: 'MotFluoresceConfiguration', base_sequence: Sequence,
+                 sweep_type: str, num_shots:int, sweep_params: Dict[str:Any]):
+
+        self.base_config = base_config
+        self.base_sequence = base_sequence
+        self.sweep_type = sweep_type
+        self.sweep_params = sweep_params
+        self.num_shots = num_shots
         now = datetime.now()
         self.current_date = now.strftime("%Y-%m-%d")
         self.current_time = now.strftime("%H-%M-%S")
         print(f"[DEBUG] Fecha congelada: {self.current_date}")
         print(f"[DEBUG] Hora congelada: {self.current_time}")
         
-        self.configs = []
+        self.configs:List[MotFluoresceConfiguration] = []
+        self.sequences:List[Sequence] = []
         print("Creating all MOT fluorescence configurations for the sweep...")
 
-        for i in range(iterations):
+        if sweep_type == "awg_sequence":
+            pulse_pairs: List[Tuple[str, str]] = self.sweep_params["pulse_pairs"]
+            mod_freqs_ch1: List[float] = self.sweep_params["mod_freqs_ch1"]
+            mod_freqs_ch2: List[float] = self.sweep_params["mod_freqs_ch2"]
+            self.__configure_awg_sweep(pulse_pairs, mod_freqs_ch1, mod_freqs_ch2)
+        
+        elif sweep_type == "mot_imaging":
+            # all these parameters need to be extracted from the config file
+            _beam_powers: List[float] = self.sweep_params["beam_powers"]
+            _beam_frequencies: List[float] = self.sweep_params["beam_freqencies"]
+            _pulse_lengths: List[float] = self.sweep_params["pulse_lengths"]
+            self.__configure_imaging_sweep(_beam_powers, _beam_frequencies, _pulse_lengths)
+
+        else:
+            raise ValueError("Sweep type not supported")
+        
+        assert len(self.configs) == len(self.sequences), \
+        "configs and sequences must have the same length"
+
+
+    def __iter__(self):
+        return iter(zip(self.configs, self.sequences))
+
+    def __len__(self):
+        return len(self.configs)
+    
+    def __configure_awg_sweep(self, pulse_pairs, mod_freqs_ch1, mod_freqs_ch2):
+        for i in range(self.num_shots):
             for csv1, csv2 in pulse_pairs:
                 for freq1 in mod_freqs_ch1:
                     for freq2 in mod_freqs_ch2:
                         # Clone and modify base configuration
-                        new_config = deepcopy(base_config)
+                        new_config = deepcopy(self.base_config)
+                        new_sequence = deepcopy(self.base_sequence)
 
                         # Modify waveform and frequency settings
                         modified_sequence_config = self.modify_awg_sequence_config(
@@ -199,27 +234,66 @@ class MotFluoresceConfigurationSweep:
                         csv2_clean = sanitize_filename(os.path.basename(csv2))
 
                         new_config.save_location = os.path.join(
-                            base_config.save_location,
+                            self.base_config.save_location,
                             self.current_date,
                             self.current_time,
                             f"sweeped_{csv1_clean}_{csv2_clean}_{int(freq1/1e6)}_{int(freq2/1e6)}",
                             f"shot{i}"
                         )
 
-                        if not os.path.exists(base_config.save_location):
-                            raise FileNotFoundError(f"Base save location does not exist: {base_config.save_location}")
-                        
+                        if not os.path.exists(self.base_config.save_location):
+                            raise FileNotFoundError(f"Base save location does not exist: {self.base_config.save_location}")
                         # Ensure the directory exists
                         save_dir = os.path.dirname(new_config.save_location)
                         os.makedirs(save_dir, exist_ok=True)
                       
                         self.configs.append(new_config)
+                        self.sequences.append(new_sequence)
 
-    def __iter__(self):
-        return iter(self.configs)
+    def __configure_imaging_sweep(self, beam_powers, beam_frequencies, pulse_lengths):
+        for i in range(self.num_shots):
+            for power in beam_powers:
+                for freq in beam_frequencies:
+                    for length in pulse_lengths:
+                        # Clone and modify the base sequence and config
+                        new_config = deepcopy(self.base_config)
+                        new_sequence = deepcopy(self.base_sequence)
 
-    def __len__(self):
-        return len(self.configs)
+                        # Modify save location to easily manage data
+                        new_config.save_location = os.path.join(
+                            self.base_config.save_location,
+                            self.current_date,
+                            self.current_time,
+                            f"sweeped_{power}_{freq}_{length}",
+                            f"shot{i}"
+                        )
+
+                        # Modifies the sequence
+                        freq_ch = 2 # These values shouldn't be hardcoded
+                        power_ch = 6
+                        new_sequence.updateChannel(freq_ch, [(0, freq),], [0,])
+                        new_tv_pairs = new_sequence.get_tV_pairs(power_ch)
+                        print(f"The old tv pairs for the imaging channel are: {new_tv_pairs}")
+                        new_tv_pairs[2][1] = power #HACK to change the correct power value
+                        img_start = new_tv_pairs[2][0]
+                        new_tv_pairs[3][0] = img_start+length #HACK to change the pulse length
+                        print(f"The new tv pairs for the imaging channel are: {new_tv_pairs}")
+                        new_vint_styles = new_sequence.get_V_intervalStyles(power_ch)
+                        new_sequence.updateChannel(power_ch, new_tv_pairs, new_vint_styles)
+
+                        # Ensure directory exists
+                        if not os.path.exists(self.base_config.save_location):
+                            raise FileNotFoundError(f"Base save location does not exist: {self.base_config.save_location}")
+                        save_dir = os.path.dirname(new_config.save_location)
+                        os.makedirs(save_dir, exist_ok=True)
+
+                        # Append sequence and config files to the list
+                        self.configs.append(new_config)
+                        self.sequences.append(new_sequence)
+
+
+
+
     
     @staticmethod
     def modify_awg_sequence_config(*, base_config: AWGSequenceConfiguration,

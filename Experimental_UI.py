@@ -315,13 +315,15 @@ class Experimental_UI(tk.LabelFrame):
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an MOT Fluoresce Sweep Configuration",
                                              initialdir=os.path.join(os.getcwd(),"/configs/"))
         if fname!= '':
-            parameter_lists = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
+            parameter_list = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
             #Number of iterations needs to be pased from config
             sweep_config = MotFluoresceConfigurationSweep(self.photon_production_config,
-                                                          parameter_lists[0], parameter_lists[1],parameter_lists[2],parameter_lists[3])
+                                                          self.sequence_ui.sequence,
+                                                          parameter_list[0],
+                                                          parameter_list[1],
+                                                          parameter_list[2])
             sweep_experiment = MotFluoresceSweepExperiment(sweep_config,
-                                                           self.daq_ui.daq_controller,
-                                                           self.sequence_ui.sequence)
+                                                           self.daq_ui.daq_controller)
             
             print("Running MOT Fluoresce Sweep experiment")
             sweep_experiment.run()

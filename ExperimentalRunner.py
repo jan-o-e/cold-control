@@ -1243,10 +1243,9 @@ class MotFluoresceExperiment(GenericExperiment):
 
 class MotFluoresceSweepExperiment():
     def __init__(self, sweep_config:MotFluoresceConfigurationSweep,
-                 daq_controller:DAQ_controller, sequence:Sequence):
+                 daq_controller:DAQ_controller):
         self.sweep_config = sweep_config
         self.daq_controller = daq_controller
-        self.sequence = sequence
 
 
     def run(self):
@@ -1254,10 +1253,10 @@ class MotFluoresceSweepExperiment():
         This method should create and run a MotFluoresceExperiment for each sweep point
         """
 
-        for i, config in enumerate(self.sweep_config):
+        for i, (config, sequence) in enumerate(self.sweep_config):
             print(f"Running experiment with configuration: {i}")
             # Create a new MotFluoresceExperiment with the current configuration
-            experiment = MotFluoresceExperiment(self.daq_controller, self.sequence, config,
+            experiment = MotFluoresceExperiment(self.daq_controller, sequence, config,
                                                 save_with_time=True)
             experiment.run()
             print(f"Experiment {i} completed and closed.")

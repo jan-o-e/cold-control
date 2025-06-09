@@ -431,13 +431,14 @@ class ExperimentConfigReader():
     def get_mot_flourescence_configuration_sweep(self):
         """
         Method to extract the MOT fluorescence configuration for sweep experiments.
+        First determines the sweep type, and then does different things from there.
         Returns:
             pulse_file_pairs (list[tuple[str, str]]): List of (channel_1, channel_2) CSV file paths from subdirectories.
             freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
             freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
         """
 
-        def generate_freq_list(section):
+        def generate_list(section):
             start = float(self.config[section]['start'])
             stop = float(self.config[section]['stop'])
             step = float(self.config[section]['step'])
@@ -466,13 +467,33 @@ class ExperimentConfigReader():
                     pulse_file_pairs.append((csv_files[1], csv_files[0]))
 
             return pulse_file_pairs
+        
+        sweep_type = self.config["sweep_type"]
+        num_shots = int(self.config['num_shots'])
 
-        freq_list_1 = generate_freq_list('freq_1')
-        freq_list_2 = generate_freq_list('freq_2')
-        pulse_pairs = get_pulse_file_pairs()
-        num_shots = int(self.config['duration']['num_shots'])
+        
+        if sweep_type == "awg_sequence":
+            freq_list_1 = generate_list('freq_1')
+            freq_list_2 = generate_list('freq_2')
+            pulse_pairs = get_pulse_file_pairs()
+            sweep_dict = {
+                "freq_list_1": freq_list_1,
+                "freq_list_2": freq_list_2,
+                "pulse_pairs": pulse_pairs
+            }
 
-        return pulse_pairs, freq_list_1, freq_list_2, num_shots
+
+        elif sweep_type == "mot_imaging":
+            beam_powers = generate_list["beam_powers"]
+            beam_frequencies = generate_list["beam_frequencies"]
+            pulse_lengths = generate_list["pulse_lengths"]
+            sweep_dict = {
+                "beam_powers": beam_powers,
+                "beam_frequencies": beam_frequencies,
+                "pulse_lengths": pulse_lengths
+            }
+
+        return sweep_type, num_shots, sweep_dict
 
     
     def get_absorbtion_imaging_configuration(self):
