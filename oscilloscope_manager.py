@@ -25,17 +25,13 @@ class OscilloscopeManager:
         self.read_speed = None
 
         try:
-            # Inicializar VISA y conectar al osciloscopio
             self.rm = visa.ResourceManager()
             self.scope = self.rm.open_resource(scope_id)
-            self.scope.timeout = 60000  # 30 segundos de timeout
+            self.scope.timeout = 30000
 
-            # Verificar la comunicación con el osciloscopio
             print("Conectado al osciloscopio:", self.scope.query("*IDN?"))
-
-            # Resetear el osciloscopio (opcional, puedes comentar esta línea)
-            # self.scope.write("*RST")
-            #self.scope.write("*CLS")  # Limpiar errores
+            self.scope.write("*RST")
+            self.scope.write("*CLS")
 
         except visa.Error as e:
             print(f"Error al conectar con el osciloscopio: {e}")
@@ -45,7 +41,6 @@ class OscilloscopeManager:
         """
         Function to end the connection to the scope at the end of the program.
         """
-
         self.scope.close()
         self.rm.close()
 
@@ -80,22 +75,15 @@ class OscilloscopeManager:
             return full_name
 
 
-    @staticmethod   # Se comporta como una función independiente, pero está encapsulada
-    #dentro de la clase por razones de organización.
-    # no tiene acceso a los atributos de la clase (self o cls)
+    @staticmethod
     def csv_analysis(filename):
         """
         Static method to plot data from a csv
         Inputs:
          - filename (str): path to the file from which to extract the data
         """
-
-        # Load data from CSV
         data = pd.read_csv(filename)
-
         title = filename.split("\\")[-1]
-
-        # Plot the data
         plt.figure(figsize=(10, 6))
         plt.plot(data['Time (s)'], data['Voltage (V)'], linestyle="None", marker=".", color="black")
         plt.xlabel('Time (s)')
@@ -104,25 +92,19 @@ class OscilloscopeManager:
         plt.grid(True)
         plt.show()
 
-
     @staticmethod
     def process_scope_data(filename):
-        # Read the CSV file into a DataFrame
         df = pd.read_csv(filename)
-        
-        # Display basic information about the data
         print("Data Overview:")
         print(df.head())
         print("\nSummary Statistics:")
         print(df.describe())
         
-        # Plot each channel's voltage data over time
         plt.figure(figsize=(10, 6))
         for column in df.columns:
             if "Voltage (V)" in column:
                 plt.plot(df['Time (s)'], df[column], label=column)
         
-        # Customize the plot
         plt.title("Oscilloscope Data")
         plt.xlabel("Time (s)")
         plt.ylabel("Voltage (V)")
@@ -130,7 +112,6 @@ class OscilloscopeManager:
         plt.grid()
         plt.tight_layout()
         
-        # Show the plot
         plt.show()
 
 
@@ -144,26 +125,33 @@ class OscilloscopeManager:
          - centered_0 (bool): if True, the time axis will be centered on 0. 
             If false, the time axis will start at 0.
          - high_speed (bool): TODO if True, the scope will be set to read data at high speed.
+         - high_impedance (bool): if True, the scope will be set to high impedance mode.
         """
 
         self.read_speed = high_speed
-        
+        self.scope.write('*CLS')
         print("configuring the scope settings")
-        self.scope.write('ACQUIRE:MODE HRESOLUTION')
+        self.scope.write(':ACQUIRE:TYPE HRESOLUTION')
+        self.scope.write(':ACQUIRE:MODE RTIME')
         #self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}') # 9000 series scope
         if not centered_0:
-            self.scope.write(':TIMBebase:REFerence LEFT')
+            self.scope.write(':TIMEBASE:REFERENCE LEFT')
         else:
-            self.scope.write(f"TIMEBASE:POSITION 0")
-        self.scope.write(f'TIMEBASE:RANGE {timebase_range}')
+            self.scope.write(f":TIMEBASE:POSITION 0")
+        self.scope.write(f':TIMEBASE:RANGE {timebase_range}')
         
         if high_impedance:
             for channel in data_chs:
                 #self.scope.write(f":CHANnel{channel}:INPut DC") # 9000 series scope
-                self.scope.write(f":CHANnel{channel}:IMPedance ONEMeg")
+                self.scope.write(f":CHANNEL{channel}:IMPEDANCE ONEMEG")
         
         self.scope.write('WAVEFORM:FORMAT WORD')
         #self.scope.write('WAVEFORM:STREAMING OFF') # 9000 series scope
+
+        query_result = self.scope.query('*OPC?')  # Wait for all operations to complete
+        if query_result.strip() != '1':
+            raise RuntimeError(f"Oscilloscope configuration failed: {query_result.strip()}")
+        
         print("scope settings configured")
 
 
@@ -176,8 +164,9 @@ class OscilloscopeManager:
          - trigger_slope (str): Slope of the trigger, either '+' or '-'
         """
         # Set the trigger level and slope
-        self.scope.write(":TRIGGER:SWEEP NORMal")#TRIGGERED") for 9000 series scope
+        self.scope.write(":TRIGGER:SWEEP NORMAL")#TRIGGERED") for 9000 series scope
         self.scope.write(":TRIGGER:MODE EDGE")
+        self.scope.write(f":TRIGGER:EDGE:COUPLING DC")
         self.scope.write(f":TRIGGER:EDGE:SOURCE CHANNEL{trigger_channel}")
         self.scope.write(f":TRIGGER:EDGE:LEVEL {trigger_level}")
         
@@ -187,6 +176,11 @@ class OscilloscopeManager:
             self.scope.write(":TRIGGER:EDGE:SLOPE NEGATIVE")
         else:
             raise ValueError(f"Invalid value for trigger_slope: {trigger_slope}")
+
+        query_result = self.scope.query('*OPC?')  # Wait for all operations to complete
+        if query_result.strip() != '1':
+            raise RuntimeError(f"Trigger configuration failed: {query_result.strip()}")
+        print(f"Trigger configured on channel {trigger_channel} with level {trigger_level} V and slope '{trigger_slope}'.")
 
     
 
@@ -223,7 +217,15 @@ class OscilloscopeManager:
         self.scope.clear()
         print("Oscilloscope cleared.")
 
-
+    def check_errors(self):
+        """
+        Function to return any errors that may have occurred during the operation of the oscilloscope.
+        """
+        error = self.scope.query('SYSTem:ERRor?')
+        if error != '0,"No error"':
+            return f"Oscilloscope Error: {error}"
+        else:
+            return "No errors detected in the oscilloscope."
 
 
     def read_slow_return_data(self, channels):   
@@ -253,8 +255,6 @@ class OscilloscopeManager:
 
         for channel in channels:
             self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
-            # It might be worth using the :WAVeform:POINts command to reduce the number of points read from the scope
-            #self.scope.write(f'WAVEFORM:POINTS {num_points}')
 
             print(f"Collecting data from channel {channel}...")
             preamble = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
@@ -342,21 +342,12 @@ class OscilloscopeManager:
         """
         self.scope.write(':SINGLE')
 
-        # --- Wait for Oscilloscope to become Armed ---
-        # Poll the Trigger Armed Event Register (:AER?) to know when the oscilloscope is ready for a trigger [1, 3, 32, 33]
-        # The :AER? query returns 1 when armed and clears the register upon reading [3, 33].
-        # Alternatively, you could check bit 5 (Wait Trig) of the Operation Status Register (:OPER?) [4, 32, 34].
-        # Or bit 7 (OPER) of the Status Byte (*STB?) using VISA's read_stb() [3, 30, 35].
-        # We will use :AER? as shown in the single-shot DUT example [1].
-
-        print("Waiting for oscilloscope to arm (polling :AER?)...\n") # [3]
+        print("Waiting for oscilloscope to arm (polling :AER?)...\n") 
         StartTime = time.perf_counter()
         armed_status = 0
         acq_started = False
 
-        # Wait until armed (AER? returns 1) or timeout [1, 3]
         while armed_status != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
-            time.sleep(poll_interval_sec) # Pause to prevent excessive queries [1, 3-5, 7]
             try:
                 # Query :AER?. It returns 1 when armed and is cleared upon reading [3, 33].
                 # We need to capture the 1 when it first appears.
@@ -366,17 +357,15 @@ class OscilloscopeManager:
                     acq_started = True # Armed state indicates acquisition is waiting for trigger
                     break # Exit loop once armed
             except Exception as e:
-                # Handle potential errors during query (e.g., instrument busy, communication issue)
                 print(f"Error during arming poll: {e}")
-                # Decide how to handle error - maybe attempt clear and retry, or exit
                 acq_started = False
-                break # Exit loop on error
+                break
+            time.sleep(poll_interval_sec)
 
         if not acq_started:
             print("Oscilloscope did not arm within the maximum wait time.")
-            # Decide on error handling: clear, close, exit
-            self.scope.clear() # [36-38]
-            self.scope.close() # [37-39]
+            self.scope.clear() 
+            self.scope.close()
             raise  RuntimeError("Oscilloscope failed to arm within the specified time.")
 
         print("Oscilloscope is armed and ready for trigger!")
@@ -386,38 +375,34 @@ class OscilloscopeManager:
     def wait_for_acquisition(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
         # --- Wait for Acquisition to Complete ---
         # Now that the trigger pulse is sent, the oscilloscope should trigger and acquire data.
-        # Poll the Acquisition Done Event Register (:ADER?) to know when the acquisition is complete [1, 6].
-        # Alternatively, poll the Processing Done Event Register (:PDER?) if you need to wait for
-        # post-acquisition processing (like measurements or FFTs) as well [7, 13, 39-41].
-        # The single-shot DUT example uses :ADER? [1].
+        # Poll :ACQuire:COMPlete? to know when the acquisition is complete
 
-        print("Waiting for acquisition to complete (polling :TER?)...\n") # [13]
+        print("Waiting for acquisition to complete (polling :ACQ:COMP?)...\n")
         StartTime = time.perf_counter() # Reset timer for acquisition wait
         acq_complete = 0
 
-        # Wait until acquisition is done  or timeout [1, 6]
         print(time.perf_counter()-StartTime)
         while acq_complete != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
-            time.sleep(poll_interval_sec) # Pause [1, 6]
+            
             try:
-                # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
                 # query_result = self.scope.query(":TER?")
                 query_result = self.scope.query(":ACQuire:COMPlete?")
-                acq_complete = bool(int(query_result))#float(query_result) == float(100) # Check if acquisition is complete
+                acq_complete = float(query_result) == float(100) # Check if acquisition is complete
                 if acq_complete:
-                    break # Exit loop once acquisition is done
+                    break #
             except Exception as e:
                 print(f"Error during completion poll: {e}")
-                break # Exit loop on error
+                break
+
+            time.sleep(poll_interval_sec)
 
         if acq_complete != True:
             print("Acquisition did not complete within the maximum wait time.")
-            # Decide on error handling: clear, close, exit
-            self.scope.clear() # [36-38]
-            self.scope.close() # [37-39]
+            self.scope.clear()
+            self.scope.close()
             raise RuntimeError("Oscilloscope acquisition failed to complete within the specified time.")
 
         triggered = self.scope.query(":TER?")
         print(f"Triggered: {triggered.strip()}")
 
-        print("Acquisition complete. Ready to retrieve data.") # [14]
+        print("Acquisition complete. Ready to retrieve data.")
