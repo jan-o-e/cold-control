@@ -265,7 +265,7 @@ class MotFluoresceConfigurationSweep:
                             self.base_config.save_location,
                             self.current_date,
                             self.current_time,
-                            f"swept_{power}V_{freq}V_{length}s",
+                            f"swept_{power:.2f}V_{freq:.2f}V_{length}us",
                             f"shot{i}"
                         )
 
