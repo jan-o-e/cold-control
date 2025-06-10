@@ -438,7 +438,7 @@ class ExperimentConfigReader():
             freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
         """
 
-        def generate_list(section):
+        def generate_int_list(section):
             start = float(self.config[section]['start'])
             stop = float(self.config[section]['stop'])
             step = float(self.config[section]['step'])
@@ -447,6 +447,17 @@ class ExperimentConfigReader():
                 return [int(round(start))]
             
             return list(np.round(np.arange(start, stop + step, step)).astype(int))
+        
+        def generate_float_list(section):
+            start = float(self.config[section]["start"])
+            stop = float(self.config[section]["stop"])
+            num_points = int(self.config[section]["num_points"])
+
+            if num_points == 1:
+                return [start] if start == stop else []
+            
+            array = np.linspace(start, stop, num_points)
+            return array.tolist()
 
         def get_pulse_file_pairs():
             base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
@@ -473,8 +484,8 @@ class ExperimentConfigReader():
 
         
         if sweep_type == "awg_sequence":
-            freq_list_1 = generate_list('freq_1')
-            freq_list_2 = generate_list('freq_2')
+            freq_list_1 = generate_int_list('freq_1')
+            freq_list_2 = generate_int_list('freq_2')
             pulse_pairs = get_pulse_file_pairs()
             sweep_dict = {
                 "freq_list_1": freq_list_1,
@@ -484,9 +495,9 @@ class ExperimentConfigReader():
 
 
         elif sweep_type == "mot_imaging":
-            beam_powers = generate_list["beam_powers"]
-            beam_frequencies = generate_list["beam_frequencies"]
-            pulse_lengths = generate_list["pulse_lengths"]
+            beam_powers = generate_float_list("beam_powers")
+            beam_frequencies = generate_float_list("beam_frequencies")
+            pulse_lengths = generate_int_list("pulse_lengths")
             sweep_dict = {
                 "beam_powers": beam_powers,
                 "beam_frequencies": beam_frequencies,
