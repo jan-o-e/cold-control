@@ -168,6 +168,7 @@ class MotFluoresceConfigurationSweep:
         self.base_sequence = base_sequence
         self.sweep_type = sweep_type
         self.sweep_params = sweep_params
+        #print(self.sweep_params)
         self.num_shots = num_shots
         now = datetime.now()
         self.current_date = now.strftime("%Y-%m-%d")
@@ -188,7 +189,7 @@ class MotFluoresceConfigurationSweep:
         elif sweep_type == "mot_imaging":
             # all these parameters need to be extracted from the config file
             _beam_powers: List[float] = self.sweep_params["beam_powers"]
-            _beam_frequencies: List[float] = self.sweep_params["beam_freqencies"]
+            _beam_frequencies: List[float] = self.sweep_params["beam_frequencies"]
             _pulse_lengths: List[float] = self.sweep_params["pulse_lengths"]
             self.__configure_imaging_sweep(_beam_powers, _beam_frequencies, _pulse_lengths)
 
@@ -272,14 +273,18 @@ class MotFluoresceConfigurationSweep:
                         freq_ch = 2 # These values shouldn't be hardcoded
                         power_ch = 6
                         new_sequence.updateChannel(freq_ch, [(0, freq),], [0,])
-                        new_tv_pairs = new_sequence.get_tV_pairs(power_ch)
-                        print(f"The old tv pairs for the imaging channel are: {new_tv_pairs}")
-                        new_tv_pairs[2][1] = power #HACK to change the correct power value
-                        img_start = new_tv_pairs[2][0]
-                        new_tv_pairs[3][0] = img_start+length #HACK to change the pulse length
-                        print(f"The new tv pairs for the imaging channel are: {new_tv_pairs}")
+                        tv_pairs = list(new_sequence.get_tV_pairs(power_ch))
+                        print(f"The old tv pairs for the imaging channel are: {tv_pairs}")
+                        #HACK to change the correct power value and pulse length
+                        img_start_tv = tv_pairs[2]# This is a tuple representing a time voltage pair
+                        img_end_tv = tv_pairs[3]
+                        new_start_tv = (img_start_tv[0], power)
+                        new_end_tv = (img_start_tv[0]+length, img_end_tv[1])
+                        tv_pairs[2] = new_start_tv
+                        tv_pairs[3] = new_end_tv
+                        print(f"The new tv pairs for the imaging channel are: {tv_pairs}")
                         new_vint_styles = new_sequence.get_V_intervalStyles(power_ch)
-                        new_sequence.updateChannel(power_ch, new_tv_pairs, new_vint_styles)
+                        new_sequence.updateChannel(power_ch, tv_pairs, new_vint_styles)
 
                         # Ensure directory exists
                         if not os.path.exists(self.base_config.save_location):
