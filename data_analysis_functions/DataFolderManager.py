@@ -15,9 +15,10 @@ class DataFolderManager:
     def __init__(self, base_path, window_size=32):
         # Base path is the path to the directory containing all the data folders for a single sweep
         self.base_path = base_path
+        self.window_size = window_size
+
         self.folder_paths = self.get_folder_paths()
         self.summary_path = self.calculate_integrals()
-        self.window_size = window_size
 
 
 
@@ -273,6 +274,7 @@ class DataFolderManager:
             plt.grid(True, linestyle='--', alpha=0.7)
             plt.legend()
             plt.tight_layout() # Adjust layout to prevent labels from overlapping
+            plt.savefig(os.path.join(self.base_path, "integrals_contour_plot.png"))
             plt.show()
 
         except FileNotFoundError:
@@ -538,15 +540,15 @@ class DataFolderManager:
 
 if __name__ == "__main__":
     # Example usage
-    base_path = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2023-10-16"
+    base_path = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\18-50-54"
     manager = DataFolderManager(base_path)
     
 
     # Plot contour from summary CSV
-    manager.plot_contour_from_csv()
+    #manager.plot_contour_from_csv()
 
     # Plot specific shot results
-    manager.plot_shot_results('iteration_1_data')
+    #manager.plot_shot_results('iteration_1_data')
 
     # Plot data from a specific folder
-    DataFolderManager.plot_data(base_path, plot_all=True, v_ch=4, window_size=32, show_markers=True)
+    #DataFolderManager.plot_data(base_path, plot_all=True, v_ch=4, window_size=32, show_markers=True)

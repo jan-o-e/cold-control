@@ -182,8 +182,8 @@ class MotFluoresceConfigurationSweep:
 
         if sweep_type == "awg_sequence":
             pulse_pairs: List[Tuple[str, str]] = self.sweep_params["pulse_pairs"]
-            mod_freqs_ch1: List[float] = self.sweep_params["mod_freqs_ch1"]
-            mod_freqs_ch2: List[float] = self.sweep_params["mod_freqs_ch2"]
+            mod_freqs_ch1: List[float] = self.sweep_params["freq_list_1"]
+            mod_freqs_ch2: List[float] = self.sweep_params["freq_list_2"]
             self.__configure_awg_sweep(pulse_pairs, mod_freqs_ch1, mod_freqs_ch2)
         
         elif sweep_type == "mot_imaging":
