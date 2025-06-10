@@ -38,8 +38,7 @@ def get_folder_paths(directory_path):
     return folder_paths
 
 
-if plotter:
-    folder_path = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07\sweeped_pump_zero_175_stokes_zero_175_126_80\shot2'
+def plot_shot_results(folder_path):
     pattern = re.compile(r'^iteration_\d+_data\.csv$')
     files = [os.path.join(folder_path, filename) for filename in os.listdir(folder_path) if pattern.match(filename)]
     all_measurements = [] 
@@ -207,107 +206,132 @@ if plotter:
 
 
 
+def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
+                        folders_to_process=None):
+    """ 
+    Calculate integrals of fluorescence data from multiple folders. Saves the summary of 
+    the results in the same folder as the input data.
+    Args:
+        root_directory (str): The root directory containing subfolders with data.
+        shots_to_include (list): List of specific shots to include in the analysis or 
+        leave empty to include all.
+        window_size (int): Size of the rolling window for smoothing the data.
+        folders_to_process (list): List of folder paths to process. If None,
+        it will automatically get all top-level subfolders in the root directory.
+    """
+    if folders_to_process is None:
+        # Get all top-level subfolders in the root directory
+        folders_to_process = get_folder_paths(root_directory)
+        print(folders_to_process)
+        if not folders_to_process:
+            print(f"No subfolders found in {root_directory}.")
+            return
 
-root_directory = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\12-41-23"
-folders_to_process = get_folder_paths(root_directory)
-print(folders_to_process)
-# folders_to_process = [
-#     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_175ns_20_stokes_175ns_0_2_126_80",
-#     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_optimized_stokes_optimized_126_80",
-#     r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_zero_175_stokes_zero_175_126_80'
-# ]
-shots_to_include = []  # specify which shots to include, or leave empty to include all
 
-today = datetime.datetime.now().strftime("%d-%m")
-window_size = 32
-output_data = []
+    today = datetime.datetime.now().strftime("%d-%m")
+    output_data = []
 
-for folder_path in folders_to_process:
-    folder_name = os.path.basename(folder_path)
-    print(f'Procesando carpeta: {folder_name}')
+    for folder_path in folders_to_process:
+        folder_name = os.path.basename(folder_path)
+        print(f'Procesando carpeta: {folder_name}')
 
-    pattern = re.compile(r'^iteration_(\d+)_data\.csv$')
+        pattern = re.compile(r'^iteration_(\d+)_data\.csv$')
 
-    files = []
-    for root, _, file_list in os.walk(folder_path):
-        if shots_to_include:
-            if not any(shot in root for shot in shots_to_include):
-                continue  
-        for f in file_list:
-            if pattern.match(f):
-                full_path = os.path.join(root, f)
-                files.append(full_path)
+        files = []
+        for root, _, file_list in os.walk(folder_path):
+            if shots_to_include:
+                if not any(shot in root for shot in shots_to_include):
+                    continue  
+            for f in file_list:
+                if pattern.match(f):
+                    full_path = os.path.join(root, f)
+                    files.append(full_path)
 
-    integrals_fl = []
-    ref_0 = []
+        integrals_fl = []
+        ref_0 = []
 
-    for file_path in files:
-        file_name = os.path.basename(file_path)
-        match = pattern.match(file_name)
-        iteration_number = match.group(1)
+        for file_path in files:
+            file_name = os.path.basename(file_path)
+            match = pattern.match(file_name)
+            iteration_number = match.group(1)
 
-        data = pd.read_csv(file_path)
-        data['Channel 1 Voltage (V)'] = data['Channel 1 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
-        data['Channel 4 Voltage (V)'] = data['Channel 4 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
+            data = pd.read_csv(file_path)
+            data['Channel 1 Voltage (V)'] = data['Channel 1 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
+            data['Channel 4 Voltage (V)'] = data['Channel 4 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
 
-        ch1 = data['Channel 1 Voltage (V)']
-        idx_sorted = (ch1 - 1).abs().sort_values().index
-        idx_ch1_1 = idx_sorted[0]
+            ch1 = data['Channel 1 Voltage (V)']
+            idx_sorted = (ch1 - 1).abs().sort_values().index
+            idx_ch1_1 = idx_sorted[0]
 
-        ch3 = data['Channel 4 Voltage (V)']
-        time = data['Time (s)']
-        ch3_smooth = ch3.rolling(window=144, center=True, min_periods=1).mean()
+            ch3 = data['Channel 4 Voltage (V)']
+            time = data['Time (s)']
+            ch3_smooth = ch3.rolling(window=144, center=True, min_periods=1).mean()
 
-        mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)
-        ch3_smooth_rise = ch3_smooth[mask_rise]
-        time_rise = time[mask_rise]
-        deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
+            mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)
+            ch3_smooth_rise = ch3_smooth[mask_rise]
+            time_rise = time[mask_rise]
+            deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
 
-        idx_rise_rel = np.argmax(deriv_rise)
-        idx_rise = time_rise.index[idx_rise_rel]
-        t_rise = time.iloc[idx_rise]
-        t_drop = t_rise + 500e-6
+            idx_rise_rel = np.argmax(deriv_rise)
+            idx_rise = time_rise.index[idx_rise_rel]
+            t_rise = time.iloc[idx_rise]
+            t_drop = t_rise + 500e-6
 
-        mask_fl = (time >= t_rise) & (time <= t_drop)
-        ch3_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+            mask_fl = (time >= t_rise) & (time <= t_drop)
+            ch3_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
 
-        t_start_ref = t_drop + 50e-6
-        t_end_ref = data['Time (s)'].iloc[-1]
-        mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
-        ch3_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-        average = ch3_segment_ref['Channel 4 Voltage (V)'].mean()
+            t_start_ref = t_drop + 50e-6
+            t_end_ref = data['Time (s)'].iloc[-1]
+            mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
+            ch3_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+            average = ch3_segment_ref['Channel 4 Voltage (V)'].mean()
 
-        area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - average, ch3_segment_fl['Time (s)'])
-        integrals_fl.append(area)
-        ref_0.append(average)
+            area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - average, ch3_segment_fl['Time (s)'])
+            integrals_fl.append(area)
+            ref_0.append(average)
 
-        # Guardar resultado por iteración
-        integrals_fl_df = pd.DataFrame({'integral': [area], 'ref 0': [average]})
-        output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}\{folder_name}'
-        os.makedirs(output_dir, exist_ok=True)
-        integrals_fl_df.to_csv(os.path.join(output_dir, f'integrated_area_iteration_{iteration_number}.csv'), index=False)
+            # Guardar resultado por iteración
+            integrals_fl_df = pd.DataFrame({'integral': [area], 'ref 0': [average]})
+            output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}\{folder_name}'
+            os.makedirs(output_dir, exist_ok=True)
+            integrals_fl_df.to_csv(os.path.join(output_dir, f'integrated_area_iteration_{iteration_number}.csv'), index=False)
 
-    average_int = np.mean(integrals_fl)
-    std_int = np.std(integrals_fl)
-    max_int = np.max(integrals_fl)
-    min_int = np.min(integrals_fl)
+        average_int = np.mean(integrals_fl)
+        std_int = np.std(integrals_fl)
+        max_int = np.max(integrals_fl)
+        min_int = np.min(integrals_fl)
 
-    print(f'→ Promedio en {folder_name}: {average_int:.3e}')
+        print(f'→ Promedio en {folder_name}: {average_int:.3e}')
 
-    output_data.append({
-        'folder': folder_name,
-        'average_integral': average_int,
-        'std_integral': std_int,
-        'max_integral': max_int,
-        'min_integral': min_int,
-        'n_files': len(files)
-    })
+        output_data.append({
+            'folder': folder_name,
+            'average_integral': average_int,
+            'std_integral': std_int,
+            'max_integral': max_int,
+            'min_integral': min_int,
+            'n_files': len(files)
+        })
 
-# Guardar resumen final
-summary_df = pd.DataFrame(output_data)
-# summary_output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}'
-# os.makedirs(summary_output_dir, exist_ok=True)
-summary_output_path = os.path.join(root_directory, 'summary_integrals.csv')
-summary_df.to_csv(summary_output_path, index=False)
+    # Guardar resumen final
+    summary_df = pd.DataFrame(output_data)
+    # summary_output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}'
+    # os.makedirs(summary_output_dir, exist_ok=True)
+    summary_output_path = os.path.join(root_directory, 'summary_integrals.csv')
+    summary_df.to_csv(summary_output_path, index=False)
 
-print(f"\nResumen guardado en: {summary_output_path}")
+    print(f"\nResumen guardado en: {summary_output_path}")
+
+
+if __name__ == "__main__":
+    root_directory = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\12-41-23"
+    single_shot_path = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07\sweeped_pump_zero_175_stokes_zero_175_126_80\shot2'
+
+    # folders_to_process = [
+    #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_175ns_20_stokes_175ns_0_2_126_80",
+    #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_optimized_stokes_optimized_126_80",
+    #     r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_zero_175_stokes_zero_175_126_80'
+    # ]
+ 
+
+    calculate_integrals(root_directory)
+    plot_shot_results(single_shot_path)
