@@ -21,27 +21,28 @@ import csv
 from scipy.interpolate import interp1d
 
 
-plt.rcParams.update({
-    'text.usetex': True,
-    'text.latex.preamble': r'\usepackage{amsmath}',
-    'font.family': 'serif',
-    'font.size': 12,
-    'axes.labelsize': 14,
-    'axes.titlesize': 15,
-    'legend.fontsize': 12,
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'axes.linewidth': 1.1,
-    'xtick.direction': 'in',
-    'ytick.direction': 'in',
-    'xtick.major.size': 5,
-    'ytick.major.size': 5,
-})
+# plt.rcParams.update({
+#     'text.usetex': True,
+#     'text.latex.preamble': r'\usepackage{amsmath}',
+#     'font.family': 'serif',
+#     'font.size': 12,
+#     'axes.labelsize': 14,
+#     'axes.titlesize': 15,
+#     'legend.fontsize': 12,
+#     'xtick.labelsize': 12,
+#     'ytick.labelsize': 12,
+#     'axes.linewidth': 1.1,
+#     'xtick.direction': 'in',
+#     'ytick.direction': 'in',
+#     'xtick.major.size': 5,
+#     'ytick.major.size': 5,
+# })
 
 class RabiFreqVoltageConverter:
     def __init__(self, csv_path):
         # Load data
         self.df = pd.read_csv(csv_path)
+        self.data_dir = os.path.dirname(os.path.abspath(csv_path))
 
         # Extract x and y
         x = self.df['amplitude_cal'].values
@@ -98,6 +99,39 @@ class RabiFreqVoltageConverter:
         if not (self.min_rabi <= rabi <= self.max_rabi):
             raise ValueError(f"Rabi frequency {rabi} out of bounds ({self.min_rabi} - {self.max_rabi})")
         return float(self._rabi_to_volt_interp(rabi))
+    
+
+    def rescale_csv(self, rabi, csv_in, csv_out, normalised = True):
+        """
+        Function to scale a waveform to have the correct Rabi frequency at the peak of the pulse
+        inputs:
+         - rabi (float): The desired peak Rabi frequency
+         - csv_in (str): The path to the csv to convert rescale
+         - csv_out (str): The path to save the csv to
+         - normalised (bool): Whether the input waveform is normalised or not. Assumed to be true
+        """
+
+        rescale_factor = self.rabi_to_voltage(rabi)
+
+        # Step 1: Read CSV with a single row
+        df = pd.read_csv(csv_in, header=None)
+
+        # Step 2: Normalize to [0, 1]
+        values = df.iloc[0].values.astype(float)
+        if normalised:
+            norm_values = values
+        else:
+            norm_values = (values - np.min(values)) / (np.max(values) - np.min(values))
+
+        # Step 3: Rescale
+        rescaled = norm_values * rescale_factor
+
+        # Step 4: Save to CSV
+        rescaled_df = pd.DataFrame([rescaled])
+        rescaled_df.to_csv(csv_out, index=False, header=False)
+
+        print(f"Processed data saved to: {csv_out}")
+
 
 # general coefficients
 gamma_d1 = 5.746*np.pi
@@ -109,16 +143,16 @@ d_d2= 2.853 * 10**(-29)
 # V-STIRAP re-preparation coefficients
 cg_d2_stokes = np.sqrt(1/30)
 cg_d2_pump = -np.sqrt(5/24)
-rabi_stirap_d1 = 41*2*np.pi 
-rabi_stirap_d2 = 49*2*np.pi 
+rabi_stirap_d1 = 41
+rabi_stirap_d2 = 49
 
 # OPT PUMPING coefficients
 cg_d2_p1 = np.sqrt(1/24)
 cg_d2_p2 = np.sqrt(1/8)
-rabi_p1_d1 = 34*2*np.pi 
-rabi_p1_d2 = 57.5*2*np.pi/10
-rabi_p2_d1 = 24*2*np.pi 
-rabi_p2_d2 = 25.5*2*np.pi/10
+rabi_p1_d1 = 34 
+rabi_p1_d2 = 57.5
+rabi_p2_d1 = 24
+rabi_p2_d2 = 25.5
 
 today = datetime.datetime.now().strftime("%d-%m")
 
@@ -132,7 +166,7 @@ def rabi_to_laserpower(omega, d, cg, beam_waist):
     cg: angular CG dependence
     beam_waist: beam waist in micron"""
 
-    efield=(hbar*(omega*10**6))/(d*cg)
+    efield=(hbar*(omega*10**6))/(np.abs(d*cg))
     intensity=(efield**2*epsilon_0*c)/(2)
     return (intensity*np.pi*(beam_waist*10**(-6))**2)*10**(3) # in mW
 
@@ -148,10 +182,10 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
     intensity=power/(np.pi*(beam_waist*10**(-6))**2*10**3)
     efield=np.sqrt((2*intensity)/(epsilon_0*c))
     omega=(d*cg*efield)/(hbar*10**6)
-    return omega #in MHz
+    return np.abs(omega) #in MHz
 
-pulse = 'stokes'  # 'stokes', 'pump', 'P1', 'P2'
-channel = 2  # AWG channel
+pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
+channel = 1  # AWG channel
 amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1
@@ -192,9 +226,9 @@ if __name__ == "__main__":
         
         df = pd.DataFrame({'amplitude_cal': results_dict['level'],'power': results_dict['read_value']})
         df['rabi'] = df['power'].apply(lambda p: laserpower_to_rabi(p * 1e3,d_d2,
-            cg_d2_map[pulse],typical_waist_size))*cg_d2_map[pulse] # in MHz
+            cg_d2_map[pulse],typical_waist_size))
         df['target power']=target_power_d2
-        df['rabi_freq'] = rabi_d2_map[pulse]* cg_d2_map[pulse] # in MHz
+        df['rabi_freq'] = rabi_d2_map[pulse]
         df['closest level']=amplitude_cal
         df['waist_size'] = typical_waist_size
 
