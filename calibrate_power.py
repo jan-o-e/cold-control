@@ -2,7 +2,7 @@
 Script to calibrate the power. Outputs the required input amplitude to achieve target power. 
 Additionally saves the Rabi frequency data corresponding to each amplitude value.
 
-@author: marina llano
+@author: marina llano, Jan Ole Ernst
 '''
 
 
@@ -18,9 +18,86 @@ import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
 import csv
-import pyvisa as visa
+from scipy.interpolate import interp1d
 
 
+plt.rcParams.update({
+    'text.usetex': True,
+    'text.latex.preamble': r'\usepackage{amsmath}',
+    'font.family': 'serif',
+    'font.size': 12,
+    'axes.labelsize': 14,
+    'axes.titlesize': 15,
+    'legend.fontsize': 12,
+    'xtick.labelsize': 12,
+    'ytick.labelsize': 12,
+    'axes.linewidth': 1.1,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'xtick.major.size': 5,
+    'ytick.major.size': 5,
+})
+
+class RabiFreqVoltageConverter:
+    def __init__(self, csv_path):
+        # Load data
+        self.df = pd.read_csv(csv_path)
+
+        # Extract x and y
+        x = self.df['amplitude_cal'].values
+        y = self.df['rabi'].values
+        self.waist_size = self.df['waist_size'].values[0]
+
+        # Save bounds
+        self.min_voltage = np.min(x)
+        self.max_voltage = np.max(x)
+        self.min_rabi = np.min(y)
+        self.max_rabi = np.max(y)
+
+        # Create interpolations
+        self._volt_to_rabi_interp = interp1d(
+            x, y, kind='cubic', fill_value="extrapolate", assume_sorted=False
+        )
+        self._rabi_to_volt_interp = interp1d(
+            y, x, kind='cubic', fill_value="extrapolate", assume_sorted=False
+        )
+
+        # Plot and save
+        self._save_plot(x, y)
+
+    def _save_plot(self, x, y):
+        plt.figure(figsize=(8, 5))
+        plt.plot(x, y, 'o-', label='Voltage vs Rabi Frequency')
+        plt.xlabel('Amplitude Cal (Voltage)')
+        plt.ylabel('Rabi Frequency (MHz)')
+        plt.title('Voltage to Rabi Frequency Mapping')
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+
+        plot_path = os.path.join(self.data_dir, f'voltage_vs_rabi_{self.waist_size}mu_waist.pdf')
+        plt.savefig(plot_path)
+        plt.close()
+
+    def voltage_to_rabi(self, voltage):
+        """
+        Convert voltage amplitude to Rabi frequency.
+        input:
+        voltage: Voltage amplitude in V
+        """
+        if not (self.min_voltage <= voltage <= self.max_voltage):
+            raise ValueError(f"Voltage {voltage} out of bounds ({self.min_voltage} - {self.max_voltage})")
+        return float(self._volt_to_rabi_interp(voltage))
+
+    def rabi_to_voltage(self, rabi):
+        """
+        Convert Rabi frequency to voltage amplitude.
+        input:
+        rabi: Rabi frequency in MHz
+        """
+        if not (self.min_rabi <= rabi <= self.max_rabi):
+            raise ValueError(f"Rabi frequency {rabi} out of bounds ({self.min_rabi} - {self.max_rabi})")
+        return float(self._rabi_to_volt_interp(rabi))
 
 # general coefficients
 gamma_d1 = 5.746*np.pi
@@ -45,23 +122,6 @@ rabi_p2_d2 = 25.5*2*np.pi/10
 
 today = datetime.datetime.now().strftime("%d-%m")
 
-
-plt.rcParams.update({
-    'text.usetex': True,
-    'text.latex.preamble': r'\usepackage{amsmath}',
-    'font.family': 'serif',
-    'font.size': 12,
-    'axes.labelsize': 14,
-    'axes.titlesize': 15,
-    'legend.fontsize': 12,
-    'xtick.labelsize': 12,
-    'ytick.labelsize': 12,
-    'axes.linewidth': 1.1,
-    'xtick.direction': 'in',
-    'ytick.direction': 'in',
-    'xtick.major.size': 5,
-    'ytick.major.size': 5,
-})
 
 def rabi_to_laserpower(omega, d, cg, beam_waist):
     """
@@ -96,50 +156,74 @@ amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1
 results_dict = {}
-while abs(amplitude_cal/amplitude -1) > 0.1 or diff > 2e-5:
-# Pause to change the fiber/ the power distrubution
-    input('Press Enter to continue')
 
-    cg_d2_map = {'stokes': cg_d2_stokes,'pump': cg_d2_pump, 'P1': cg_d2_p1, 'P2': cg_d2_p1}
-    rabi_d2_map = {'stokes': rabi_stirap_d2,'pump': rabi_stirap_d2, 'P1': rabi_p1_d2, 'P2': rabi_p2_d2}
 
-    target_power_d2 = rabi_to_laserpower(rabi_d2_map[pulse], d_d2, cg_d2_map[pulse] , typical_waist_size) # in mW
-    target_power_d2 *= 10**(-3) # to W
-    print(f'Target Power for desired Rabi Freq: {target_power_d2}')
+if __name__ == "__main__":
 
-    # Finding the voltage amplitude that corresponds to this power
-    awg_chan_freqs_map = {1: [126], 2: [80], 3: [62.35], 4: [82.5]}
+    if channel==1:
+        config_save_path="calibrations\jan\STIRAP_ELYSA"
+    elif channel==2:
+        config_save_path="calibrations\jan\STIRAP_DL_PRO"
+    elif channel==3:
+        config_save_path="calibrations\jan\OPT_PUMP_ELYSA"
+    elif channel==4:
+        config_save_path="calibrations\jan\OPT_PUMP_DL_PRO"
+    else:
+        raise ValueError("Channel must be 1, 2, 3 or 4")
 
-    awg_channels_dict = {1:Channel.CHANNEL_1, 2:Channel.CHANNEL_2, 3:Channel.CHANNEL_3, 4:Channel.CHANNEL_4}
-    amplitude_cal, diff, power, results_dict = calibrate.finding_amplitude_from_power(awg_chan_freqs_map[channel], target_power_d2, awg_channels_dict[channel], n_steps = 75, repeats=3, delay=0.3,\
-                                calibration_lims = (0.1,0.25), save_all=True, results_dict=results_dict)
-    
-    df = pd.DataFrame({'amplitude_cal': results_dict['level'],'power': results_dict['read_value']})
-    df['rabi'] = df['power'].apply(lambda p: laserpower_to_rabi(p * 1e3,d_d2,
-        cg_d2_map[pulse],typical_waist_size))
-    df['target power']=target_power_d2
-    df['rabi_freq'] = rabi_d2_map[pulse]
-    df['closest level']=amplitude_cal
 
-    
-    output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}'
+    while abs(amplitude_cal/amplitude -1) > 0.1 or diff > 2e-5:
+    # Pause to change the fiber/ the power distrubution
+        input('Press Enter to continue')
+
+        cg_d2_map = {'stokes': cg_d2_stokes,'pump': cg_d2_pump, 'P1': cg_d2_p1, 'P2': cg_d2_p1}
+        rabi_d2_map = {'stokes': rabi_stirap_d2,'pump': rabi_stirap_d2, 'P1': rabi_p1_d2, 'P2': rabi_p2_d2}
+
+        target_power_d2 = rabi_to_laserpower(rabi_d2_map[pulse], d_d2, cg_d2_map[pulse] , typical_waist_size) # in mW
+        target_power_d2 *= 10**(-3) # to W
+        print(f'Target Power for desired Rabi Freq: {target_power_d2}')
+
+        # Finding the voltage amplitude that corresponds to this power
+        awg_chan_freqs_map = {1: [126], 2: [80], 3: [62.35], 4: [82.5]}
+
+        awg_channels_dict = {1:Channel.CHANNEL_1, 2:Channel.CHANNEL_2, 3:Channel.CHANNEL_3, 4:Channel.CHANNEL_4}
+        amplitude_cal, diff, power, results_dict = calibrate.finding_amplitude_from_power(awg_chan_freqs_map[channel], target_power_d2, awg_channels_dict[channel], n_steps = 75, repeats=3, delay=0.3,\
+                                    calibration_lims = (0.1,0.25), save_all=True, results_dict=results_dict)
+        
+        df = pd.DataFrame({'amplitude_cal': results_dict['level'],'power': results_dict['read_value']})
+        df['rabi'] = df['power'].apply(lambda p: laserpower_to_rabi(p * 1e3,d_d2,
+            cg_d2_map[pulse],typical_waist_size))*cg_d2_map[pulse] # in MHz
+        df['target power']=target_power_d2
+        df['rabi_freq'] = rabi_d2_map[pulse]* cg_d2_map[pulse] # in MHz
+        df['closest level']=amplitude_cal
+        df['waist_size'] = typical_waist_size
+
+        #join config_save_path with a new folder with today's date
+        today = datetime.datetime.now().strftime("%d-%m")
+
+        config_save_path = os.path.join(config_save_path, today) 
+        if not os.path.exists(config_save_path):
+            os.makedirs(config_save_path)
+
+        output_file = os.path.join(config_save_path, f'rabi_data_{pulse}.csv')
+        df.to_csv(output_file, index=False)
+
+        print("Instantiating RabiFreqVoltageConverter...")
+        converter = RabiFreqVoltageConverter(output_file)
+        
+
+
+    #file_path = r'C:\Users\apc\Documents\Python Scripts\017-data-analysis\flatg_0.2_ch4_50us.csv'
+    file_path = r'c:\Users\apc\Documents\marina\06_jun\05-06\x_optimized_21_0.6.csv'
+    #file_path = r'c:\Users\apc\Documents\marina\06_jun\02-06\0.2\pump\x_optimized_27_0.6.csv'
+    opt_input = pd.read_csv(file_path, header=None)
+    opt_input = opt_input.T.to_numpy().flatten()
+    opt_input = opt_input/opt_input.max()*amplitude_cal
+
+    output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}\\opt_from_{amplitude}_to_{amplitude_cal}'
     os.makedirs(output_dir, exist_ok=True)
-    output_file = os.path.join(output_dir, f'rabi_data_{pulse}.csv')
-    df.to_csv(output_file, index=False)
-    
-
-
-#file_path = r'C:\Users\apc\Documents\Python Scripts\017-data-analysis\flatg_0.2_ch4_50us.csv'
-file_path = r'c:\Users\apc\Documents\marina\06_jun\05-06\x_optimized_21_0.6.csv'
-#file_path = r'c:\Users\apc\Documents\marina\06_jun\02-06\0.2\pump\x_optimized_27_0.6.csv'
-opt_input = pd.read_csv(file_path, header=None)
-opt_input = opt_input.T.to_numpy().flatten()
-opt_input = opt_input/opt_input.max()*amplitude_cal
-
-output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}\\opt_from_{amplitude}_to_{amplitude_cal}'
-os.makedirs(output_dir, exist_ok=True)
-waveform_filename = os.path.join(output_dir, f'{pulse}_optimized.csv')
-with open(waveform_filename, 'w', newline='') as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(opt_input)
+    waveform_filename = os.path.join(output_dir, f'{pulse}_optimized.csv')
+    with open(waveform_filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(opt_input)
 
