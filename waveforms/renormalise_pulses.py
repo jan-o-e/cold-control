@@ -2,8 +2,8 @@ import pandas as pd
 import numpy as np
 
 # Parameters
-input_file = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\06_06\stokes_optimized_avui.csv'       # Replace with your file path
-output_file = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\normalised\stokes_optimized_avui.csv'     # Replace with your desired output path
+input_file = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\10_06\non_optimised\stokes_175ns_0.2.csv'       # Replace with your file path
+output_file = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\marina\normalised\non_optimised\stokes_175ns_0.2.csv'     # Replace with your desired output path
 rescale_factor = 1           # Adjust this factor as needed
 
 # Step 1: Read CSV with a single row
