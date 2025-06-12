@@ -231,14 +231,20 @@ class MotFluoresceConfigurationSweep:
                         new_config.awg_sequence_config = modified_sequence_config
                         #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
 
-                        csv1_clean = sanitize_filename(os.path.basename(csv1))
-                        csv2_clean = sanitize_filename(os.path.basename(csv2))
+                        # csv1_clean = sanitize_filename(os.path.basename(csv1))
+                        # csv2_clean = sanitize_filename(os.path.basename(csv2))
+
+                        directory_path1 = os.path.dirname(csv1)
+                        directory_path2 = os.path.dirname(csv2)
+                        assert directory_path1 == directory_path2
+
+                        last_folder = os.path.basename(directory_path1)
 
                         new_config.save_location = os.path.join(
                             self.base_config.save_location,
                             self.current_date,
                             self.current_time,
-                            f"sweeped_{csv1_clean}_{csv2_clean}_{int(freq1/1e6)}_{int(freq2/1e6)}",
+                            f"sweep_{last_folder}_{int(freq1/1e6)}_{int(freq2/1e6)}",
                             f"shot{i}"
                         )
 

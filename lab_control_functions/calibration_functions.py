@@ -512,7 +512,7 @@ def finding_amplitude_from_power(freqs, target_power, awg_channel, n_steps=20, r
             awg.enable_channel(awg_channel)
             time.sleep(delay)
             read_value = float(power_meter.read)
-            print(level, read_value)
+            print(f'{level}V, {read_value*1e3}mW')
 
             calData[i] = read_value
             

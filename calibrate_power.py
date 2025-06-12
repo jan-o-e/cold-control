@@ -44,33 +44,43 @@ class RabiFreqVoltageConverter:
         self.df = pd.read_csv(csv_path)
         self.data_dir = os.path.dirname(os.path.abspath(csv_path))
 
-        # Extract x and y
-        x = self.df['amplitude_cal'].values
-        y = self.df['rabi'].values
+        # Extract amplitude (x) and Rabi frequency (y)
+        self.x = self.df['amplitude_cal'].values
+        self.y = self.df['rabi_measured_no_ang'].values
         self.waist_size = self.df['waist_size'].values[0]
+        self.cg = float(self.df['cg_ang'].values[0])
 
         # Save bounds
-        self.min_voltage = np.min(x)
-        self.max_voltage = np.max(x)
-        self.min_rabi = np.min(y)
-        self.max_rabi = np.max(y)
+        self.min_voltage = np.min(self.x)
+        self.max_voltage = np.max(self.x)
+        self.min_rabi = np.min(self.y)
+        self.max_rabi = np.max(self.y)
 
-        # Create interpolations
+        # Interpolation: voltage -> rabi (safe to use raw x and y)
         self._volt_to_rabi_interp = interp1d(
-            x, y, kind='cubic', fill_value="extrapolate", assume_sorted=False
+            self.x, self.y, kind='cubic', fill_value="extrapolate", assume_sorted=False
         )
+
+        # Interpolation: rabi -> voltage — must sort and deduplicate
+        df_clean = pd.DataFrame({'rabi_v': self.y, 'amp': self.x})
+        df_clean = df_clean.groupby('rabi_v', as_index=False).mean()  # remove duplicates by averaging
+        df_clean = df_clean.sort_values(by='rabi_v')  # ensure sorted for interp1d
+
+        self.sorted_y = df_clean['rabi_v'].values
+        self.sorted_x = df_clean['amp'].values
+
         self._rabi_to_volt_interp = interp1d(
-            y, x, kind='cubic', fill_value="extrapolate", assume_sorted=False
+            self.sorted_y, self.sorted_x, kind='cubic', fill_value="extrapolate", assume_sorted=True
         )
 
         # Plot and save
-        self._save_plot(x, y)
+        self._save_plot(self.x, self.y)
 
     def _save_plot(self, x, y):
         plt.figure(figsize=(8, 5))
         plt.plot(x, y, 'o-', label='Voltage vs Rabi Frequency')
         plt.xlabel('Amplitude Cal (Voltage)')
-        plt.ylabel('Rabi Frequency (MHz)')
+        plt.ylabel('Rabi Frequency/ d_cg (MHz)')
         plt.title('Voltage to Rabi Frequency Mapping')
         plt.grid(True)
         plt.legend()
@@ -85,17 +95,20 @@ class RabiFreqVoltageConverter:
         Convert voltage amplitude to Rabi frequency.
         input:
         voltage: Voltage amplitude in V
+        returns:
+        rabi frequency (not normalised to angular CG)
         """
         if not (self.min_voltage <= voltage <= self.max_voltage):
             raise ValueError(f"Voltage {voltage} out of bounds ({self.min_voltage} - {self.max_voltage})")
-        return float(self._volt_to_rabi_interp(voltage))
+        return float(self._volt_to_rabi_interp(voltage)*np.abs(self.cg))
 
     def rabi_to_voltage(self, rabi):
         """
         Convert Rabi frequency to voltage amplitude.
         input:
-        rabi: Rabi frequency in MHz
+        rabi: Rabi frequency in MHz (not normalised to angular CG)
         """
+        rabi=rabi/np.abs(self.cg)
         if not (self.min_rabi <= rabi <= self.max_rabi):
             raise ValueError(f"Rabi frequency {rabi} out of bounds ({self.min_rabi} - {self.max_rabi})")
         return float(self._rabi_to_volt_interp(rabi))
@@ -134,17 +147,17 @@ class RabiFreqVoltageConverter:
 
 
 # general coefficients
-gamma_d1 = 5.746*np.pi
+#gamma_d1 = 5.746*np.pi
 gamma_d2= 6*np.pi
 typical_waist_size=100 #mu m
-d_d1 = 2.537 * 10**(-29)
+#d_d1 = 2.537 * 10**(-29)
 d_d2= 2.853 * 10**(-29) 
 
 # V-STIRAP re-preparation coefficients
 cg_d2_stokes = np.sqrt(1/30)
 cg_d2_pump = -np.sqrt(5/24)
-rabi_stirap_d1 = 41
-rabi_stirap_d2 = 49
+#rabi_stirap_d1 = 41
+rabi_stirap_d2 = 50
 
 # OPT PUMPING coefficients
 cg_d2_p1 = np.sqrt(1/24)
@@ -182,10 +195,10 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
     intensity=power/(np.pi*(beam_waist*10**(-6))**2*10**3)
     efield=np.sqrt((2*intensity)/(epsilon_0*c))
     omega=(d*cg*efield)/(hbar*10**6)
-    return np.abs(omega) #in MHz
+    return np.abs(omega) #in MHz with angular dependence
 
-pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
-channel = 1  # AWG channel
+pulse = 'stokes'  # 'stokes', 'pump', 'P1', 'P2'
+channel = 2  # AWG channel
 amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1
@@ -215,7 +228,7 @@ if __name__ == "__main__":
 
         target_power_d2 = rabi_to_laserpower(rabi_d2_map[pulse], d_d2, cg_d2_map[pulse] , typical_waist_size) # in mW
         target_power_d2 *= 10**(-3) # to W
-        print(f'Target Power for desired Rabi Freq: {target_power_d2}')
+        print(f'Target Power for desired Rabi Freq: {target_power_d2*1e3} mW')
 
         # Finding the voltage amplitude that corresponds to this power
         awg_chan_freqs_map = {1: [126], 2: [80], 3: [62.35], 4: [82.5]}
@@ -225,12 +238,13 @@ if __name__ == "__main__":
                                     calibration_lims = (0.1,0.25), save_all=True, results_dict=results_dict)
         
         df = pd.DataFrame({'amplitude_cal': results_dict['level'],'power': results_dict['read_value']})
-        df['rabi'] = df['power'].apply(lambda p: laserpower_to_rabi(p * 1e3,d_d2,
-            cg_d2_map[pulse],typical_waist_size))
+        df['rabi_measured_no_ang'] = df['power'].apply(lambda p: laserpower_to_rabi(p * 1e3,d_d2,
+            cg_d2_map[pulse],typical_waist_size))/np.abs(cg_d2_map[pulse])
         df['target power']=target_power_d2
-        df['rabi_freq'] = rabi_d2_map[pulse]
+        df['rabi_des_no_cg'] = np.abs(rabi_d2_map[pulse]/cg_d2_map[pulse])
         df['closest level']=amplitude_cal
         df['waist_size'] = typical_waist_size
+        df['cg_ang']=cg_d2_map[pulse]
 
         #join config_save_path with a new folder with today's date
         today = datetime.datetime.now().strftime("%d-%m")

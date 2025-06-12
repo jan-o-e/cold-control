@@ -540,7 +540,7 @@ class DataFolderManager:
 
 if __name__ == "__main__":
     # Example usage
-    base_path = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\18-50-54"
+    base_path = r"d:\pulse_shaping_data\2025-06-12\16-04-01\sweeped_pump_optimised_stokes_optimised_126_80"
     manager = DataFolderManager(base_path)
     
 
