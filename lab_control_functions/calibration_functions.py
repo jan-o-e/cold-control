@@ -3,7 +3,7 @@ File containing functions to generate calibration data for driving AOMs with DAQ
 
 Refactored 09/12/2024
 
-@author: Matt King
+@author: Matt King, Marina
 '''
 
 import os
@@ -458,3 +458,90 @@ def test_stirap_aom_freq_response(level=0.5,
     
     ax.plot(freqs, calData)
     
+
+
+def finding_amplitude_from_power(freqs, target_power, awg_channel, n_steps=20, repeats=3, delay=0.2,
+                                 calibration_lims=(0, 1), save_all=False, results_dict=None):
+    """ Provides with the value of the voltage amplitude we have to send to the AWG if we want an output 
+    of the aom with a specific power value.
+    
+    Inputs:
+        freqs (list) - frequencies at which the awg should drive the aom
+        target_power (float) - target power value to achieve
+        awg_channel (Channel) - awg channel that drives the aom
+        n_steps (int) - number of steps to divide the voltage range into
+        repeats (int) - How many measurements to take and average over when reading a value from the power meter
+                          (note 1 measurement is about 3ms).
+        delay (float) - How long to wait between writing a new voltage and querying the frequency counter
+        calibration_lims (tuple) - limits of the calibration
+    """
+
+    sample_rate = 1.25 * 10**9
+    print('Creating AWG instance')
+    awg = WX218x_awg()
+    print('Connecting...')
+    awg.open(reset=False)
+    
+    awg.configure_operation_mode(awg_channel, WX218x_OperationMode.CONTINUOUS)
+    awg.configure_output_mode(WX218x_OutputMode.ARBITRARY)
+    awg.configure_sample_rate(sample_rate)
+    awg.configure_arb_gain(awg_channel, 2)
+
+    inst, power_meter = get_power_meter(return_inst=True)
+    power_meter: ThorlabsPM100 = power_meter  # declare the type for easier editing
+    configure_power_meter(power_meter, nMeasurmentCounts=repeats)
+    
+    closest_level = None
+    closest_diff = float('inf')
+    last_read_Value = None
+
+    if save_all and results_dict is not None:
+        results_dict['level'] = []
+        results_dict['read_value'] = []
+        results_dict['rabi']=[]
+
+    for freq in freqs:
+        levelData = np.linspace(*calibration_lims, n_steps)
+        calData = np.empty(n_steps)
+        print('Running through awg levels...might take a while...')
+
+        for i, level in enumerate(levelData):
+            wf = testWaveform(sample_rate, level=level, mod_freq=freq * 10**6)
+            awg.create_custom_adv(wf.get(sample_rate), wf.get(sample_rate))
+             
+            awg.enable_channel(awg_channel)
+            time.sleep(delay)
+            read_value = float(power_meter.read)
+            print(f'{level}V, {read_value*1e3}mW')
+
+            calData[i] = read_value
+            
+            awg.disable_channel(awg_channel)
+
+            diff = abs(read_value - target_power)
+            if diff < closest_diff:
+                closest_diff = diff
+                closest_level = level
+                last_read_value = read_value
+
+            if save_all and results_dict is not None:
+                results_dict['level'].append(level)
+                results_dict['read_value'].append(read_value)
+
+            if diff < 1e-8:  # Adjust the tolerance as needed
+                print(f'Target power {target_power} achieved with level {level}: {read_value}. Diff: {diff}')
+                awg.reset()
+                awg.close()
+                inst.close()
+                return level, diff, read_value, results_dict
+        
+        print('...finished taking data')
+
+    print('Resetting awg...')
+    awg.reset()
+    print('Calibration finished.')
+    awg.close()
+
+    inst.close()
+    print(f'Closest level found: {closest_level} with difference: {closest_diff}')
+    return closest_level, closest_diff, read_value, results_dict  # Return the closest level found if the target power is not achieved

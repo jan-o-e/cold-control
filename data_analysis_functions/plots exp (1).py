@@ -131,7 +131,11 @@ def plot_shot_results(folder_path):
         mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
         ch3_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
         average = ch3_segment_ref['Channel 4 Voltage (V)'].mean(axis=0)
-        print(average)
+
+        # integration area below curve, taking average as a zero reference
+        area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch3_segment_fl['Channel 4 Voltage (V)']), ch3_segment_fl['Time (s)'])
+
+        print(f"Average background: {average}, Integrated area: {area}")
 
         # check if it's working
         plt.figure(figsize=(15, 8))
@@ -147,19 +151,22 @@ def plot_shot_results(folder_path):
         plt.tight_layout()
         plt.show()
 
-        # integration area below curve, taking average as a zero reference
-        area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch3_segment_fl['Channel 4 Voltage (V)']), ch3_segment_fl['Time (s)'])
         
         integrals_fl.append(area)
         ref_0.append(average)   
 
-    today = datetime.datetime.now().strftime("%d-%m")
-    output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}'
-    os.makedirs(output_dir, exist_ok=True)
-    integrals_fl_df = pd.DataFrame({'integral': integrals_fl, 'ref 0': ref_0})
-    average_int = integrals_fl_df['integral'].mean()
-    print(f'Average: {average_int}, ')
-    integrals_fl_df.to_csv(os.path.join(output_dir, 'integrated_area_155.csv'), index=False)
+    #today = datetime.datetime.now().strftime("%d-%m")
+    #output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}'
+    #os.makedirs(output_dir, exist_ok=True)
+    #integrals_fl_df = pd.DataFrame({'integral': integrals_fl, 'ref 0': ref_0})
+    average_int = np.mean(integrals_fl)
+    std_int = np.std(integrals_fl)
+    max_int = np.max(integrals_fl)
+    min_int = np.min(integrals_fl)
+    print(f'Average integrated area: {average_int}, ')
+    print(f"Standard deviation of area: {std_int}")
+    print(f"Number of integrals calculated: {len(integrals_fl)}")
+    #integrals_fl_df.to_csv(os.path.join(output_dir, 'integrated_area_155.csv'), index=False)
 
 
     
@@ -323,8 +330,8 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
 
 
 if __name__ == "__main__":
-    root_directory = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\12-41-23"
-    single_shot_path = r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07\sweeped_pump_zero_175_stokes_zero_175_126_80\shot2'
+    root_directory = r"D:\pulse_shaping_data\2025-06-12\16-23-23"
+    single_shot_path = r'D:\pulse_shaping_data\2025-06-12\16-23-23\sweep_no_pulse_126_80\shot0'
 
     # folders_to_process = [
     #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_175ns_20_stokes_175ns_0_2_126_80",
@@ -334,4 +341,4 @@ if __name__ == "__main__":
  
 
     calculate_integrals(root_directory)
-    plot_shot_results(single_shot_path)
+    #plot_shot_results(single_shot_path)
