@@ -155,17 +155,20 @@ def plot_shot_results(folder_path):
         integrals_fl.append(area)
         ref_0.append(average)   
 
+    valid_integrals = [val for val in integrals_fl if val is not None and not np.isnan(val) and val >= 0]
+
+
     #today = datetime.datetime.now().strftime("%d-%m")
     #output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}'
     #os.makedirs(output_dir, exist_ok=True)
     #integrals_fl_df = pd.DataFrame({'integral': integrals_fl, 'ref 0': ref_0})
-    average_int = np.mean(integrals_fl)
-    std_int = np.std(integrals_fl)
-    max_int = np.max(integrals_fl)
-    min_int = np.min(integrals_fl)
+    average_int = np.mean(valid_integrals)
+    std_int = np.std(valid_integrals)
+    max_int = np.max(valid_integrals)
+    min_int = np.min(valid_integrals)
     print(f'Average integrated area: {average_int}, ')
     print(f"Standard deviation of area: {std_int}")
-    print(f"Number of integrals calculated: {len(integrals_fl)}")
+    print(f"Number of integrals calculated: {len(valid_integrals)} out of {len(integrals_fl)} shots")
     #integrals_fl_df.to_csv(os.path.join(output_dir, 'integrated_area_155.csv'), index=False)
 
 
@@ -336,15 +339,26 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
 
 
 if __name__ == "__main__":
-    root_directory = r"D:\pulse_shaping_data\2025-06-13\11-25-47"
-    single_shot_path = r'd:\pulse_shaping_data\2025-06-13\12-22-27'
+    root_directory = r"d:\pulse_shaping_data\2025-06-13\16-08-00"
+    single_shot_path = r'D:\pulse_shaping_data\2025-06-13\16-08-00\sweep_55_opt_126_80\shot0'
 
     # folders_to_process = [
     #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_175ns_20_stokes_175ns_0_2_126_80",
     #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_optimized_stokes_optimized_126_80",
     #     r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_zero_175_stokes_zero_175_126_80'
     # ]
- 
+    
+    while True:
+        response = input("Plot data from a single shot (1/single) or calculate integrals (2/calc):\n")
+        path = input("Enter the path to the data:\n")
+        if response.lower() in ["1", "s", "single"]:
+            plot_shot_results(path)
+        elif response.lower() in ["2", "c", "calc"]:
+            calculate_integrals(path)
+        else:
+            print("Invalid response")
+        
 
+    
     #calculate_integrals(root_directory)
-    plot_shot_results(single_shot_path)
+    #plot_shot_results(single_shot_path)

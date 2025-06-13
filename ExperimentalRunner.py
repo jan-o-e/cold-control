@@ -983,7 +983,7 @@ class MotFluoresceExperiment(GenericExperiment):
 
     def __init__(self, daq_controller:DAQ_controller, sequence:Sequence, 
                 mot_fluoresce_configuration:MotFluoresceConfiguration,
-                ic_imaging_control:IC_ImagingControl = None, save_with_time=True):
+                ic_imaging_control:IC_ImagingControl = None, sweep=True):
         
         super().__init__(daq_controller, sequence, mot_fluoresce_configuration)
         # the configuration object is a MotFluoresceConfiguration object and called self.config
@@ -997,7 +997,7 @@ class MotFluoresceExperiment(GenericExperiment):
         self.with_scope = self.mot_fluoresce_config.use_scope
         self.with_awg = self.mot_fluoresce_config.use_awg
 
-        self.save_with_time = save_with_time
+        self.sweep = sweep
         #if self.save_with_time and self.iterations != 1:
         #    raise ValueError("Cannot save with time if iterations is not 1. Set save_with_time to False or iterations to 1.")
         self.current_date = datetime.now().strftime("%Y-%m-%d")
@@ -1131,13 +1131,16 @@ class MotFluoresceExperiment(GenericExperiment):
         
         directory = self.save_location
 
-        # Get current date and time
-        now = datetime.now()
-        date_str = now.strftime("%Y-%m-%d")
-        time_str = now.strftime("%H-%M-%S")
+        if not self.sweep:
+            # Get current date and time
+            now = datetime.now()
+            date_str = now.strftime("%Y-%m-%d")
+            time_str = now.strftime("%H-%M-%S")
+            # Create full path with date and time subdirectories
+            full_directory = os.path.join(directory, date_str, time_str)
+        else:
+            full_directory = directory
 
-        # Create full path with date and time subdirectories
-        full_directory = os.path.join(directory, date_str, time_str)
         os.makedirs(full_directory, exist_ok=True)
 
         print(f"Data will be saved to {full_directory}")
@@ -1261,11 +1264,13 @@ class MotFluoresceSweepExperiment():
         This method should create and run a MotFluoresceExperiment for each sweep point
         """
 
+        print(f"This will run a series of {len(self.sweep_config)} experiments.")
+
         for i, (config, sequence) in enumerate(self.sweep_config):
             print(f"Running experiment with configuration: {i}")
             # Create a new MotFluoresceExperiment with the current configuration
             experiment = MotFluoresceExperiment(self.daq_controller, sequence, config,
-                                                save_with_time=True)
+                                                sweep=True)
             experiment.run()
             print(f"Experiment {i} completed and closed.")
 

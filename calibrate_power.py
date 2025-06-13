@@ -145,6 +145,19 @@ class RabiFreqVoltageConverter:
 
         print(f"Processed data saved to: {csv_out}")
 
+    def get_rabi_limits(self, print_info=True):
+        act_max = np.abs(self.max_rabi*self.cg)/(2*np.pi)
+        act_min = np.abs(self.min_rabi*self.cg)/(2*np.pi)
+
+        if print_info:
+            print(f"The maximum and minimum values for the transition normalised Rabi frequency are: ")
+            print(f"Max: {self.max_rabi}, Min: {self.min_rabi}")
+
+            print("This corresponds to actual Rabi frequencies of:")
+            print(f"Max: {act_max}, Min: {act_min}")
+
+        return (act_max, act_min)
+
 
 # general coefficients
 #gamma_d1 = 5.746*np.pi

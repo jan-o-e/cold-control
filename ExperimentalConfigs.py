@@ -207,10 +207,26 @@ class MotFluoresceConfigurationSweep:
         return len(self.configs)
     
     def __configure_awg_sweep(self, pulse_pairs, mod_freqs_ch1, mod_freqs_ch2):
-        for i in range(self.num_shots):
-            for csv1, csv2 in pulse_pairs:
-                for freq1 in mod_freqs_ch1:
-                    for freq2 in mod_freqs_ch2:
+        for csv1, csv2 in pulse_pairs:
+            directory_path1 = os.path.dirname(csv1)
+            directory_path2 = os.path.dirname(csv2)
+            assert directory_path1 == directory_path2
+            last_folder = os.path.basename(directory_path1)
+            # if we are sending no pulses we don't need to sweep the frequency
+            if last_folder == r"no_pulse":
+                ch1_freqs = [1]
+                ch2_freqs = [1]
+            else:
+                ch1_freqs = mod_freqs_ch1
+                ch2_freqs = mod_freqs_ch2
+
+            print(ch1_freqs)
+            print(ch2_freqs)
+            print("Warning! If the steps are too small then the frequencies will be overwritten when rounded.")
+
+            for freq1 in ch1_freqs:
+                for freq2 in ch2_freqs:
+                    for i in range(self.num_shots):
                         # Clone and modify base configuration
                         new_config = deepcopy(self.base_config)
                         new_sequence = deepcopy(self.base_sequence)
@@ -229,22 +245,12 @@ class MotFluoresceConfigurationSweep:
 
                         # Update the new config with modified sequence
                         new_config.awg_sequence_config = modified_sequence_config
-                        #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
-
-                        # csv1_clean = sanitize_filename(os.path.basename(csv1))
-                        # csv2_clean = sanitize_filename(os.path.basename(csv2))
-
-                        directory_path1 = os.path.dirname(csv1)
-                        directory_path2 = os.path.dirname(csv2)
-                        assert directory_path1 == directory_path2
-
-                        last_folder = os.path.basename(directory_path1)
 
                         new_config.save_location = os.path.join(
                             self.base_config.save_location,
                             self.current_date,
                             self.current_time,
-                            f"sweep_{last_folder}_{int(freq1/1e6)}_{int(freq2/1e6)}",
+                            f"sweep_{last_folder}_{freq1/1e6:.1f}_{freq2/1e6:.1f}",
                             f"shot{i}"
                         )
 
