@@ -303,10 +303,16 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
             os.makedirs(output_dir, exist_ok=True)
             integrals_fl_df.to_csv(os.path.join(output_dir, f'integrated_area_iteration_{iteration_number}.csv'), index=False)
 
-        average_int = np.mean(integrals_fl)
-        std_int = np.std(integrals_fl)
-        max_int = np.max(integrals_fl)
-        min_int = np.min(integrals_fl)
+        # Filter out NaN and negative values
+        valid_integrals = [val for val in integrals_fl if val is not None and not np.isnan(val) and val >= 0]
+
+        if valid_integrals:
+            average_int = np.mean(valid_integrals)
+            std_int = np.std(valid_integrals)
+            max_int = np.max(valid_integrals)
+            min_int = np.min(valid_integrals)
+        else:
+            average_int = std_int = max_int = min_int = np.nan  # or handle differently
 
         print(f'→ Promedio en {folder_name}: {average_int:.3e}')
 
@@ -330,8 +336,8 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
 
 
 if __name__ == "__main__":
-    root_directory = r"D:\pulse_shaping_data\2025-06-12\16-23-23"
-    single_shot_path = r'D:\pulse_shaping_data\2025-06-12\16-23-23\sweep_no_pulse_126_80\shot0'
+    root_directory = r"D:\pulse_shaping_data\2025-06-13\11-25-47"
+    single_shot_path = r'd:\pulse_shaping_data\2025-06-13\12-22-27'
 
     # folders_to_process = [
     #     r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-09\16-08-07_low_fluoresce\sweeped_pump_175ns_20_stokes_175ns_0_2_126_80",
@@ -340,5 +346,5 @@ if __name__ == "__main__":
     # ]
  
 
-    calculate_integrals(root_directory)
-    #plot_shot_results(single_shot_path)
+    #calculate_integrals(root_directory)
+    plot_shot_results(single_shot_path)

@@ -157,7 +157,7 @@ d_d2= 2.853 * 10**(-29)
 cg_d2_stokes = np.sqrt(1/30)
 cg_d2_pump = -np.sqrt(5/24)
 #rabi_stirap_d1 = 41
-rabi_stirap_d2 = 50
+rabi_stirap_d2 = 50*2*np.pi
 
 # OPT PUMPING coefficients
 cg_d2_p1 = np.sqrt(1/24)
@@ -197,8 +197,8 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
     omega=(d*cg*efield)/(hbar*10**6)
     return np.abs(omega) #in MHz with angular dependence
 
-pulse = 'stokes'  # 'stokes', 'pump', 'P1', 'P2'
-channel = 2  # AWG channel
+pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
+channel = 1  # AWG channel
 amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1
@@ -249,11 +249,11 @@ if __name__ == "__main__":
         #join config_save_path with a new folder with today's date
         today = datetime.datetime.now().strftime("%d-%m")
 
-        config_save_path = os.path.join(config_save_path, today) 
-        if not os.path.exists(config_save_path):
-            os.makedirs(config_save_path)
+        config_path_date = os.path.join(config_save_path, today) 
+        if not os.path.exists(config_path_date):
+            os.makedirs(config_path_date)
 
-        output_file = os.path.join(config_save_path, f'rabi_data_{pulse}.csv')
+        output_file = os.path.join(config_path_date, f'rabi_data_{pulse}.csv')
         df.to_csv(output_file, index=False)
 
         print("Instantiating RabiFreqVoltageConverter...")
