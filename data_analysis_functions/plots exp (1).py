@@ -336,7 +336,7 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
 
 
 if __name__ == "__main__":
-    root_directory = r"D:\pulse_shaping_data\2025-06-13\11-25-47"
+    root_directory = r"D:\pulse_shaping_data\2025-06-13\14-52-56"
     single_shot_path = r'd:\pulse_shaping_data\2025-06-13\12-22-27'
 
     # folders_to_process = [
@@ -346,5 +346,5 @@ if __name__ == "__main__":
     # ]
  
 
-    #calculate_integrals(root_directory)
-    plot_shot_results(single_shot_path)
+    calculate_integrals(root_directory)
+    #plot_shot_results(single_shot_path)
