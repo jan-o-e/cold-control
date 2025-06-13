@@ -1128,11 +1128,19 @@ class MotFluoresceExperiment(GenericExperiment):
         save_dir = self.save_location
         if save_dir.endswith(".csv"):
             save_dir = os.path.dirname(save_dir)  # Get parent folder if it's a full file path
-
-        # Create the filepath for the data
+        
         directory = self.save_location
-        os.makedirs(directory, exist_ok=True) 
-        print(f"Data will be saved to {directory}")
+
+        # Get current date and time
+        now = datetime.now()
+        date_str = now.strftime("%Y-%m-%d")
+        time_str = now.strftime("%H-%M-%S")
+
+        # Create full path with date and time subdirectories
+        full_directory = os.path.join(directory, date_str, time_str)
+        os.makedirs(full_directory, exist_ok=True)
+
+        print(f"Data will be saved to {full_directory}")
 
         i = 1
 
@@ -1156,7 +1164,7 @@ class MotFluoresceExperiment(GenericExperiment):
             print("collecting data")
             data = self.scope.read_slow_return_data(self.data_chs)
             filename=f"iteration_{i}_data.csv"
-            full_name = os.path.join(directory, filename)
+            full_name = os.path.join(full_directory, filename)
             data.to_csv(full_name, index=False)# Saves the data
             print(f"Data saved to {full_name}")
 
