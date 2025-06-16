@@ -149,7 +149,7 @@ class OscilloscopeManager:
         self.read_speed = high_speed
         
         print("configuring the scope settings")
-        self.scope.write('ACQUIRE:MODE HRESOLUTION')
+        self.scope.write('ACQUIRE:TYPE HRESOLUTION')
         #self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}') # 9000 series scope
         if not centered_0:
             self.scope.write(':TIMEBASE:REFERENCE LEFT')

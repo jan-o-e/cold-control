@@ -20,15 +20,6 @@ def extract_voltages(filename: str) -> Union[tuple[float, float], None]:
                                      as floats, or None if the pattern is not found.
     """
     # Define a regular expression pattern to capture the two voltage values.
-    # - `swept_`: Matches the literal string "swept_".
-    # - `(\d+\.?\d*)`: This is the first capturing group.
-    #   - `\d+`: Matches one or more digits (for the whole number part).
-    #   - `\.?`: Matches an optional decimal point.
-    #   - `\d*`: Matches zero or more digits (for the fractional part after the decimal).
-    # - `V_`: Matches the literal string "V_" after the first voltage.
-    # - `(\d+\.?\d*)`: This is the second capturing group, identical to the first.
-    # - `V_`: Matches the literal string "V_" after the second voltage.
-    # - `.*`: Matches any characters that follow (e.g., the time part and file extension).
     pattern = r"swept_(\d+\.?\d*)V_(\d+\.?\d*)V_.*"
     
     # Search for the pattern in the given filename.
@@ -48,6 +39,17 @@ def extract_voltages(filename: str) -> Union[tuple[float, float], None]:
     else:
         return None
     
+def extract_freqs(text:str):
+    # matches = re.findall(r'(\d+)', text)
+    # freq1 = float(matches[-2])
+    # freq2 = float(matches[-1])
+    match = re.search(r'(\d+(?:\.\d+)?)_(\d+(?:\.\d+)?)$', text)
+
+    if match:
+        val1, val2 = map(float, match.groups())
+
+    return val1, val2
+    
 
 
 def plot_contour_from_csv(csv_filepath: str):
@@ -65,14 +67,14 @@ def plot_contour_from_csv(csv_filepath: str):
         # print("DataFrame head:\n", df.head()) # Uncomment to inspect data
 
         # Apply the voltage extraction function to the 'folder' column
-        # and create new columns for power_voltage and frequency_voltage.
+        # and create new columns for frequency_1 and frequency_2.
         # Use .apply(pd.Series) to expand the tuple output into two separate columns.
-        df[['power_voltage', 'frequency_voltage']] = df['folder'].apply(
-            lambda x: pd.Series(extract_voltages(x))
+        df[['frequency_1', 'frequency_2']] = df['folder'].apply(
+            lambda x: pd.Series(extract_freqs(x))
         )
         
-        # Drop rows where voltage extraction failed (i.e., 'power_voltage' is NaN)
-        df.dropna(subset=['power_voltage', 'frequency_voltage'], inplace=True)
+        # Drop rows where voltage extraction failed (i.e., 'frequency_1' is NaN)
+        df.dropna(subset=['frequency_1', 'frequency_2'], inplace=True)
         print(f"Data after extracting voltages and dropping NaNs: {df.shape}")
 
         # Ensure that integral column is numeric
@@ -83,14 +85,20 @@ def plot_contour_from_csv(csv_filepath: str):
         if df.empty:
             print("No valid data remaining after processing for contour plot. Exiting.")
             return
+        
+        cols_to_check = ["frequency_1", "frequency_2"]
+        df_filt = df[(df[cols_to_check] != 0).all(axis=1)]# remove zeros
+
 
         # Prepare data for contour plot
-        # X-axis: power_voltage
-        # Y-axis: frequency_voltage
+        # X-axis: frequency_1
+        # Y-axis: frequency_2
         # Z-axis: average_integral
-        x = df['power_voltage'].values
-        y = df['frequency_voltage'].values
-        z = df['average_integral'].values
+        x = df_filt['frequency_1'].values
+        print(x)
+        y = df_filt['frequency_2'].values
+        print(y)
+        z = df_filt['average_integral'].values
 
         # Create a regular grid for the contour plot
         # Determine the range for X and Y
@@ -121,7 +129,7 @@ def plot_contour_from_csv(csv_filepath: str):
         # Set labels and title
         plt.xlabel('Power Voltage (V)')
         plt.ylabel('Frequency Voltage (V)')
-        plt.title('Contour Plot of Average Integral vs. Power and Frequency Voltages')
+        plt.title('Contour Plot of Average Integral vs. Modulation frequencies')
         
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.legend()
@@ -135,4 +143,4 @@ def plot_contour_from_csv(csv_filepath: str):
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
     
-plot_contour_from_csv(r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\2025-06-10\12-21-56_imaging_sweep1\summary_integrals.csv")
+plot_contour_from_csv(r"D:\pulse_shaping_data\2025-06-13\18-42-20\summary_integrals.csv")
