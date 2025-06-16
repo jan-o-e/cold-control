@@ -261,7 +261,7 @@ class OscilloscopeManager:
             print(f"Preamble info: {preamble}")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
+            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='H', container=np.array, is_big_endian=False)
             y_data = y_data * y_incr + y_orig
 
             if len(y_data) == 0:
@@ -391,19 +391,23 @@ class OscilloscopeManager:
         # post-acquisition processing (like measurements or FFTs) as well [7, 13, 39-41].
         # The single-shot DUT example uses :ADER? [1].
 
-        print("Waiting for acquisition to complete (polling :TER?)...\n") # [13]
+        print("Waiting for acquisition to complete (polling :ACQuire:COMPlete?)...") # [13]
         StartTime = time.perf_counter() # Reset timer for acquisition wait
         acq_complete = 0
 
         # Wait until acquisition is done  or timeout [1, 6]
-        print(time.perf_counter()-StartTime)
+        #print(time.perf_counter()-StartTime)
         while acq_complete != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
             time.sleep(poll_interval_sec) # Pause [1, 6]
             try:
                 # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
                 # query_result = self.scope.query(":TER?")
                 query_result = self.scope.query(":ACQuire:COMPlete?")
-                acq_complete = bool(int(query_result))#float(query_result) == float(100) # Check if acquisition is complete
+                triggered = self.scope.query(":TER?")
+
+                #acq_complete = bool(int(query_result))#float(query_result) == float(100) # Check if acquisition is complete
+                acq_complete = int(query_result) == 100
+                print(acq_complete)
                 if acq_complete:
                     break # Exit loop once acquisition is done
             except Exception as e:
@@ -417,7 +421,6 @@ class OscilloscopeManager:
             self.scope.close() # [37-39]
             raise RuntimeError("Oscilloscope acquisition failed to complete within the specified time.")
 
-        triggered = self.scope.query(":TER?")
         print(f"Triggered: {triggered.strip()}")
 
         print("Acquisition complete. Ready to retrieve data.") # [14]

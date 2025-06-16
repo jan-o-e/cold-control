@@ -210,8 +210,8 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
     omega=(d*cg*efield)/(hbar*10**6)
     return np.abs(omega) #in MHz with angular dependence
 
-pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
-channel = 1  # AWG channel
+pulse = 'stokes'  # 'stokes', 'pump', 'P1', 'P2'
+channel = 2  # AWG channel
 amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1

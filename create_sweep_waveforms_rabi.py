@@ -13,8 +13,8 @@ save_dir = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\
 stokes_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\optimised\stokes_optimized_avui.csv"
 pump_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\optimised\pump_optimized_avui.csv"
 
-RabiClassStokes=RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_DL_PRO\13-06\rabi_data_stokes.csv')
-RabiClassPump=RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_ELYSA\13-06\rabi_data_pump.csv')
+RabiClassStokes=RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_DL_PRO\16-06\rabi_data_stokes.csv')
+RabiClassPump=RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_ELYSA\16-06\rabi_data_pump.csv')
 stokes_lims = RabiClassStokes.get_rabi_limits(print_info=False)
 pump_lims = RabiClassPump.get_rabi_limits(print_info=False)
 

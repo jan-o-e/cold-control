@@ -543,5 +543,5 @@ def finding_amplitude_from_power(freqs, target_power, awg_channel, n_steps=20, r
     awg.close()
 
     inst.close()
-    print(f'Closest level found: {closest_level} with difference: {closest_diff}')
+    print(f'Closest level found: {closest_level}V with difference: {closest_diff*10**3}mW')
     return closest_level, closest_diff, read_value, results_dict  # Return the closest level found if the target power is not achieved

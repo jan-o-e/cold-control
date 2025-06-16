@@ -297,7 +297,8 @@ class Experimental_UI(tk.LabelFrame):
             experiment = MotFluoresceExperiment(daq_controller=self.daq_ui.daq_controller,
                                                 sequence = self.sequence_ui.sequence,
                                                 mot_fluoresce_configuration=self.photon_production_config,
-                                                ic_imaging_control=camera_control)
+                                                ic_imaging_control=camera_control,
+                                                sweep = False)
             # The mot fluoresce experiment is a special case where the Live UI is not set up.
             liveUI = False
             autoCloseLiveUI = False
