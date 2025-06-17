@@ -53,18 +53,19 @@ def plot_shot_results(folder_path):
         all_measurements.append(data)
 
     measurements = pd.DataFrame()
-
-    for i, data in enumerate(all_measurements):
-        measurements[f'Time (s) {i}'] = data['Time (s)']
-        measurements[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
-        measurements[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
-        measurements[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
+    valid_meas = pd.DataFrame()
 
     ref_0 = []
     fluor = []
     integrals_fl = []
 
-    for data in all_measurements:
+    for i,data in enumerate(all_measurements):
+
+        measurements[f'Time (s) {i}'] = data['Time (s)']
+        measurements[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
+        measurements[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
+        measurements[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
+
         ch1 = data['Channel 1 Voltage (V)']
 
         idx_sorted = (ch1 - 1).abs().sort_values().index
@@ -76,17 +77,37 @@ def plot_shot_results(folder_path):
         ch4 = data['Channel 4 Voltage (V)']
         ch2 = data["Channel 2 Voltage (V)"]
         time = data['Time (s)']
+
+        # Step 1: Find the first index where ch2 drops below 7.45
+        below = ch2 < 7.45
+        if not below.any():
+            print("Channel 2 never drops below 7.45 V")
+        else:
+            drop_index = below.idxmax()
+            drop_time = time[drop_index]
+
+            # Step 2: From that point onward, find the first time it goes back above 7.45
+            above = ch2[drop_index+1:] > 7.45
+            if not above.any():
+                print(f"Channel 2 drops below 7.45 V at {drop_time} s and never goes back above.")
+            else:
+                rise_index = above.idxmax()
+                rise_time = time[rise_index]
+                print(f"Channel 2 drops below 7.45 V at {drop_time} s")
+                print(f"Channel 2 goes back above 7.45 V at {rise_time} s")
+
         ch4_smooth = ch4#.rolling(window=144, center=True, min_periods=1).mean()
 
         # big increase when imaging start
-        mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
-        ch4_smooth_rise = ch4_smooth[mask_rise]
-        time_rise = time[mask_rise]
-        deriv_rise = np.gradient(ch4_smooth_rise, time_rise)
+        # mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
+        # ch4_smooth_rise = ch4_smooth[mask_rise]
+        # time_rise = time[mask_rise]
+        # deriv_rise = np.gradient(ch4_smooth_rise, time_rise)
 
-        idx_rise_rel = np.argmax(deriv_rise)
-        idx_rise = time_rise.index[idx_rise_rel]
-        t_rise = time.iloc[idx_rise]
+        # idx_rise_rel = np.argmax(deriv_rise)
+        # idx_rise = time_rise.index[idx_rise_rel]
+        # t_rise = time.iloc[idx_rise]
+        t_rise = 1.82e-3
 
         # big decrease when imaging stops
         t_drop = t_rise + 500e-6
@@ -103,7 +124,23 @@ def plot_shot_results(folder_path):
         # integration area below curve, taking average as a zero reference
         area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
 
-        print(f"Average background: {average}, Integrated area: {area}")
+        target_time = 0.001604375
+        tolerance = 5e-6
+
+        # only consider the result if the timing of the awg marker is correct
+        if abs(drop_time - target_time) <= tolerance:
+            print("The drop time is close enough to the expected time")
+        
+            integrals_fl.append(area)
+            ref_0.append(average)
+
+            if area is not None and not np.isnan(area):
+                valid_meas[f'Time (s) {i}'] = data['Time (s)']
+                valid_meas[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
+                valid_meas[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
+                valid_meas[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
+
+        print(f"Average background: {average}, Integrated area: {area}\n")
 
         # # check if it's working
         # plt.figure(figsize=(15, 8))
@@ -134,7 +171,7 @@ def plot_shot_results(folder_path):
         ax1.tick_params(axis='y', labelcolor='tab:blue')
 
         ax2 = ax1.twinx()
-        ax2.plot(time, ch2, label='CH2 (marker)', color='tab:orange', alpha=0.7)
+        ax2.plot(time, ch2, label='CH2 (marker)', color='tab:orange')
         ax2.set_ylabel('Channel 2 Voltage (V)', color='tab:orange')
         ax2.tick_params(axis='y', labelcolor='tab:orange')
 
@@ -148,17 +185,10 @@ def plot_shot_results(folder_path):
         plt.show()
 
 
-        
-        integrals_fl.append(area)
-        ref_0.append(average)   
 
-    valid_integrals = [val for val in integrals_fl if val is not None and not np.isnan(val) and val >= 0]
+    valid_integrals = [val for val in integrals_fl if val is not None and not np.isnan(val)]# and val >= 0]
 
 
-    #today = datetime.datetime.now().strftime("%d-%m")
-    #output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}'
-    #os.makedirs(output_dir, exist_ok=True)
-    #integrals_fl_df = pd.DataFrame({'integral': integrals_fl, 'ref 0': ref_0})
     average_int = np.mean(valid_integrals)
     std_int = np.std(valid_integrals)
     max_int = np.max(valid_integrals)
@@ -166,28 +196,6 @@ def plot_shot_results(folder_path):
     print(f'Average integrated area: {average_int}, ')
     print(f"Standard deviation of area: {std_int}")
     print(f"Number of integrals calculated: {len(valid_integrals)} out of {len(integrals_fl)} shots")
-    #integrals_fl_df.to_csv(os.path.join(output_dir, 'integrated_area_155.csv'), index=False)
-
-
-    
-    # only one file
-    # last_file = sorted(files)[-1]  
-    # data = pd.read_csv(last_file)
-
-    # fig, ax1 = plt.subplots(figsize=(11, 3))
-    # ax1.plot(data['Time (s)'], data['Channel 1 Voltage (V)'], linewidth=1.5, color='tab:blue', label='CH 1')
-    # ax1.set_xlabel(r'Time (s)')
-    # ax1.set_ylabel(r'Intensity (a.u) CH 1', color='tab:blue')
-    # ax1.tick_params(axis='y', labelcolor='tab:blue')
-
-    # ax2 = ax1.twinx()
-    # ax2.plot(data['Time (s)'], data['Channel 4 Voltage (V)'], linewidth=1.5, color='tab:orange', label='CH 3')
-    # ax2.set_ylabel(r'Intensity (a.u) CH 3', color='tab:orange')
-    # ax2.tick_params(axis='y', labelcolor='tab:orange')
-
-    # fig.suptitle(f'CH1 and CH3 - {os.path.basename(last_file)}')
-    # fig.tight_layout()
-    # plt.show()
 
 
 
@@ -197,7 +205,7 @@ def plot_shot_results(folder_path):
     mean_ch4 = measurements.filter(like='Channel 4 Voltage (V)').mean(axis=1)
     mean_ch2 = measurements.filter(like="Channel 2 Voltage (V)").mean(axis=1)
 
-    fig, ax1 = plt.subplots(figsize=(11, 5))
+    fig1, ax1 = plt.subplots(figsize=(11, 5))
     ax1.plot(mean_time, mean_ch1, linewidth=1.5, color='tab:blue', label='Mean CH 1')
     ax1.set_xlabel(r'Time (s)')
     ax1.set_ylabel(r'Mean Intensity (a.u) CH 1', color='tab:blue')
@@ -214,8 +222,36 @@ def plot_shot_results(folder_path):
     ax3.set_ylabel('Imaging Marker', color='green')
     ax3.tick_params(axis='y', labelcolor='green')
 
-    fig.suptitle('Mean CH1 and CH4 across all files')
-    fig.tight_layout()
+    fig1.suptitle('Mean CH1 and CH4 across all files')
+    fig1.tight_layout()
+
+    # plot only good data
+    time_val = valid_meas.filter(like='Time (s)').mean(axis=1)
+    ch1_val = valid_meas.filter(like='Channel 1 Voltage (V)').mean(axis=1)
+    ch4_val = valid_meas.filter(like='Channel 4 Voltage (V)').mean(axis=1)
+    ch2_val = valid_meas.filter(like="Channel 2 Voltage (V)").mean(axis=1)
+
+    fig1, ax1 = plt.subplots(figsize=(11, 5))
+    ax1.plot(time_val, ch1_val, linewidth=1.5, color='tab:blue', label='Mean CH 1')
+    ax1.set_xlabel(r'Time (s)')
+    ax1.set_ylabel(r'Mean Intensity (a.u) CH 1', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+    ax2 = ax1.twinx()
+    ax2.plot(time_val, ch4_val, linewidth=1.5, color='tab:orange', label='Mean CH 3')
+    ax2.set_ylabel(r'Mean Intensity (a.u) CH 4', color='tab:orange')
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    ax3 = ax1.twinx()
+    ax3.spines['right'].set_position(('outward', 100)) 
+    ax3.plot(time_val, ch2_val, linewidth = 0.5, color='green', label='Channel 2')
+    ax3.set_ylabel('Imaging Marker', color='green')
+    ax3.tick_params(axis='y', labelcolor='green')
+
+    fig1.suptitle('Only data where the AWG marker is at the right time, and the integral is a number')
+    fig1.tight_layout()
+
+
     plt.show()
 
 
