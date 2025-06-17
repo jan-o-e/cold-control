@@ -363,10 +363,7 @@ class ExperimentConfigReader():
                                             phases = phases)) # map(float, v['phases']))) 
 
             # Sets the general settings for the whole process as a photon production configuration
-            awg_sequence_config = AWGSequenceConfiguration(save_location = config['save location'],
-                                                                        mot_reload  = eval(config['mot reload']),
-                                                                        iterations = int(config['iterations']),
-                                                                        waveform_sequence = list(eval(config['waveform sequence'])),
+            awg_sequence_config = AWGSequenceConfiguration(waveform_sequence = list(eval(config['waveform sequence'])),
                                                                         waveforms = waveforms,
                                                                         waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
                                                                         interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
@@ -386,10 +383,7 @@ class ExperimentConfigReader():
                                                 mod_frequency= float(v['modulation frequency']),
                                                 phases=map(float, v['phases'])))
 
-            awg_sequence_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
-                                                                            mot_reload  = eval(config_single['mot reload']),
-                                                                            iterations = int(config_single['iterations']),
-                                                                            waveform_sequence = list(eval(config_single['waveform sequence'])),
+            awg_sequence_config_single = AWGSequenceConfiguration(waveform_sequence = list(eval(config_single['waveform sequence'])),
                                                                             waveforms = waveforms_single,
                                                                             waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
                                                                             interleave_waveforms = toBool(config_single['interleave waveforms']),

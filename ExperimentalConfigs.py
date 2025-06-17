@@ -338,7 +338,7 @@ class MotFluoresceConfigurationSweep:
     # for config in sweep:
 
 
-class AWGSequenceConfiguration(GenericConfiguration):
+class AWGSequenceConfiguration():
     """
     AWGSequenceConfiguration stores all configuration parameters
     required for a photon production experiment.
@@ -352,9 +352,6 @@ class AWGSequenceConfiguration(GenericConfiguration):
     """
 
     def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
                  waveform_sequence,
                  waveforms,
                  interleave_waveforms,
@@ -362,7 +359,6 @@ class AWGSequenceConfiguration(GenericConfiguration):
                  awg_configuration,
                  ):
 
-        super().__init__(save_location, mot_reload, iterations)
 
         self._waveform_sequence = waveform_sequence
         self.waveforms: List[Waveform] = waveforms
