@@ -7,6 +7,12 @@ import datetime
 
 plotter = False
 
+MARKER_DROP = 7.45 # The level below which the AWG marker will drop
+T_RISE = 1.82e-3 # The time at which the fluorescence is expected to first rise
+IMG_WIDTH = 500e-6 # The width of the imaging pulse
+TARGET_TIME = 0.001604375 # The expected time of the AWG marker
+TOLERANCE = 5e-6 # How far around the target time to check for the marker
+
 
 
 def get_folder_paths(directory_path):
@@ -38,6 +44,82 @@ def get_folder_paths(directory_path):
     return folder_paths
 
 
+def calculate_integrals_single_trace(data, i=0):
+        """
+        Function to calculate the fluorescence for a particular trace.
+        """
+
+
+        processed_df = pd.DataFrame()
+        # imaging beam on
+        ch4 = data['Channel 4 Voltage (V)']
+        ch2 = data["Channel 2 Voltage (V)"]
+        time = data['Time (s)']
+
+        # Step 1: Find the first index where ch2 drops below 7.45
+        below = ch2 < MARKER_DROP
+        if not below.any():
+            print("Channel 2 never drops below {MARKER_DROP} V")
+        else:
+            drop_index = below.idxmax()
+            drop_time = time[drop_index]
+
+            # Step 2: From that point onward, find the first time it goes back above 7.45
+            above = ch2[drop_index+1:] > MARKER_DROP
+            if not above.any():
+                print(f"Channel 2 drops below {MARKER_DROP} V at {drop_time} s and never goes back above.")
+            else:
+                rise_index = above.idxmax()
+                rise_time = time[rise_index]
+                print(f"Channel 2 drops below {MARKER_DROP} V at {drop_time} s")
+                print(f"Channel 2 goes back above {MARKER_DROP} V at {rise_time} s")
+
+        ch4_smooth = ch4#.rolling(window=144, center=True, min_periods=1).mean()
+
+        # big increase when imaging start
+        # mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
+        # ch4_smooth_rise = ch4_smooth[mask_rise]
+        # time_rise = time[mask_rise]
+        # deriv_rise = np.gradient(ch4_smooth_rise, time_rise)
+
+        # idx_rise_rel = np.argmax(deriv_rise)
+        # idx_rise = time_rise.index[idx_rise_rel]
+        # t_rise = time.iloc[idx_rise]
+
+        # big decrease when imaging stops
+        t_drop = T_RISE + IMG_WIDTH
+
+        mask_fl = (time >= T_RISE) & (time <= t_drop)
+        ch4_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+
+        t_start_ref = t_drop + 50e-6  # after imaging stops
+        t_end_ref = data['Time (s)'].iloc[-1] 
+        mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
+        ch4_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+        average = ch4_segment_ref['Channel 4 Voltage (V)'].mean(axis=0)
+
+        # integration area below curve, taking average as a zero reference
+        area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
+
+
+        # only consider the result if the timing of the awg marker is correct
+        if abs(drop_time - TARGET_TIME) <= TOLERANCE:
+            print("The drop time is close enough to the expected time")
+        
+            if area is not None and not np.isnan(area):
+                processed_df[f'Time (s) {i}'] = data['Time (s)']
+                processed_df[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
+                processed_df[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
+                processed_df[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
+
+            print(f"Average background: {average}, Integrated area: {area}\n")
+
+            return (area, average, processed_df)
+        else:
+            return (area, average, None)
+
+
+
 def plot_shot_results(folder_path):
     pattern = re.compile(r'^iteration_\d+_data\.csv$')
     files = [os.path.join(folder_path, filename) for filename in os.listdir(folder_path) if pattern.match(filename)]
@@ -60,111 +142,36 @@ def plot_shot_results(folder_path):
     integrals_fl = []
 
     for i,data in enumerate(all_measurements):
-
-        measurements[f'Time (s) {i}'] = data['Time (s)']
-        measurements[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
-        measurements[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
-        measurements[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
-
+        time = data["Time (s)"]
         ch1 = data['Channel 1 Voltage (V)']
+        ch2 = data["Channel 2 Voltage (V)"]
+        ch4 = data["Channel 4 Voltage (V)"]
+
+        measurements[f'Time (s) {i}'] = time
+        measurements[f'Channel 1 Voltage (V) {i}'] = ch1
+        measurements[f'Channel 2 Voltage (V) {i}'] = ch2
+        measurements[f"Channel 4 Voltage (V) {i}"] = ch4
+
+
 
         idx_sorted = (ch1 - 1).abs().sort_values().index
         idx_ch1_1 = idx_sorted[0] # ch1 crosses 1V (trigger value)
 
+        (area, average, processed_df) = calculate_integrals_single_trace(data, i)
         
-
-        # imaging beam on
-        ch4 = data['Channel 4 Voltage (V)']
-        ch2 = data["Channel 2 Voltage (V)"]
-        time = data['Time (s)']
-
-        # Step 1: Find the first index where ch2 drops below 7.45
-        below = ch2 < 7.45
-        if not below.any():
-            print("Channel 2 never drops below 7.45 V")
-        else:
-            drop_index = below.idxmax()
-            drop_time = time[drop_index]
-
-            # Step 2: From that point onward, find the first time it goes back above 7.45
-            above = ch2[drop_index+1:] > 7.45
-            if not above.any():
-                print(f"Channel 2 drops below 7.45 V at {drop_time} s and never goes back above.")
-            else:
-                rise_index = above.idxmax()
-                rise_time = time[rise_index]
-                print(f"Channel 2 drops below 7.45 V at {drop_time} s")
-                print(f"Channel 2 goes back above 7.45 V at {rise_time} s")
-
-        ch4_smooth = ch4#.rolling(window=144, center=True, min_periods=1).mean()
-
-        # big increase when imaging start
-        # mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
-        # ch4_smooth_rise = ch4_smooth[mask_rise]
-        # time_rise = time[mask_rise]
-        # deriv_rise = np.gradient(ch4_smooth_rise, time_rise)
-
-        # idx_rise_rel = np.argmax(deriv_rise)
-        # idx_rise = time_rise.index[idx_rise_rel]
-        # t_rise = time.iloc[idx_rise]
-        t_rise = 1.82e-3
-
-        # big decrease when imaging stops
-        t_drop = t_rise + 500e-6
-
-        mask_fl = (time >= t_rise) & (time <= t_drop)
-        ch4_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-
-        t_start_ref = t_drop + 50e-6  # after imaging stops
-        t_end_ref = data['Time (s)'].iloc[-1] 
-        mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
-        ch4_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-        average = ch4_segment_ref['Channel 4 Voltage (V)'].mean(axis=0)
-
-        # integration area below curve, taking average as a zero reference
-        area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
-
-        target_time = 0.001604375
-        tolerance = 5e-6
-
-        # only consider the result if the timing of the awg marker is correct
-        if abs(drop_time - target_time) <= tolerance:
-            print("The drop time is close enough to the expected time")
-        
+        if processed_df is not None:
             integrals_fl.append(area)
             ref_0.append(average)
-
-            if area is not None and not np.isnan(area):
-                valid_meas[f'Time (s) {i}'] = data['Time (s)']
-                valid_meas[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
-                valid_meas[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
-                valid_meas[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
-
-        print(f"Average background: {average}, Integrated area: {area}\n")
-
-        # # check if it's working
-        # plt.figure(figsize=(15, 8))
-        # plt.plot(time, ch3, label='CH4 raw', alpha=0.5)
-        # plt.plot(time, ch3_smooth, label='CH4 smooth', linewidth=2)
-        # plt.axvline(t_rise, color='green', linestyle='--', label='t_rise (subida)')
-        # plt.axvline(t_drop, color='red', linestyle='--', label='t_drop (bajada)')
-        # plt.axhline(average, color='purple', linestyle='--', label='average ref')
-        # plt.xlabel('Time (s)')
-        # plt.ylabel('Channel 4 Voltage (V)')
-        # plt.title('Detecting rise and fall of imaging beam')
-
-
-        # plt.legend()
-        # plt.tight_layout()
-        # plt.show()
+            valid_meas = pd.concat([valid_meas, processed_df], axis = 1)
 
 
         fig, ax1 = plt.subplots(figsize=(15, 8))
 
         ax1.plot(time, ch4, label='CH4 raw', alpha=0.5, color='tab:blue')
-        ax1.plot(time, ch4_smooth, label='CH4 smooth', linewidth=2, color='tab:cyan')
-        ax1.axvline(t_rise, color='green', linestyle='--', label='t_rise (subida)')
-        ax1.axvline(t_drop, color='red', linestyle='--', label='t_drop (bajada)')
+        ax1.plot(time, ch4, label='CH4 smooth', linewidth=2, color='tab:cyan')
+        ax1.axvline(T_RISE, color='green', linestyle='--', label='t_rise (subida)')
+        ax1.axvline((T_RISE+IMG_WIDTH), color='red', linestyle='--', label='t_drop (bajada)')
+        ax1.axvline(TARGET_TIME, color = "black", linestyle="--", label="target marker time")
         ax1.axhline(average, color='purple', linestyle='--', label='average ref')
         ax1.set_xlabel('Time (s)')
         ax1.set_ylabel('Channel 4 Voltage (V)', color='tab:blue')
@@ -228,8 +235,8 @@ def plot_shot_results(folder_path):
     # plot only good data
     time_val = valid_meas.filter(like='Time (s)').mean(axis=1)
     ch1_val = valid_meas.filter(like='Channel 1 Voltage (V)').mean(axis=1)
-    ch4_val = valid_meas.filter(like='Channel 4 Voltage (V)').mean(axis=1)
     ch2_val = valid_meas.filter(like="Channel 2 Voltage (V)").mean(axis=1)
+    ch4_val = valid_meas.filter(like='Channel 4 Voltage (V)').mean(axis=1)
 
     fig1, ax1 = plt.subplots(figsize=(11, 5))
     ax1.plot(time_val, ch1_val, linewidth=1.5, color='tab:blue', label='Mean CH 1')
@@ -313,38 +320,16 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
             idx_sorted = (ch1 - 1).abs().sort_values().index
             idx_ch1_1 = idx_sorted[0]
 
-            ch3 = data['Channel 4 Voltage (V)']
-            time = data['Time (s)']
-            ch3_smooth = ch3.rolling(window=144, center=True, min_periods=1).mean()
+            (area, average, processed_df) = calculate_integrals_single_trace(data)
 
-            mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)
-            ch3_smooth_rise = ch3_smooth[mask_rise]
-            time_rise = time[mask_rise]
-            deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
-
-            idx_rise_rel = np.argmax(deriv_rise)
-            idx_rise = time_rise.index[idx_rise_rel]
-            t_rise = time.iloc[idx_rise]
-            t_drop = t_rise + 500e-6
-
-            mask_fl = (time >= t_rise) & (time <= t_drop)
-            ch3_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-
-            t_start_ref = t_drop + 50e-6
-            t_end_ref = data['Time (s)'].iloc[-1]
-            mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
-            ch3_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-            average = ch3_segment_ref['Channel 4 Voltage (V)'].mean()
-
-            area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - average, ch3_segment_fl['Time (s)'])
             integrals_fl.append(area)
             ref_0.append(average)
 
-            # Guardar resultado por iteración
-            integrals_fl_df = pd.DataFrame({'integral': [area], 'ref 0': [average]})
-            output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}\{folder_name}'
-            os.makedirs(output_dir, exist_ok=True)
-            integrals_fl_df.to_csv(os.path.join(output_dir, f'integrated_area_iteration_{iteration_number}.csv'), index=False)
+            # # Guardar resultado por iteración
+            # integrals_fl_df = pd.DataFrame({'integral': [area], 'ref 0': [average]})
+            # output_dir = rf'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\data\integrals_data_analysis\{today}\{folder_name}'
+            # os.makedirs(output_dir, exist_ok=True)
+            # integrals_fl_df.to_csv(os.path.join(output_dir, f'integrated_area_iteration_{iteration_number}.csv'), index=False)
 
         # Filter out NaN and negative values
         valid_integrals = [val for val in integrals_fl if val is not None and not np.isnan(val) and val >= 0]
