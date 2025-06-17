@@ -46,9 +46,10 @@ def plot_shot_results(folder_path):
     window_size = 64
     for file_path in files:
         data = pd.read_csv(file_path)
-        # apply rolling mean to every channel
-        data['Channel 1 Voltage (V)'] = data['Channel 1 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
+        data['Channel 1 Voltage (V)'] = data['Channel 1 Voltage (V)']
         data['Channel 4 Voltage (V)'] = data['Channel 4 Voltage (V)'].rolling(window=window_size, center=True, min_periods=1).mean()
+        data["Channel 2 Voltage (V)"] = data['Channel 2 Voltage (V)']
+
         all_measurements.append(data)
 
     measurements = pd.DataFrame()
@@ -57,6 +58,7 @@ def plot_shot_results(folder_path):
         measurements[f'Time (s) {i}'] = data['Time (s)']
         measurements[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
         measurements[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
+        measurements[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
 
     ref_0 = []
     fluor = []
@@ -69,52 +71,18 @@ def plot_shot_results(folder_path):
         idx_ch1_1 = idx_sorted[0] # ch1 crosses 1V (trigger value)
 
         
-        # if ref == 'drop':
-        #     ch3 = data['Channel 4 Voltage (V)']
-        #     time = data['Time (s)']
-        #     ch3_smooth = ch3.rolling(window=15, center=True, min_periods=1).mean()
-
-        #     mask_window = (time >= -1e-4) & (time <= 1e-4)
-        #     ch3_smooth_window = ch3_smooth[mask_window]
-        #     time_window = time[mask_window]
-
-        #     deriv_window = np.gradient(ch3_smooth_window, time_window)
-        #     idx_drop = np.argmin(deriv_window)
-        #     idx_rise = None
-        #     for idx in range(idx_drop + 1, len(deriv_window)):
-        #         if deriv_window[idx] > 0:
-        #             idx_rise = idx
-        #             break
-
-        #     if idx_rise is not None:
-        #         t_start_ref = time_window.iloc[idx_rise]
-        #     else:
-        #         t_start_ref = time_window.iloc[0]
-
-        #     t_end_ref = data.loc[idx_ch1_1, 'Time (s)']
-
-        # checking if t_start_ref is ok
-        # plt.figure(figsize=(8, 3))
-        # plt.plot(time, ch3, label='CH3 raw', alpha=0.5)
-        # plt.plot(time, ch3_smooth, label='CH3 smooth', linewidth=2)
-        # plt.axvline(t_start_ref, color='red', linestyle='--', label='t_start_ref')
-        # plt.xlabel('Time (s)')
-        # plt.ylabel('Channel 4 Voltage (V)')
-        # plt.title('Detection of t_start_ref')
-        # plt.legend()
-        # plt.tight_layout()
-        # plt.show()
 
         # imaging beam on
-        ch3 = data['Channel 4 Voltage (V)']
+        ch4 = data['Channel 4 Voltage (V)']
+        ch2 = data["Channel 2 Voltage (V)"]
         time = data['Time (s)']
-        ch3_smooth = ch3.rolling(window=144, center=True, min_periods=1).mean()
+        ch4_smooth = ch4#.rolling(window=144, center=True, min_periods=1).mean()
 
-        # big increase when imaging starts
+        # big increase when imaging start
         mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
-        ch3_smooth_rise = ch3_smooth[mask_rise]
+        ch4_smooth_rise = ch4_smooth[mask_rise]
         time_rise = time[mask_rise]
-        deriv_rise = np.gradient(ch3_smooth_rise, time_rise)
+        deriv_rise = np.gradient(ch4_smooth_rise, time_rise)
 
         idx_rise_rel = np.argmax(deriv_rise)
         idx_rise = time_rise.index[idx_rise_rel]
@@ -124,32 +92,61 @@ def plot_shot_results(folder_path):
         t_drop = t_rise + 500e-6
 
         mask_fl = (time >= t_rise) & (time <= t_drop)
-        ch3_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+        ch4_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
 
         t_start_ref = t_drop + 50e-6  # after imaging stops
         t_end_ref = data['Time (s)'].iloc[-1] 
         mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
-        ch3_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
-        average = ch3_segment_ref['Channel 4 Voltage (V)'].mean(axis=0)
+        ch4_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
+        average = ch4_segment_ref['Channel 4 Voltage (V)'].mean(axis=0)
 
         # integration area below curve, taking average as a zero reference
-        area = trapz(ch3_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch3_segment_fl['Channel 4 Voltage (V)']), ch3_segment_fl['Time (s)'])
+        area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
 
         print(f"Average background: {average}, Integrated area: {area}")
 
-        # check if it's working
-        plt.figure(figsize=(15, 8))
-        plt.plot(time, ch3, label='CH4 raw', alpha=0.5)
-        plt.plot(time, ch3_smooth, label='CH4 smooth', linewidth=2)
-        plt.axvline(t_rise, color='green', linestyle='--', label='t_rise (subida)')
-        plt.axvline(t_drop, color='red', linestyle='--', label='t_drop (bajada)')
-        plt.axhline(average, color='purple', linestyle='--', label='average ref')
-        plt.xlabel('Time (s)')
-        plt.ylabel('Channel 4 Voltage (V)')
-        plt.title('Detecting rise and fall of imaging beam')
-        plt.legend()
+        # # check if it's working
+        # plt.figure(figsize=(15, 8))
+        # plt.plot(time, ch3, label='CH4 raw', alpha=0.5)
+        # plt.plot(time, ch3_smooth, label='CH4 smooth', linewidth=2)
+        # plt.axvline(t_rise, color='green', linestyle='--', label='t_rise (subida)')
+        # plt.axvline(t_drop, color='red', linestyle='--', label='t_drop (bajada)')
+        # plt.axhline(average, color='purple', linestyle='--', label='average ref')
+        # plt.xlabel('Time (s)')
+        # plt.ylabel('Channel 4 Voltage (V)')
+        # plt.title('Detecting rise and fall of imaging beam')
+
+
+        # plt.legend()
+        # plt.tight_layout()
+        # plt.show()
+
+
+        fig, ax1 = plt.subplots(figsize=(15, 8))
+
+        ax1.plot(time, ch4, label='CH4 raw', alpha=0.5, color='tab:blue')
+        ax1.plot(time, ch4_smooth, label='CH4 smooth', linewidth=2, color='tab:cyan')
+        ax1.axvline(t_rise, color='green', linestyle='--', label='t_rise (subida)')
+        ax1.axvline(t_drop, color='red', linestyle='--', label='t_drop (bajada)')
+        ax1.axhline(average, color='purple', linestyle='--', label='average ref')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Channel 4 Voltage (V)', color='tab:blue')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+
+        ax2 = ax1.twinx()
+        ax2.plot(time, ch2, label='CH2 (marker)', color='tab:orange', alpha=0.7)
+        ax2.set_ylabel('Channel 2 Voltage (V)', color='tab:orange')
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+        # Combinar leyendas de ambos ejes
+        lines1, labels1 = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
+
+        plt.title('Detecting rise and fall of imaging beam with CH2 Marker')
         plt.tight_layout()
         plt.show()
+
 
         
         integrals_fl.append(area)
@@ -197,7 +194,8 @@ def plot_shot_results(folder_path):
     # mean signal
     mean_time = measurements.filter(like='Time (s)').mean(axis=1)
     mean_ch1 = measurements.filter(like='Channel 1 Voltage (V)').mean(axis=1)
-    mean_ch3 = measurements.filter(like='Channel 4 Voltage (V)').mean(axis=1)
+    mean_ch4 = measurements.filter(like='Channel 4 Voltage (V)').mean(axis=1)
+    mean_ch2 = measurements.filter(like="Channel 2 Voltage (V)").mean(axis=1)
 
     fig, ax1 = plt.subplots(figsize=(11, 5))
     ax1.plot(mean_time, mean_ch1, linewidth=1.5, color='tab:blue', label='Mean CH 1')
@@ -206,9 +204,15 @@ def plot_shot_results(folder_path):
     ax1.tick_params(axis='y', labelcolor='tab:blue')
 
     ax2 = ax1.twinx()
-    ax2.plot(mean_time, mean_ch3, linewidth=1.5, color='tab:orange', label='Mean CH 3')
+    ax2.plot(mean_time, mean_ch4, linewidth=1.5, color='tab:orange', label='Mean CH 3')
     ax2.set_ylabel(r'Mean Intensity (a.u) CH 4', color='tab:orange')
     ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    ax3 = ax1.twinx()
+    ax3.spines['right'].set_position(('outward', 100)) 
+    ax3.plot(mean_time, mean_ch2, linewidth = 0.5, color='green', label='Channel 2')
+    ax3.set_ylabel('Imaging Marker', color='green')
+    ax3.tick_params(axis='y', labelcolor='green')
 
     fig.suptitle('Mean CH1 and CH4 across all files')
     fig.tight_layout()
@@ -350,6 +354,8 @@ if __name__ == "__main__":
     
     while True:
         response = input("Plot data from a single shot (1/single) or calculate integrals (2/calc):\n")
+        if response in ["0", "x", "exit", "q", "quit"]:
+            break
         path = input("Enter the path to the data:\n")
         if response.lower() in ["1", "s", "single"]:
             plot_shot_results(path)
