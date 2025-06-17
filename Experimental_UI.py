@@ -314,7 +314,7 @@ class Experimental_UI(tk.LabelFrame):
                 button.invoke()
                 
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an MOT Fluoresce Sweep Configuration",
-                                             initialdir=os.path.join(os.getcwd(),"/configs/"))
+                                             initialdir=os.path.join(os.getcwd(),"/configs/pulse_shaping_expt/sweeps/"))
         if fname!= '':
             parameter_list = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
             print(parameter_list[2])

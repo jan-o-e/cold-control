@@ -436,6 +436,7 @@ class ExperimentConfigReader():
             pulse_file_pairs (list[tuple[str, str]]): List of (channel_1, channel_2) CSV file paths from subdirectories.
             freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
             freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
+            waveform_indices (list[int]): indices corresponding to the desired waveforms that should be overwritten in the AWG config file
         """
 
         def generate_int_list(section):
@@ -479,18 +480,25 @@ class ExperimentConfigReader():
 
             return pulse_file_pairs
         
+        def get_waveform_indices():
+            return [self.config['waveform_indices']['pump'], self.config['waveform_indices']['stokes']]
+        
+        
         sweep_type = self.config["sweep_type"]
         num_shots = int(self.config['num_shots'])
+
 
         
         if sweep_type == "awg_sequence":
             freq_list_1 = generate_int_list('freq_1')
             freq_list_2 = generate_int_list('freq_2')
             pulse_pairs = get_pulse_file_pairs()
+            pulse_waveform_config_indices=get_waveform_indices()
             sweep_dict = {
                 "freq_list_1": freq_list_1,
                 "freq_list_2": freq_list_2,
-                "pulse_pairs": pulse_pairs
+                "pulse_pairs": pulse_pairs,
+                "waveform_config_indices": pulse_waveform_config_indices
             }
 
 

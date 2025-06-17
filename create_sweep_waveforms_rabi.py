@@ -2,14 +2,14 @@ from calibrate_power import RabiFreqVoltageConverter
 import numpy as np
 import os
 
-rabi_start=60*2*np.pi
-rabi_finish=60*2*np.pi
+rabi_start=55*2*np.pi
+rabi_finish=55*2*np.pi
 steps = 1
 
 rabi_sweep=np.linspace(rabi_start, rabi_finish, steps)
 
 #save_dir=rf"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\rabi_sweep\{rabi_start/(2*np.pi):.1f}mhz_{rabi_finish/(2*np.pi):.1f}mhz_{steps}steps"
-save_dir = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\rabi_sweep\frequency_sweep\60_opt"
+save_dir = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\pump_only_sweep\optimised"
 stokes_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\optimised\stokes_optimized_avui.csv"
 pump_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\optimised\pump_optimized_avui.csv"
 

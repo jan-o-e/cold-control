@@ -1146,6 +1146,7 @@ class MotFluoresceExperiment(GenericExperiment):
         print(f"Data will be saved to {full_directory}")
 
         i = 1
+        fails = 0
 
         #self.scope.set_to_run()
         while i <= self.config.iterations:
@@ -1162,17 +1163,22 @@ class MotFluoresceExperiment(GenericExperiment):
             print("writing channel values")
             self.daq_controller.writeChannelValues()
 
-            self.scope.wait_for_acquisition()
-            
-            print("collecting data")
-            data = self.scope.read_slow_return_data(self.data_chs)
-            filename=f"iteration_{i}_data.csv"
-            full_name = os.path.join(full_directory, filename)
-            data.to_csv(full_name, index=False)# Saves the data
-            print(f"Data saved to {full_name}")
+            success = self.scope.wait_for_acquisition()
 
+            if success:
+                print("collecting data")
+                data = self.scope.read_slow_return_data(self.data_chs)
+                filename=f"iteration_{i}_data.csv"
+                full_name = os.path.join(full_directory, filename)
+                data.to_csv(full_name, index=False)# Saves the data
+                print(f"Data saved to {full_name}")
+                i += 1
+            else:
+                fails += 1
+                if fails >= 10:
+                    break
+                print("Failed to trigger, running again")
 
-            i += 1
 
     def __run_with_cam(self):
         # needs to be in a try except. If the camera isn't closed the computer will crash

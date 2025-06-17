@@ -173,8 +173,8 @@ class MotFluoresceConfigurationSweep:
         now = datetime.now()
         self.current_date = now.strftime("%Y-%m-%d")
         self.current_time = now.strftime("%H-%M-%S")
-        print(f"[DEBUG] Fecha congelada: {self.current_date}")
-        print(f"[DEBUG] Hora congelada: {self.current_time}")
+        print(f"[DEBUG] date: {self.current_date}")
+        print(f"[DEBUG] time: {self.current_time}")
         
         self.configs:List[MotFluoresceConfiguration] = []
         self.sequences:List[Sequence] = []
@@ -184,7 +184,8 @@ class MotFluoresceConfigurationSweep:
             pulse_pairs: List[Tuple[str, str]] = self.sweep_params["pulse_pairs"]
             mod_freqs_ch1: List[float] = self.sweep_params["freq_list_1"]
             mod_freqs_ch2: List[float] = self.sweep_params["freq_list_2"]
-            self.__configure_awg_sweep(pulse_pairs, mod_freqs_ch1, mod_freqs_ch2)
+            pulse_waveform_config_indices: List[int] = self.sweep_params["waveform_config_indices"]
+            self.__configure_awg_sweep(pulse_pairs,pulse_waveform_config_indices, mod_freqs_ch1, mod_freqs_ch2)
         
         elif sweep_type == "mot_imaging":
             # all these parameters need to be extracted from the config file
@@ -206,7 +207,7 @@ class MotFluoresceConfigurationSweep:
     def __len__(self):
         return len(self.configs)
     
-    def __configure_awg_sweep(self, pulse_pairs, mod_freqs_ch1, mod_freqs_ch2):
+    def __configure_awg_sweep(self, pulse_pairs,pulse_waveform_indices, mod_freqs_ch1, mod_freqs_ch2):
         print(mod_freqs_ch1)
         print(mod_freqs_ch2)
         print("Warning! If the steps are too small then the frequencies will be overwritten when rounded.")
@@ -233,12 +234,12 @@ class MotFluoresceConfigurationSweep:
                         modified_sequence_config = self.modify_awg_sequence_config(
                             base_config=new_config.awg_sequence_config,
                             waveform_csvs={
-                                1: csv1,
-                                2: csv2
+                                pulse_waveform_indices[0]: csv1,
+                                pulse_waveform_indices[1]: csv2
                             },
                             mod_freqs={
-                                1: freq1,
-                                2: freq2
+                                pulse_waveform_indices[0]: freq1,
+                                pulse_waveform_indices[1]: freq2
                             })
 
                         # Update the new config with modified sequence

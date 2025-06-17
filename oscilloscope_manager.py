@@ -403,7 +403,7 @@ class OscilloscopeManager:
                 # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
                 # query_result = self.scope.query(":TER?")
                 query_result = self.scope.query(":ACQuire:COMPlete?")
-                triggered = self.scope.query(":TER?")
+                triggered = bool(self.scope.query(":TER?"))
 
                 #acq_complete = bool(int(query_result))#float(query_result) == float(100) # Check if acquisition is complete
                 acq_complete = int(query_result) == 100
@@ -416,11 +416,9 @@ class OscilloscopeManager:
 
         if acq_complete != True:
             print("Acquisition did not complete within the maximum wait time.")
-            # Decide on error handling: clear, close, exit
-            self.scope.clear() # [36-38]
-            self.scope.close() # [37-39]
-            raise RuntimeError("Oscilloscope acquisition failed to complete within the specified time.")
 
-        print(f"Triggered: {triggered.strip()}")
 
-        print("Acquisition complete. Ready to retrieve data.") # [14]
+        print(f"Triggered: {triggered}")
+
+        print("Acquisition complete. Ready to retrieve data.\n") # [14]
+        return triggered and acq_complete
