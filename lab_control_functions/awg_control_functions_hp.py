@@ -236,7 +236,6 @@ def write_channels(awg_chs, _rel_offsets, _wf_data, _awg:WX218x_awg):
         # plt.pause(1)
         # plt.close()
 
-
         data = np.roll(np.array(data), rel_offset).tolist()        
         # print('Writing {0} points to {1}'.format(len(data),channel))
         _awg.set_active_channel(channel)

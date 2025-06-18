@@ -189,23 +189,30 @@ class WX218x_awg(object):
         
     def create_arbitrary_waveform_custom(self, data):
         '''
-        Creates a arbitrary waveform from a list of data points.
-            data: list of values between (-1,1)
+        Creates an arbitrary waveform from a list/array of data points.
+            data: list or numpy array of values between (-1,1)
         '''
         waveform_handle = c_int32()
         
         def format_data(data):
-            data_p = (c_short*len(data))()
-            for i in range(len(data)):
-                data_p[i] = int(np.round((1+data[i])*8191))
-#             print [x for x in data_p]
+            # Convert to numpy array if it isn't already
+            if not isinstance(data, np.ndarray):
+                data = np.array(data)
+            
+            # Vectorized conversion (faster than loop)
+            formatted = np.round((1 + data) * 8191).astype(np.int16)
+            
+            # Convert to ctypes array
+            data_p = (c_short * len(formatted))()
+            data_p[:] = formatted
+            
             return data_p        
 
         self._validate_response(WX218x_DLL.create_arbitrary_waveform_custom(self.vi_session,
                                                                             len(data),
                                                                             format_data(data),
                                                                             byref(waveform_handle)))
-        return waveform_handle    
+        return waveform_handle     
         
     def create_custom_adv(self, data1, data2):
         '''
