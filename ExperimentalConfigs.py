@@ -553,7 +553,7 @@ class Waveform:
         return data
 
     def get(self, sample_rate: float, calibration_function=lambda level: level,
-            constant_voltage=False, double_pass=True) -> List[float]:
+            constant_voltage=False, double_pass=False) -> List[float]:
         """
         Returns the modulated waveform data.
 
