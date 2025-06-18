@@ -539,43 +539,73 @@ class Waveform:
         self.__phases = sorted(phases, key=lambda x: x[1])  # Sort by index
         self.data = self.__load_data()
 
-    def __load_data(self) -> List[float]:
-        """Loads waveform data from a CSV file."""
-        with open(self.__fname, 'rt') as csvfile:
-            print('Loading waveform:', self.__fname)
-            reader = csv.reader(csvfile, delimiter=',')
-            data = []
-            for row in reader:
-                if len(row) > 1:
-                    data += list(map(float, row))
-                else:
-                    data += float(row[0])
-        return data
+    def __load_data(self) -> np.ndarray:
+        """Loads waveform data from a CSV file using numpy for faster processing."""
+        print('Loading waveform:', self.__fname)
+        
+        try:
+            # Try to load with numpy first (fastest for well-formatted files)
+            data = np.loadtxt(self.__fname, delimiter=',', ndmin=1)
+            return data.flatten()
+        except:
+            # Fallback to manual parsing for irregular CSV files
+            with open(self.__fname, 'rt') as csvfile:
+                reader = csv.reader(csvfile, delimiter=',')
+                data_list = []
+                for row in reader:
+                    if len(row) > 1:
+                        data_list.extend([float(x) for x in row])
+                    else:
+                        data_list.append(float(row[0]))
+                return np.array(data_list)
 
     def get(self, sample_rate: float, calibration_function=lambda level: level,
-            constant_voltage=False, double_pass=False) -> List[float]:
+            constant_voltage=False, double_pass=False) -> np.ndarray:
         """
-        Returns the modulated waveform data.
+        Returns the modulated waveform data using vectorized numpy operations.
 
         - Applies the calibration function.
         - If constant_voltage is False, applies sinusoidal modulation.
         """
-        mod_data = [calibration_function(x) for x in self.data]
+        # Convert to numpy array if not already
+        if not isinstance(self.data, np.ndarray):
+            self.data = np.array(self.data)
+        
+        # Apply calibration function vectorized
+        if calibration_function != (lambda level: level):
+            # For custom calibration functions, use vectorize
+            vectorized_calib = np.vectorize(calibration_function)
+            mod_data = vectorized_calib(self.data)
+        else:
+            mod_data = self.data.copy()
+        
         if constant_voltage:
             return mod_data
 
+        # Vectorized sinusoidal modulation
         t_step = 2 * np.pi / sample_rate
-        phi = 0.0
-        if double_pass:
-            # Divided phases by two for double passed AOM.
-            phases = [(x[0] / 2 if double_pass else x[0], x[1]) for x in self.__phases]
-        next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-
-        for i in range(len(mod_data)):
-            if i == next_i_flip:
-                phi = next_phi
-                next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
-            mod_data[i] *= np.sin(i * t_step * self.__mod_frequency + phi)
+        data_length = len(mod_data)
+        
+        # Create time indices array
+        time_indices = np.arange(data_length)
+        
+        # Initialize phase array with zeros
+        phase_array = np.zeros(data_length)
+        
+        # Apply phase changes at specific indices
+        if hasattr(self, '_Waveform__phases') and self.__phases:
+            phases = self.__phases.copy()
+            if double_pass:
+                # Divide phases by two for double passed AOM
+                phases = [(x[0] / 2, x[1]) for x in phases]
+            
+            for phase_val, phase_idx in phases:
+                if phase_idx < data_length:
+                    phase_array[phase_idx:] = phase_val
+        
+        # Vectorized sinusoidal calculation
+        sin_arg = time_indices * t_step * self.__mod_frequency + phase_array
+        mod_data *= np.sin(sin_arg)
 
         return mod_data
 
