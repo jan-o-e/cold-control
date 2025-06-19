@@ -5,13 +5,15 @@ from numpy import trapz
 import numpy as np
 import datetime
 
-plotter = False
-
 MARKER_DROP = 7.45 # The level below which the AWG marker will drop
-T_RISE = 1.57e-3 # The time at which the fluorescence is expected to first rise
-IMG_WIDTH = 600e-6 # The width of the imaging pulse
+#T_RISE = 1.57e-3 # The time at which the fluorescence is expected to first rise
+IMG_WIDTH = 500e-6 # The width of the imaging pulse
 TARGET_TIME = 1.46e-3 # The expected time of the AWG marker
 TOLERANCE = 50e-6 # How far around the target time to check for the marker
+
+MOT_DROP = 19.7e-3 # The level below which the fluorescence will drop after the MOT is turned off
+MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop marker, when the MOT is turned off
+T_RISE = MOT_DROP_TIME + 1e-3
 
 
 
@@ -48,8 +50,6 @@ def calculate_integrals_single_trace(data, i=0):
         """
         Function to calculate the fluorescence for a particular trace.
         """
-
-
         processed_df = pd.DataFrame()
         # imaging beam on
         ch4 = data['Channel 4 Voltage (V)']
@@ -73,8 +73,6 @@ def calculate_integrals_single_trace(data, i=0):
                 rise_time = time[rise_index]
                 print(f"Channel 2 drops below {MARKER_DROP} V at {drop_time} s")
                 print(f"Channel 2 goes back above {MARKER_DROP} V at {rise_time} s")
-
-        ch4_smooth = ch4#.rolling(window=144, center=True, min_periods=1).mean()
 
         # big increase when imaging start
         # mask_rise = (time >= 1.77e-3) & (time <= 2.0e-3)  # imaging starts at 2ms
@@ -101,7 +99,6 @@ def calculate_integrals_single_trace(data, i=0):
         # integration area below curve, taking average as a zero reference
         area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
 
-
         # only consider the result if the timing of the awg marker is correct
         if abs(drop_time - TARGET_TIME) <= TOLERANCE:
             print("The drop time is close enough to the expected time")
@@ -119,7 +116,8 @@ def calculate_integrals_single_trace(data, i=0):
             return (area, average, None)
 
 
-def single_trace_int_based_on_marker(data, i=0):
+
+def calculate_integrals_align_mot(data, i=0):
         """
         Function to calculate the fluorescence for a particular trace.
         """
@@ -132,34 +130,26 @@ def single_trace_int_based_on_marker(data, i=0):
         time = data['Time (s)']
 
         # Step 1: Find the first index where ch2 drops below 7.45
-        below = ch2 < MARKER_DROP
+        below = ch4 < MOT_DROP
         if not below.any():
-            print("Channel 2 never drops below {MARKER_DROP} V")
+            print("Channel 2 never drops below {MOT_DROP} V")
         else:
             drop_index = below.idxmax()
             drop_time = time[drop_index]
+            print(f"Channel 4 drops below {MOT_DROP} V at {drop_time} s")
 
-            # Step 2: From that point onward, find the first time it goes back above 7.45
-            above = ch2[drop_index+1:] > MARKER_DROP
-            if not above.any():
-                print(f"Channel 2 drops below {MARKER_DROP} V at {drop_time} s and never goes back above.")
-            else:
-                rise_index = above.idxmax()
-                rise_time = time[rise_index]
-                print(f"Channel 2 drops below {MARKER_DROP} V at {drop_time} s")
-                print(f"Channel 2 goes back above {MARKER_DROP} V at {rise_time} s")
+        # Adjust the time to align the drop time with the expected drop time
+        difference = drop_time - MOT_DROP_TIME
 
 
+        time = time - difference  # Shift the time to align with the expected drop time
 
-        # big decrease when imaging stops
-        # assume imaging starts at the awg marker time
-        t_rise = drop_time
-        t_drop = t_rise + IMG_WIDTH
+        t_end = T_RISE + IMG_WIDTH
 
-        mask_fl = (time >= t_rise) & (time <= t_drop)
+        mask_fl = (time >= T_RISE) & (time <= t_end)
         ch4_segment_fl = data.loc[mask_fl, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
 
-        t_start_ref = t_drop + 50e-6  # after imaging stops
+        t_start_ref = t_end + 50e-6  # after imaging stops
         t_end_ref = data['Time (s)'].iloc[-1] 
         mask_ref = (data['Time (s)'] >= t_start_ref) & (data['Time (s)'] <= t_end_ref)
         ch4_segment_ref = data.loc[mask_ref, ['Time (s)', 'Channel 4 Voltage (V)']].copy()
@@ -168,23 +158,16 @@ def single_trace_int_based_on_marker(data, i=0):
         # integration area below curve, taking average as a zero reference
         area = trapz(ch4_segment_fl['Channel 4 Voltage (V)'] - [average]*len(ch4_segment_fl['Channel 4 Voltage (V)']), ch4_segment_fl['Time (s)'])
 
-
-        # only consider the result if the timing of the awg marker is correct
-        if True:#abs(drop_time - TARGET_TIME) <= TOLERANCE:
-            print("The drop time is close enough to the expected time")
         
-            if area is not None and not np.isnan(area):
-                processed_df[f'Time (s) {i}'] = data['Time (s)']
-                processed_df[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
-                processed_df[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
-                processed_df[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
+        if area is not None and not np.isnan(area):
+            processed_df[f'Time (s) {i}'] = data['Time (s)']
+            processed_df[f'Channel 1 Voltage (V) {i}'] = data['Channel 1 Voltage (V)']
+            processed_df[f'Channel 4 Voltage (V) {i}'] = data['Channel 4 Voltage (V)']
+            processed_df[f"Channel 2 Voltage (V) {i}"] = data["Channel 2 Voltage (V)"]
 
-            print(f"Average background: {average}, Integrated area: {area}\n")
+        print(f"Average background: {average}, Integrated area: {area}\n")
 
-            return (area, average, processed_df)
-        else:
-            return (area, average, None)
-
+        return (area, average, processed_df)
 
 
 
@@ -225,7 +208,7 @@ def plot_shot_results(folder_path):
         idx_sorted = (ch1 - 1).abs().sort_values().index
         idx_ch1_1 = idx_sorted[0] # ch1 crosses 1V (trigger value)
 
-        (area, average, processed_df) = calculate_integrals_single_trace(data, i)
+        (area, average, processed_df) = calculate_integrals_align_mot(data, i)
         
         if processed_df is not None:
             integrals_fl.append(area)
@@ -332,7 +315,7 @@ def plot_shot_results(folder_path):
 
 
 
-def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
+def calculate_all_integrals(root_directory, shots_to_include=[], window_size=32,
                         folders_to_process=None):
     """ 
     Calculate integrals of fluorescence data from multiple folders. Saves the summary of 
@@ -389,7 +372,7 @@ def calculate_integrals(root_directory, shots_to_include=[], window_size=32,
             idx_sorted = (ch1 - 1).abs().sort_values().index
             idx_ch1_1 = idx_sorted[0]
 
-            (area, average, processed_df) = calculate_integrals_single_trace(data)
+            (area, average, processed_df) = calculate_integrals_align_mot(data)
 
             integrals_fl.append(area)
             ref_0.append(average)
@@ -450,7 +433,7 @@ if __name__ == "__main__":
         if response.lower() in ["1", "s", "single"]:
             plot_shot_results(path)
         elif response.lower() in ["2", "c", "calc"]:
-            calculate_integrals(path)
+            calculate_all_integrals(path)
         else:
             print("Invalid response")
         

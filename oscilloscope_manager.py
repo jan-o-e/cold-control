@@ -257,7 +257,12 @@ class OscilloscopeManager:
             #self.scope.write(f'WAVEFORM:POINTS {num_points}')
 
             print(f"Collecting data from channel {channel}...")
+            errors = self.scope.query('SYSTem:ERRor?')  # Check for errors
+            print(f"Errors: {errors.strip()}")  # Print any errors that might have occurred
             preamble = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
+            opc = self.scope.query('*OPC?')  # Wait for operation complete
+            if opc.strip() != '1':
+                raise RuntimeError(f"Operation did not complete successfully. OPC returned: {opc.strip()}")
             print(f"Preamble info: {preamble}")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
