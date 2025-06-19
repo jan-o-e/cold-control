@@ -1112,8 +1112,10 @@ class MotFluoresceExperiment(GenericExperiment):
         awg = rm.open_resource("USB0::0x168C::0x1284::0000215582::0::INSTR")   
         awg.write(":SYSTem:REBoot") 
         awg.close()
+        if self.awg_config_single is not None:
+            print("Configuring single AWG")
+            run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
 
-        run_awg_single(self.awg_config_single, self.awg_sequence_config_single)
         run_awg(self.awg_config, self.awg_sequence_config) 
 
 

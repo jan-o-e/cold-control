@@ -148,10 +148,11 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_data_channels = scope_dict["data_channels"]
 
         if self.use_awg:
-            self.awg_config_path_single = awg_dict["config_path_single"]
+            
             self.awg_config_path = awg_dict["config_path_full"]
             self.awg_config = awg_dict["awg_config"]
             self.awg_sequence_config = awg_dict["sequence_config"]
+            self.awg_config_path_single = awg_dict["config_path_single"]
             self.awg_config_single = awg_dict["awg_config_single"]
             self.awg_sequence_config_single = awg_dict[
                 "sequence_config_single"]
