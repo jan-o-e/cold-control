@@ -443,11 +443,11 @@ def _apply_channel_offset(waveform_data, marker_data, channel_abs_offset):
 
 def _process_queued_markers(queud_markers, waveforms, delay, marker_wid, marker_data):
     """Process any queued markers by wrapping them into waveforms."""
+    # Convert to numpy arrays for efficient operations
+    queud_markers_array = np.array(queud_markers)
+    
     if queud_markers:
         marker_index = 0
-        
-        # Convert to numpy arrays for efficient operations
-        queud_markers_array = np.array(queud_markers)
         
         for ind, waveform in enumerate(waveforms):
             seg_length = waveform.get_n_samples() + abs(delay)
@@ -605,15 +605,19 @@ def _process_all_channels(awg_config, wf_list, wf_data, wf_stitched_delays, abs_
         waveform_aom_calibs = _load_aom_calibrations(aom_calibration_loc, channel)
         
         # Process channel waveforms
+        t_start = perf_counter()
         waveform_data, marker_data, queud_markers = _process_channel_waveforms(
             channel, waveforms, waveform_data, delay, channel_abs_offset,
             awg_config, waveform_aom_calibs, marker_wid, queud_markers
         )
+        print(f"CHANNEL {channel} PROCESSING WAVEFORM TIME: {perf_counter() - t_start:.4f} SECONDS")
         
         wf_data[j] = waveform_data
         
         # Combine marker data
+        t_marker_start = perf_counter()
         seq_marker_data = _combine_marker_data(seq_marker_data, marker_data, channel, awg_config)
+        print(f"CHANNEL {channel} PROCESSING MARKER TIME: {perf_counter() - t_marker_start:.4f} SECONDS")
         
         print('\t', j+1, len(wf_data), [len(x) for x in wf_data])
     
@@ -635,7 +639,9 @@ def _finalize_awg_configuration(awg, wf_data, seq_marker_data, awg_config, rel_o
     awg.configure_arb_wave_trace_mode(WX218x_TraceMode.SINGLE)
     
     # Configure channels and write data
+    channel_writing_start=perf_counter()
     write_channels(awg_config.waveform_output_channels, rel_offsets, wf_data, awg)
+    print(f"CHANNELS_WRITING: {perf_counter() - channel_writing_start:.4f} SECONDS")
     
     return len(wf_data[0]) / awg_config.sample_rate
 
