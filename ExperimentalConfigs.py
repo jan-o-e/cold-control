@@ -558,19 +558,30 @@ class Waveform:
         Returns the modulated waveform data.
 
         - Applies the calibration function.
-        - If constant_voltage is False, applies sinusoidal modulation.
+        - If constant_voltage is True, returns calibrated data with no modulation.
+        - Otherwise, applies sinusoidal modulation.
+        - If double_pass is True, halves the modulation phase (AOM double pass).
         """
+        # Apply the calibration function to the waveform data
         mod_data = [calibration_function(x) for x in self.data]
+
         if constant_voltage:
             return mod_data
 
+        # Time step for sinusoidal modulation
         t_step = 2 * np.pi / sample_rate
         phi = 0.0
+
+        # Prepare phase events
         if double_pass:
-            # Divided phases by two for double passed AOM.
-            phases = [(x[0] / 2 if double_pass else x[0], x[1]) for x in self.__phases]
+            phases = [(phase / 2, idx) for phase, idx in self.__phases]
+        else:
+            phases = self.__phases.copy()
+
+        # Initialize next phase shift
         next_phi, next_i_flip = (None, None) if not phases else phases.pop(0)
 
+        # Apply sinusoidal modulation with optional phase flips
         for i in range(len(mod_data)):
             if i == next_i_flip:
                 phi = next_phi
