@@ -473,45 +473,89 @@ class ExperimentConfigReader():
             array = np.linspace(start, stop, num_points)
             return array.tolist()
 
-        def get_pulse_file_pairs():
+        def get_pulse_files_by_indices(self, waveform_indices):
+            # Validate waveform_indices
+            if not all(isinstance(idx, int) for idx in waveform_indices):
+                raise ValueError(f"Invalid waveform indices: {waveform_indices}. All indices must be integers.")
+            
             base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
-            pulse_file_pairs = []
+            waveform_dict = {}
 
             subdirs = sorted([
                 os.path.join(base_dir, d) for d in os.listdir(base_dir)
                 if os.path.isdir(os.path.join(base_dir, d))
             ])
 
+            # Collect all csv files in all subdirs
+            all_csv_files = []
             for subdir in subdirs:
-                csv_files = sorted(glob.glob(os.path.join(subdir, '*.csv')))
-                if len(csv_files) != 2:
-                    raise ValueError(f"Expected 2 CSV files in {subdir}, found {len(csv_files)}")
-                if self.config['pulse_directories']['channel_1'] == 'pump':
-                    pulse_file_pairs.append((csv_files[0], csv_files[1]))
-                else:
-                    pulse_file_pairs.append((csv_files[1], csv_files[0]))
+                all_csv_files.extend(glob.glob(os.path.join(subdir, '*.csv')))
+            
+            # Map files by waveform index (assumes filename starts with index)
+            for csv_file in all_csv_files:
+                fname = os.path.basename(csv_file)
+                idx_str = ''
+                for c in fname:
+                    if c.isdigit():
+                        idx_str += c
+                    else:
+                        break
+                if idx_str:
+                    idx = int(idx_str)
+                    waveform_dict[idx] = csv_file
 
-            return pulse_file_pairs
+            # Check for missing or extra indices
+            if set(waveform_dict.keys()) != set(waveform_indices):
+                missing = set(waveform_indices) - set(waveform_dict.keys())
+                extra = set(waveform_dict.keys()) - set(waveform_indices)
+                msg = []
+                if missing:
+                    msg.append(f"Missing waveform indices: {sorted(missing)}")
+                if extra:
+                    msg.append(f"Extra waveform indices found: {sorted(extra)}")
+                raise ValueError("; ".join(msg))
+            if len(waveform_dict) != len(waveform_indices):
+                raise ValueError(f"Number of files ({len(waveform_dict)}) does not match number of waveform indices ({len(waveform_indices)})")
+
+            return waveform_dict
         
-        def get_waveform_indices():
-            return [self.config['waveform_indices']['pump'], self.config['waveform_indices']['stokes']]
+        def get_waveform_indices(self):
+            # Retrieve the raw indices
+            raw_indices = self.config['waveform_indices']['amp_waveform_indices']
+            
+            # Check if raw_indices is a list
+            if isinstance(raw_indices, list):
+                try:
+                    # Convert list of strings to list of integers
+                    return list(map(int, raw_indices))
+                except ValueError:
+                    raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected a list of integers.")
+            elif isinstance(raw_indices, str):
+                # If it's a string, clean and split it
+                cleaned_indices = raw_indices.replace('[', '').replace(']', '').replace('"', '').replace("'", "")
+                try:
+                    return list(map(int, cleaned_indices.split(',')))
+                except ValueError:
+                    raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected comma-separated integers.")
+            else:
+                raise TypeError(f"Unexpected type for waveform indices: {type(raw_indices)}. Expected list or string.")
         
         
         sweep_type = self.config["sweep_type"]
         num_shots = int(self.config['num_shots'])
 
-
-        
         if sweep_type == "awg_sequence":
             freq_list_1 = generate_int_list('freq_1')
             freq_list_2 = generate_int_list('freq_2')
-            pulse_pairs = get_pulse_file_pairs()
-            pulse_waveform_config_indices=get_waveform_indices()
+            frequency_waveform_indices=list(self.config['waveform_indices']['frequency_waveform_indices'])
+            pulse_waveform_config_indices=get_waveform_indices(self)
+            pulses_by_index= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
             sweep_dict = {
                 "freq_list_1": freq_list_1,
                 "freq_list_2": freq_list_2,
-                "pulse_pairs": pulse_pairs,
-                "waveform_config_indices": pulse_waveform_config_indices
+                "pulses_by_index": pulses_by_index,
+                "waveform_config_indices": pulse_waveform_config_indices,
+                "frequency_waveform_indices": frequency_waveform_indices
             }
 
 
