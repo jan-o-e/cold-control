@@ -446,10 +446,9 @@ class ExperimentConfigReader():
         Method to extract the MOT fluorescence configuration for sweep experiments.
         First determines the sweep type, and then does different things from there.
         Returns:
-            pulse_file_pairs (list[tuple[str, str]]): List of (channel_1, channel_2) CSV file paths from subdirectories.
-            freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
-            freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
-            waveform_indices (list[int]): indices corresponding to the desired waveforms that should be overwritten in the AWG config file
+         - sweep_type (str): The type of sweep being performed, e.g. "awg_sequence" or "mot_imaging".
+         - num_shots (int): The number of shots to take for the sweep.
+         - sweep_dict (dict): A dictionary containing the parameters for the sweep.
         """
 
         def generate_int_list(section):
@@ -479,7 +478,9 @@ class ExperimentConfigReader():
                 raise ValueError(f"Invalid waveform indices: {waveform_indices}. All indices must be integers.")
             
             base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
-            waveform_dict = {}
+            
+            waveform_dicts_list = []
+
 
             subdirs = sorted([
                 os.path.join(base_dir, d) for d in os.listdir(base_dir)
@@ -487,37 +488,40 @@ class ExperimentConfigReader():
             ])
 
             # Collect all csv files in all subdirs
-            all_csv_files = []
             for subdir in subdirs:
-                all_csv_files.extend(glob.glob(os.path.join(subdir, '*.csv')))
-            
-            # Map files by waveform index (assumes filename starts with index)
-            for csv_file in all_csv_files:
-                fname = os.path.basename(csv_file)
-                idx_str = ''
-                for c in fname:
-                    if c.isdigit():
-                        idx_str += c
-                    else:
-                        break
-                if idx_str:
-                    idx = int(idx_str)
-                    waveform_dict[idx] = csv_file
+                csv_files = glob.glob(os.path.join(subdir, '*.csv'))
+                print(f"Found {len(csv_files)} CSV files in {subdir} and its subdirectories.")
+                waveform_dict = {}
+                
+                # Map files by waveform index (assumes filename starts with index)
+                for csv_file in csv_files:
+                    fname = os.path.basename(csv_file)
+                    idx_str = ''
+                    for c in fname:
+                        if c.isdigit():
+                            idx_str += c
+                        else:
+                            break
+                    if idx_str:
+                        idx = int(idx_str)
+                        waveform_dict[idx] = csv_file
 
-            # Check for missing or extra indices
-            if set(waveform_dict.keys()) != set(waveform_indices):
-                missing = set(waveform_indices) - set(waveform_dict.keys())
-                extra = set(waveform_dict.keys()) - set(waveform_indices)
-                msg = []
-                if missing:
-                    msg.append(f"Missing waveform indices: {sorted(missing)}")
-                if extra:
-                    msg.append(f"Extra waveform indices found: {sorted(extra)}")
-                raise ValueError("; ".join(msg))
-            if len(waveform_dict) != len(waveform_indices):
-                raise ValueError(f"Number of files ({len(waveform_dict)}) does not match number of waveform indices ({len(waveform_indices)})")
+                # Check for missing or extra indices
+                if set(waveform_dict.keys()) != set(waveform_indices):
+                    missing = set(waveform_indices) - set(waveform_dict.keys())
+                    extra = set(waveform_dict.keys()) - set(waveform_indices)
+                    msg = []
+                    if missing:
+                        msg.append(f"Missing waveform indices in {subdir}: {sorted(missing)}")
+                    if extra:
+                        msg.append(f"Extra waveform indices in {subdir}: {sorted(extra)}")
+                    raise ValueError("; ".join(msg))
+                if len(waveform_dict) != len(waveform_indices):
+                    raise ValueError(f"Number of files ({len(waveform_dict)}) does not match number of waveform indices ({len(waveform_indices)}) in {subdir}")
+                
+                waveform_dicts_list.append(waveform_dict)
 
-            return waveform_dict
+            return waveform_dicts_list
         
         def get_waveform_indices(self):
             # Retrieve the raw indices
@@ -549,11 +553,11 @@ class ExperimentConfigReader():
             freq_list_2 = generate_int_list('freq_2')
             frequency_waveform_indices=list(self.config['waveform_indices']['frequency_waveform_indices'])
             pulse_waveform_config_indices=get_waveform_indices(self)
-            pulses_by_index= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
+            pulses_by_index_list= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
             sweep_dict = {
                 "freq_list_1": freq_list_1,
                 "freq_list_2": freq_list_2,
-                "pulses_by_index": pulses_by_index,
+                "pulses_by_index_list": pulses_by_index_list,
                 "waveform_config_indices": pulse_waveform_config_indices,
                 "frequency_waveform_indices": frequency_waveform_indices
             }

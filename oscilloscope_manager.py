@@ -388,42 +388,43 @@ class OscilloscopeManager:
         return True
     
 
-    def wait_for_acquisition(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
+    def wait_for_acquisition(self, max_acq_wait_sec=1, poll_interval_sec=0.01):
         # --- Wait for Acquisition to Complete ---
         # Now that the trigger pulse is sent, the oscilloscope should trigger and acquire data.
-        # Poll the Acquisition Done Event Register (:ADER?) to know when the acquisition is complete [1, 6].
-        # Alternatively, poll the Processing Done Event Register (:PDER?) if you need to wait for
-        # post-acquisition processing (like measurements or FFTs) as well [7, 13, 39-41].
-        # The single-shot DUT example uses :ADER? [1].
 
-        print("Waiting for acquisition to complete (polling :ACQuire:COMPlete?)...") # [13]
+        print("Waiting for acquisition to complete...") 
         StartTime = time.perf_counter() # Reset timer for acquisition wait
-        acq_complete = 0
+        triggered = 0
+        success = False
 
-        # Wait until acquisition is done  or timeout [1, 6]
-        #print(time.perf_counter()-StartTime)
-        while acq_complete != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
-            time.sleep(poll_interval_sec) # Pause [1, 6]
+
+        # Wait until acquisition is done  or timeout
+        while success != True and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+            time.sleep(poll_interval_sec)
             try:
-                # Query :ADER?. It returns 1 when acquisition is complete and is likely cleared upon reading.
-                # query_result = self.scope.query(":TER?")
-                query_result = self.scope.query(":ACQuire:COMPlete?")
-                triggered = bool(self.scope.query(":TER?"))
+                acq_complete = self.scope.query(":ACQuire:COMPlete?")
+                if triggered == 0:
+                    # Once the triggered event register is read, it is reset to zero
+                    triggered = bool(self.scope.query(":TER?"))
+                run_state = self.scope.query(":RSTATE?")
 
-                #acq_complete = bool(int(query_result))#float(query_result) == float(100) # Check if acquisition is complete
-                acq_complete = int(query_result) == 100
-                print(acq_complete)
-                if acq_complete:
+                acq_complete_bool = int(acq_complete) == 100
+                run_state_bool = run_state.strip() == "STOP"
+
+                success = acq_complete_bool and run_state_bool and triggered
+
+                if success:
                     break # Exit loop once acquisition is done
             except Exception as e:
                 print(f"Error during completion poll: {e}")
                 break # Exit loop on error
 
-        if acq_complete != True:
+        if success != True:
             print("Acquisition did not complete within the maximum wait time.")
 
-
+        print(f"Acquisition complete: {acq_complete_bool}")
         print(f"Triggered: {triggered}")
+        print(f"Run state: {run_state.strip()}")
 
         print("Acquisition complete. Ready to retrieve data.\n") # [14]
-        return triggered and acq_complete
+        return success
