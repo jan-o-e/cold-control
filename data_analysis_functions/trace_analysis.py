@@ -4,6 +4,8 @@ import pandas as pd
 from numpy import trapz
 import numpy as np
 import datetime
+from scipy.interpolate import interp1d
+
 
 MARKER_DROP = 7.45 # The level below which the AWG marker will drop
 #T_RISE = 1.57e-3 # The time at which the fluorescence is expected to first rise
@@ -44,6 +46,51 @@ def get_folder_paths(directory_path):
             # Add the raw string representation of the path
             folder_paths.append(r"{}".format(full_path))
     return folder_paths
+
+
+
+def average_and_plot_voltage(dfs, time_col='Time (s)', voltage_col='Voltage (V)', num_points=1000):
+    """
+    Averages voltage traces from multiple DataFrames using interpolation and plots the result.
+
+    Parameters:
+    - dfs: list of pandas.DataFrame, each with time and voltage columns.
+    - time_col: name of the time column.
+    - voltage_col: name of the voltage column.
+    - num_points: number of points in the common time grid.
+    """
+
+    # Step 1: Define a common time base (only overlap range)
+    min_time = max(df[time_col].min() for df in dfs)
+    max_time = min(df[time_col].max() for df in dfs)
+    common_time = np.linspace(min_time, max_time, num_points)
+
+    # Step 2: Interpolate each DataFrame to the common time
+    interpolated_voltages = []
+    for df in dfs:
+        interp_func = interp1d(df[time_col], df[voltage_col], kind='linear', bounds_error=False, fill_value="extrapolate")
+        interpolated = interp_func(common_time)
+        interpolated_voltages.append(interpolated)
+
+    # Step 3: Stack and average
+    stacked = np.vstack(interpolated_voltages)
+    mean_voltage = np.mean(stacked, axis=0)
+
+    # Step 4: Plot
+    plt.figure(figsize=(10, 5))
+    for v in interpolated_voltages:
+        plt.plot(common_time, v, color='gray', alpha=0.3)
+
+    plt.plot(common_time, mean_voltage, color='red', linewidth=2, label='Average')
+    plt.xlabel('Time (s)')
+    plt.ylabel('Voltage (V)')
+    plt.title('Average Voltage Trace')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    return pd.DataFrame({'Time (s)': common_time, 'Average Voltage (V)': mean_voltage})
 
 
 def calculate_integrals_single_trace(data, i=0):
