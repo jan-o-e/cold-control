@@ -9,12 +9,12 @@ steps = 1
 rabi_sweep=np.linspace(rabi_start, rabi_finish, steps)
 
 #save_dir=rf"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\rabi_sweep\{rabi_start/(2*np.pi):.1f}mhz_{rabi_finish/(2*np.pi):.1f}mhz_{steps}steps"
-save_dir = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\pulses_19_06\non-optimised"
+save_dir = r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\detuning_sweep\10_mhz_det"
 stokes_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\non_optimised\stokes_175ns_0.2.csv"
 pump_pulse_loc=r"C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\waveforms\pulse_shaping_exp\normalised_pulses\non_optimised\pump_175ns_20.csv"
 
-RabiClassStokes = RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_DL_PRO\19-06\rabi_data_stokes.csv')
-RabiClassPump = RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_ELYSA\19-06\rabi_data_pump.csv')
+RabiClassStokes = RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_DL_PRO\23-06\70MHz\rabi_data_stokes.csv')
+RabiClassPump = RabiFreqVoltageConverter(r'C:\Users\apc\Documents\Python Scripts\Cold Control Heavy\calibrations\jan\STIRAP_ELYSA\23-06\116MHz\rabi_data_pump.csv')
 stokes_lims = RabiClassStokes.get_rabi_limits(print_info=False)
 pump_lims = RabiClassPump.get_rabi_limits(print_info=False)
 

@@ -210,12 +210,14 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
     omega=(d*cg*efield)/(hbar*10**6)
     return np.abs(omega) #in MHz with angular dependence
 
-pulse = 'stokes'  # 'stokes', 'pump', 'P1', 'P2'
-channel = 2  # AWG channel
+pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
+channel = 1  # AWG channel
 amplitude = 0.2
 amplitude_cal = 0.00
 diff = 1
 results_dict = {}
+# Finding the voltage amplitude that corresponds to this power
+awg_chan_freqs_map = {1: [116], 2: [80], 3: [62.35], 4: [82.5]}
 
 
 if __name__ == "__main__":
@@ -234,7 +236,11 @@ if __name__ == "__main__":
 
     while abs(amplitude_cal/amplitude -1) > 0.1 or diff > 2e-5:
     # Pause to change the fiber/ the power distrubution
-        input('Press Enter to continue')
+        response = input('Press Enter to continue')
+        if response.lower() in ['exit', 'ex', 'q', 'quit', "x"]:
+            print("Exiting...")
+            break
+        
 
         cg_d2_map = {'stokes': cg_d2_stokes,'pump': cg_d2_pump, 'P1': cg_d2_p1, 'P2': cg_d2_p1}
         rabi_d2_map = {'stokes': rabi_stirap_d2,'pump': rabi_stirap_d2, 'P1': rabi_p1_d2, 'P2': rabi_p2_d2}
@@ -243,8 +249,7 @@ if __name__ == "__main__":
         target_power_d2 *= 10**(-3) # to W
         print(f'Target Power for desired Rabi Freq: {target_power_d2*1e3} mW')
 
-        # Finding the voltage amplitude that corresponds to this power
-        awg_chan_freqs_map = {1: [126], 2: [80], 3: [62.35], 4: [82.5]}
+
 
         awg_channels_dict = {1:Channel.CHANNEL_1, 2:Channel.CHANNEL_2, 3:Channel.CHANNEL_3, 4:Channel.CHANNEL_4}
         amplitude_cal, diff, power, results_dict = calibrate.finding_amplitude_from_power(awg_chan_freqs_map[channel], target_power_d2, awg_channels_dict[channel], n_steps = 75, repeats=3, delay=0.3,\
@@ -262,11 +267,14 @@ if __name__ == "__main__":
         #join config_save_path with a new folder with today's date
         today = datetime.datetime.now().strftime("%d-%m")
 
-        config_path_date = os.path.join(config_save_path, today) 
-        if not os.path.exists(config_path_date):
-            os.makedirs(config_path_date)
+        config_path_date = os.path.join(config_save_path, today)
+        full_folder_path = os.path.join(config_path_date, f"{awg_chan_freqs_map[channel][0]}MHz")
+        if not os.path.exists(full_folder_path):
+            os.makedirs(full_folder_path)
 
-        output_file = os.path.join(config_path_date, f'rabi_data_{pulse}.csv')
+        
+
+        output_file = os.path.join(full_folder_path, f'rabi_data_{pulse}.csv')
         df.to_csv(output_file, index=False)
 
         print("Instantiating RabiFreqVoltageConverter...")
@@ -274,17 +282,17 @@ if __name__ == "__main__":
         
 
 
-    #file_path = r'C:\Users\apc\Documents\Python Scripts\017-data-analysis\flatg_0.2_ch4_50us.csv'
-    file_path = r'c:\Users\apc\Documents\marina\06_jun\05-06\x_optimized_21_0.6.csv'
-    #file_path = r'c:\Users\apc\Documents\marina\06_jun\02-06\0.2\pump\x_optimized_27_0.6.csv'
-    opt_input = pd.read_csv(file_path, header=None)
-    opt_input = opt_input.T.to_numpy().flatten()
-    opt_input = opt_input/opt_input.max()*amplitude_cal
+    # #file_path = r'C:\Users\apc\Documents\Python Scripts\017-data-analysis\flatg_0.2_ch4_50us.csv'
+    # file_path = r'c:\Users\apc\Documents\marina\06_jun\05-06\x_optimized_21_0.6.csv'
+    # #file_path = r'c:\Users\apc\Documents\marina\06_jun\02-06\0.2\pump\x_optimized_27_0.6.csv'
+    # opt_input = pd.read_csv(file_path, header=None)
+    # opt_input = opt_input.T.to_numpy().flatten()
+    # opt_input = opt_input/opt_input.max()*amplitude_cal
 
-    output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}\\opt_from_{amplitude}_to_{amplitude_cal}'
-    os.makedirs(output_dir, exist_ok=True)
-    waveform_filename = os.path.join(output_dir, f'{pulse}_optimized.csv')
-    with open(waveform_filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(opt_input)
+    # output_dir = f'c:\\Users\\apc\\Documents\\marina\\06_jun\\{today}\\opt_from_{amplitude}_to_{amplitude_cal}'
+    # os.makedirs(output_dir, exist_ok=True)
+    # waveform_filename = os.path.join(output_dir, f'{pulse}_optimized.csv')
+    # with open(waveform_filename, 'w', newline='') as csvfile:
+    #     writer = csv.writer(csvfile)
+    #     writer.writerow(opt_input)
 
