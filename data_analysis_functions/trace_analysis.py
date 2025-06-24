@@ -14,7 +14,7 @@ TARGET_TIME = 1.46e-3 # The expected time of the AWG marker
 TOLERANCE = 50e-6 # How far around the target time to check for the marker
 
 MOT_DROP = 19.7e-3 # The level below which the fluorescence will drop after the MOT is turned off
-MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop marker, when the MOT is turned off
+MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop, when the MOT is turned off
 T_RISE = MOT_DROP_TIME + 1e-3
 
 

@@ -17,8 +17,10 @@ import re
 from typing import List, Tuple, Dict, Any
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
 from Sequence import Sequence
+from rabi_voltage_converter import RabiFreqVoltageConverter
 
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
@@ -182,12 +184,17 @@ class MotFluoresceConfigurationSweep:
         print("Creating all MOT fluorescence configurations for the sweep...")
 
         if sweep_type == "awg_sequence":
+            rabi_freq = self.sweep_params["rabi_frequency"]
             pulses_by_index_list: List[Dict[int:str]] = self.sweep_params["pulses_by_index_list"]
             mod_freqs_ch1: List[float] = self.sweep_params["freq_list_1"]
             mod_freqs_ch2: List[float] = self.sweep_params["freq_list_2"]
             frequency_waveform_indices: List[int] = self.sweep_params["frequency_waveform_indices"]
             pulse_waveform_config_indices: List[int] = self.sweep_params["waveform_config_indices"]
-            self.__configure_awg_sweep(pulses_by_index_list,pulse_waveform_config_indices, mod_freqs_ch1, mod_freqs_ch2, frequency_waveform_indices)
+            calib_filepaths: Dict[int:str] = self.sweep_params["calibration_paths"]
+            self.__configure_awg_sweep(rabi_freq, pulses_by_index_list,
+                                       pulse_waveform_config_indices,
+                                       mod_freqs_ch1, mod_freqs_ch2,
+                                       frequency_waveform_indices, calib_filepaths)
         
         elif sweep_type == "mot_imaging":
             # all these parameters need to be extracted from the config file
@@ -209,10 +216,13 @@ class MotFluoresceConfigurationSweep:
     def __len__(self):
         return len(self.configs)
     
-    def __configure_awg_sweep(self, pulses_by_index_list, pulse_waveform_indices, mod_freqs_ch1, mod_freqs_ch2, frequency_indices):
-        print(mod_freqs_ch1)
-        print(mod_freqs_ch2)
+    def __configure_awg_sweep(self, rabi_freq, pulses_by_index_list:List[Dict[int:str]],
+                            pulse_waveform_indices, mod_freqs_ch1, mod_freqs_ch2,
+                            frequency_indices, calib_filepaths:Dict[int:str]):
+        print([f"{mod_freqs_ch1/1e6:.0f}" for mod_freqs_ch1 in mod_freqs_ch1])
+        print([f"{mod_freqs_ch2/1e6:.0f}" for mod_freqs_ch2 in mod_freqs_ch2])
         print("Warning! If the steps are too small then the frequencies will be overwritten when rounded.")
+        print("Check that all the frequencies listed above are different.\n\n")
         for i in range(self.num_shots):
             for pulses_dict in pulses_by_index_list:
                 directories = {os.path.dirname(csv) for csv in pulses_dict.values()}
@@ -227,7 +237,24 @@ class MotFluoresceConfigurationSweep:
                     ch1_freqs = mod_freqs_ch1
                     ch2_freqs = mod_freqs_ch2
                 for freq1 in ch1_freqs:
+                    freq1_str = f"{freq1/1e6:.0f}"
                     for freq2 in ch2_freqs:
+                        freq2_str = f"{freq2/1e6:.0f}"
+                        freq_strs = [freq1_str, freq2_str]
+                        # Create the new waveforms with the voltages scaled based on the desired modulation frequencies
+                        new_paths = {}
+                        for idx, pulse in pulses_dict.items():
+                            if not freq_strs[idx-1] == "0":
+                                print(rabi_freq)
+                                calib_path = os.path.join(calib_filepaths[idx], f"{freq_strs[idx-1]}MHz\\rabi_data.csv")
+                                rabi_converter = RabiFreqVoltageConverter(calib_path)
+                                pulse_path = f"temp/{freq1/1e6:.0f}/{freq2/1e6:.0f}/{last_folder}"
+                                os.makedirs(os.path.dirname(pulse_path), exist_ok=True)
+                                rabi_converter.rescale_csv(rabi_freq*2*np.pi, pulse, pulse_path, normalised=False)
+                                new_paths[idx] = pulse_path
+                            else:
+                                new_paths[idx] = pulse
+
                         # Clone and modify base configuration
                         new_config = deepcopy(self.base_config)
                         new_sequence = deepcopy(self.base_sequence)
@@ -235,7 +262,7 @@ class MotFluoresceConfigurationSweep:
                         # Modify waveform and frequency settings
                         modified_sequence_config = self.modify_awg_sequence_config(
                             base_config=new_config.awg_sequence_config,
-                            waveform_csvs = {idx: pulses_dict[idx] for idx in pulse_waveform_indices},
+                            waveform_csvs = {idx: new_paths[idx] for idx in pulse_waveform_indices},
                             mod_freqs={
                                 frequency_indices[0]: freq1,
                                 frequency_indices[1]: freq2
@@ -248,7 +275,7 @@ class MotFluoresceConfigurationSweep:
                             self.base_config.save_location,
                             self.current_date,
                             self.current_time,
-                            f"sweep_{last_folder}_{freq1/1e6:.1f}_{freq2/1e6:.1f}",
+                            f"sweep_{last_folder}_{freq1/1e6:.0f}_{freq2/1e6:.0f}",
                             f"shot{i}"
                         )
 

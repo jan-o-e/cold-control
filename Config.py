@@ -543,23 +543,35 @@ class ExperimentConfigReader():
                     raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected comma-separated integers.")
             else:
                 raise TypeError(f"Unexpected type for waveform indices: {type(raw_indices)}. Expected list or string.")
+            
+        def get_calib_files_by_indices(self, waveform_indices):
+            calib_dict = {}
+            for idx in waveform_indices:
+                path_to_calib = self.config["calibration_paths"][f"{idx}"]
+                calib_dict[idx] = path_to_calib
+
+            return calib_dict
         
         
         sweep_type = self.config["sweep_type"]
         num_shots = int(self.config['num_shots'])
 
         if sweep_type == "awg_sequence":
-            freq_list_1 = generate_int_list('freq_1')
-            freq_list_2 = generate_int_list('freq_2')
-            frequency_waveform_indices=list(self.config['waveform_indices']['frequency_waveform_indices'])
+            rabi_freq = float(self.config["frequencies"]['rabi_freq'])
+            freq_list_1 = list(map(lambda x:int(float(x)),self.config["frequencies"]["1"]))
+            freq_list_2 = list(map(lambda x:int(float(x)),self.config["frequencies"]["2"]))
+            frequency_waveform_indices=list(map(int, self.config['waveform_indices']['frequency_waveform_indices']))
             pulse_waveform_config_indices=get_waveform_indices(self)
             pulses_by_index_list= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
+            calib_files_dict = get_calib_files_by_indices(self, frequency_waveform_indices)
             sweep_dict = {
+                "rabi_frequency": rabi_freq,
                 "freq_list_1": freq_list_1,
                 "freq_list_2": freq_list_2,
                 "pulses_by_index_list": pulses_by_index_list,
                 "waveform_config_indices": pulse_waveform_config_indices,
-                "frequency_waveform_indices": frequency_waveform_indices
+                "frequency_waveform_indices": frequency_waveform_indices,
+                "calibration_paths": calib_files_dict
             }
 
 
