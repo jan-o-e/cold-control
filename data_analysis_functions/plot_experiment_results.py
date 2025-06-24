@@ -24,10 +24,15 @@ def plot_averaged_shot(shot_folder: str, suffix='_averaged.csv', save=True):
         df = pd.read_csv(file)
         plt.plot(df["Time (s)"], df["Channel 4 Voltage (V)"].rolling(window=32).mean(), color='gray', alpha=0.3)
 
+    if suffix == '_aligned.csv':
+        time_correction = 0.6e-3
+    else:
+        time_correction = 0.0
+
     # Plot the averaged CSV
     if avg_file.exists():
         avg_df = pd.read_csv(avg_file)
-        plt.plot(avg_df["Time (s)"], avg_df["Channel 4 Voltage (V)"], color='blue', label='Averaged')
+        plt.plot(avg_df["Time (s)"]+time_correction, avg_df["Channel 4 Voltage (V)"], color='blue', label=f'{suffix[1:-4]}')
 
     plt.xlabel("Time (s)")
     plt.ylabel("Channel 4 Voltage (V)")
@@ -97,7 +102,7 @@ def plot_all_shots_in_folder(root_folder: str, suffix='_averaged.csv'):
 
 
 if __name__ == "__main__":
-    root = r"D:\pulse_shaping_data\2025-06-23\17-37-40"
+    root = r"D:\pulse_shaping_data\2025-06-24\17-37-50"
     summary_csv_averaged = os.path.join(root, "experiment_summary_averaged.csv")
     summary_csv_aligned = os.path.join(root, "experiment_summary_aligned.csv")
 
