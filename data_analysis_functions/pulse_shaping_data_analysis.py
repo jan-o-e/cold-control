@@ -463,7 +463,7 @@ if __name__ == "__main__":
 
     
     # Example parameters (adjust these based on your data)
-    root_folder = r"D:\pulse_shaping_data\2025-06-24\17-37-50"
+    root_folder = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
     marker_time_range = (TARGET_TIME-TOLERANCE, TARGET_TIME+TOLERANCE)  # When marker voltage drop should occur
     fluor_drop_voltage = MOT_DROP  # Voltage threshold for fluorescence drop
     fluor_drop_time_range = (MOT_DROP_TIME-TOLERANCE, MOT_DROP_TIME+TOLERANCE)  # When fluorescence drop should occur

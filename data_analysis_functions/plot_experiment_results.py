@@ -102,7 +102,7 @@ def plot_all_shots_in_folder(root_folder: str, suffix='_averaged.csv'):
 
 
 if __name__ == "__main__":
-    root = r"D:\pulse_shaping_data\2025-06-24\17-37-50"
+    root = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
     summary_csv_averaged = os.path.join(root, "experiment_summary_averaged.csv")
     summary_csv_aligned = os.path.join(root, "experiment_summary_aligned.csv")
 

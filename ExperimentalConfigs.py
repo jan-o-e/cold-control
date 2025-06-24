@@ -310,7 +310,7 @@ class MotFluoresceConfigurationSweep:
                 modified_sequence_config = self.modify_awg_sequence_config(
                     base_config=new_config.awg_sequence_config,
                     waveform_csvs = {idx: new_paths[idx] for idx in wave_idxs},
-                    mod_freqs={idx: mod_freqs[idx] for idx in wave_idxs}
+                    mod_freqs={idx: mod_freqs[j] for j, idx in enumerate(wave_idxs)}
                 )
 
                 # Update the new config with modified sequence

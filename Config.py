@@ -623,7 +623,25 @@ class ExperimentConfigReader():
             return list(map(int,arg))
         
         def toFloatList(arg):
-            return list(map(float,arg))
+            if isinstance(arg, list):
+                return list(map(float, arg))
+            elif isinstance(arg, (int, float)):
+                return [float(arg)]
+            elif isinstance(arg, str):
+                items = [x.strip() for x in arg.replace(',', '\n').split('\n') if x.strip()]
+                try:
+                    return list(map(float, items))
+                except ValueError as e:
+                    raise ValueError(f"Could not convert one of the entries to float: {items}") from e
+            else:
+                raise TypeError(f"Unsupported input type for toFloatList: {type(arg)}")
+
+        
+        def ensure_list(value):
+            if isinstance(value, list):
+                return value
+            else:
+                return [value]
         
         
         sweep_type = self.config["sweep_type"]
@@ -636,12 +654,12 @@ class ExperimentConfigReader():
                 title = sweep['title']
                 waveform_indices = toIntList((sweep['waveform_indices']))
                 rabi_freqs = toFloatList(sweep['rabi_frequencies'])
-                mod_freqs = toIntList(sweep['modulation_frequencies'])
-                waveforms = sweep["waveforms"]
-                calib_paths = sweep["calibration_paths"]
+                print(sweep["modulation_frequencies"])
+                mod_freqs = toFloatList(sweep['modulation_frequencies'])
+                waveforms = ensure_list(sweep["waveforms"])
+                calib_paths = ensure_list(sweep["calibration_paths"])
 
-                assert len(waveform_indices) == len(rabi_freqs) == len(mod_freqs) \
-                    == len(waveforms) == len(calib_paths)
+                assert len(waveform_indices) == len(rabi_freqs) == len(mod_freqs) == len(waveforms) == len(calib_paths)
 
                 sweep_dict = {
                     "title": title,
