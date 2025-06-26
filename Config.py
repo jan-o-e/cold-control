@@ -240,6 +240,7 @@ class ExperimentConfigReader():
 
     def __init__(self, fname):
         self.fname = fname
+        print(f"Reading config file: {fname}")
         self.config = ConfigObj(fname)
 
     

@@ -446,67 +446,75 @@ class ExperimentalDataProcessor:
 
 # Example usage
 if __name__ == "__main__":
-    # Initialize processor with optional rolling average (e.g., 5-point window)
-    processor = ExperimentalDataProcessor(
-        marker_channel=2, 
-        fluorescence_channel=4,
-        rolling_window=32  # Apply 5-point rolling average to reduce noise
-    )
-
-    MARKER_DROP = 7.45 # The level below which the AWG marker will drop
-    IMG_WIDTH = 500e-6 # The width of the imaging pulse
-    TARGET_TIME = 1.46e-3 # The expected time of the AWG marker
-    TOLERANCE = 50e-6 # How far around the target time to check for the marker
-    MOT_DROP = 19.7e-3 # The level below which the fluorescence will drop after the MOT is turned off
-    MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop, when the MOT is turned off
-    T_RISE = MOT_DROP_TIME + 1e-3
-
-    
-    # Example parameters (adjust these based on your data)
-    root_folder = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
-    marker_time_range = (TARGET_TIME-TOLERANCE, TARGET_TIME+TOLERANCE)  # When marker voltage drop should occur
-    fluor_drop_voltage = MOT_DROP  # Voltage threshold for fluorescence drop
-    fluor_drop_time_range = (MOT_DROP_TIME-TOLERANCE, MOT_DROP_TIME+TOLERANCE)  # When fluorescence drop should occur
-    integration_time_range = (T_RISE, T_RISE+IMG_WIDTH)  # Time range for integration
-    background_time_range = (T_RISE+IMG_WIDTH+0.1e-3, 1)  # Time range for background calculation
-    
-    # Process all experiments with standard averaging
-    try:
-        summary_standard = processor.process_all_experiments(
-            root_folder=root_folder,
-            marker_time_range=marker_time_range,
-            fluor_drop_voltage=fluor_drop_voltage,
-            fluor_drop_time_range=fluor_drop_time_range,
-            background_time_range=background_time_range,
-            integration_time_range=integration_time_range,
-            save_averaged_csvs=True,
-            use_alignment=False
+    while True:
+        # Initialize processor with optional rolling average (e.g., 5-point window)
+        processor = ExperimentalDataProcessor(
+            marker_channel=2, 
+            fluorescence_channel=4,
+            rolling_window=64  # Apply rolling average to reduce noise
         )
+
+        MARKER_DROP = 7.45 # The level below which the AWG marker will drop
+        IMG_WIDTH = 500e-6 # The width of the imaging pulse
+        TARGET_TIME = 1.46e-3 # The expected time of the AWG marker
+        TOLERANCE = 50e-6 # How far around the target time to check for the marker
+        MOT_DROP = 19.4e-3 # The level below which the fluorescence will drop after the MOT is turned off
+        MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop, when the MOT is turned off
+        T_RISE = MOT_DROP_TIME + 1e-3
+
         
-        print("Standard averaging complete!")
-        def adjust_time(timings, offset):
-            return tuple(np.subtract(timings, (offset, offset)))
+        # Example parameters (adjust these based on your data)
+        user_input = input("Enter the root folder path or 'exit' to quit: ")
+        if user_input.lower() in ['exit', "x", "e"]:
+            break
+        if not Path(user_input).is_dir():
+            print(f"Invalid folder: {user_input}. Please enter a valid path.")
+            continue
+        root_folder = Path(user_input)
+        #root_folder = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
+        marker_time_range = (TARGET_TIME-TOLERANCE, TARGET_TIME+TOLERANCE)  # When marker voltage drop should occur
+        fluor_drop_voltage = MOT_DROP  # Voltage threshold for fluorescence drop
+        fluor_drop_time_range = (MOT_DROP_TIME-TOLERANCE, MOT_DROP_TIME+TOLERANCE)  # When fluorescence drop should occur
+        integration_time_range = (T_RISE, T_RISE+IMG_WIDTH)  # Time range for integration
+        background_time_range = (T_RISE+IMG_WIDTH+0.1e-3, 1)  # Time range for background calculation
         
-        # Process with time alignment
-        summary_aligned = processor.process_all_experiments(
-            root_folder=root_folder,
-            marker_time_range=adjust_time(marker_time_range, MOT_DROP_TIME),
-            fluor_drop_voltage=fluor_drop_voltage,
-            fluor_drop_time_range=adjust_time(fluor_drop_time_range, MOT_DROP_TIME),
-            background_time_range=adjust_time(background_time_range, MOT_DROP_TIME),  # Background after drop
-            integration_time_range=adjust_time(integration_time_range, MOT_DROP_TIME),   # Integration after drop
-            save_averaged_csvs=True,
-            use_alignment=True,
-            alignment_params={
-                'time_before_drop': 1.0e-3,  # 1.1ms before drop
-                'time_after_drop': 3.9e-3,   # 4ms after drop
-                'num_points': 50000          # High resolution
-            }
-        )
-        
-        print("Time-aligned averaging complete!")
-        print(f"Processed {len(summary_aligned)} shots total")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        print("Please check your file paths and parameters.")
+        # Process all experiments with standard averaging
+        try:
+            summary_standard = processor.process_all_experiments(
+                root_folder=root_folder,
+                marker_time_range=marker_time_range,
+                fluor_drop_voltage=fluor_drop_voltage,
+                fluor_drop_time_range=fluor_drop_time_range,
+                background_time_range=background_time_range,
+                integration_time_range=integration_time_range,
+                save_averaged_csvs=True,
+                use_alignment=False
+            )
+            
+            print("Standard averaging complete!")
+            def adjust_time(timings, offset):
+                return tuple(np.subtract(timings, (offset, offset)))
+            
+            # Process with time alignment
+            summary_aligned = processor.process_all_experiments(
+                root_folder=root_folder,
+                marker_time_range=adjust_time(marker_time_range, MOT_DROP_TIME),
+                fluor_drop_voltage=fluor_drop_voltage,
+                fluor_drop_time_range=adjust_time(fluor_drop_time_range, MOT_DROP_TIME),
+                background_time_range=adjust_time(background_time_range, MOT_DROP_TIME),  # Background after drop
+                integration_time_range=adjust_time(integration_time_range, MOT_DROP_TIME),   # Integration after drop
+                save_averaged_csvs=True,
+                use_alignment=True,
+                alignment_params={
+                    'time_before_drop': 1.0e-3,  # 1.1ms before drop
+                    'time_after_drop': 3.9e-3,   # 4ms after drop
+                    'num_points': 50000          # High resolution
+                }
+            )
+            
+            print("Time-aligned averaging complete!")
+            print(f"Processed {len(summary_aligned)} shots total")
+            
+        except Exception as e:
+            print(f"Error: {e}")
+            print("Please check your file paths and parameters.")

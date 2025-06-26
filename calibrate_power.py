@@ -70,9 +70,9 @@ def laserpower_to_rabi(power, d, cg, beam_waist):
 
 calib_tuples = [
     (1, "pump", 126),
-    (1, "pump", 116),
+    #(1, "pump", 116),
     (2, "stokes", 80),
-    (2, "stokes", 70)
+    #(2, "stokes", 70)
 ]
 
 pulse = 'pump'  # 'stokes', 'pump', 'P1', 'P2'
@@ -140,6 +140,7 @@ if __name__ == "__main__":
 
         print("Instantiating RabiFreqVoltageConverter...")
         converter = RabiFreqVoltageConverter(output_file)
+        converter.get_rabi_limits(print_info=True)
         
 
 

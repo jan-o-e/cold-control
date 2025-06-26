@@ -290,10 +290,12 @@ class MotFluoresceConfigurationSweep:
 
                 new_paths = {}
                 for j in range(len(wave_idxs)):
-                    if rabi_freqs[j] == 0 or mod_freqs[j] == 0:
-                        # This means the pulse is just a pulse of zeros
+                    if waveforms_paths[j] == "":
+                        # This means the pulse shouldn't be changed
                         new_paths[wave_idxs[j]] = waveforms_paths[j]  # No rescaling needed
                     else:
+                        # if mod_freqs[j] == 0 or rabi_freqs[j] == 0:
+                        #     calib_path = os.path.join(calib_paths[j], "no_pulse\\rabi_data.csv")
                         calib_path = os.path.join(calib_paths[j], f"{mod_freqs[j]/1e6:.0f}MHz\\rabi_data.csv")
                         rabi_converter = RabiFreqVoltageConverter(calib_path)
                         pulse_path = f"temp/{sweep_title}/{wave_idxs[j]}"

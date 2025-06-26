@@ -102,15 +102,17 @@ class RabiFreqVoltageConverter:
          - csv_out (str): The path to save the csv to
          - normalised (bool): Whether the input waveform is normalised or not. Assumed to be true
         """
-
-        rescale_factor = self.rabi_to_voltage(rabi)
+        if rabi == 0:
+            rescale_factor = 0
+        else:
+            rescale_factor = self.rabi_to_voltage(rabi)
 
         # Step 1: Read CSV with a single row
         df = pd.read_csv(csv_in, header=None)
 
         # Step 2: Normalize to [0, 1]
         values = df.iloc[0].values.astype(float)
-        if normalised:
+        if normalised or rescale_factor == 0:
             norm_values = values
         else:
             norm_values = (values - np.min(values)) / (np.max(values) - np.min(values))

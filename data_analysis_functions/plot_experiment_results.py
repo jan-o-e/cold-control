@@ -22,7 +22,7 @@ def plot_averaged_shot(shot_folder: str, suffix='_averaged.csv', save=True):
     plt.figure(figsize=(10, 6))
     for file in files:
         df = pd.read_csv(file)
-        plt.plot(df["Time (s)"], df["Channel 4 Voltage (V)"].rolling(window=32).mean(), color='gray', alpha=0.3)
+        plt.plot(df["Time (s)"], df["Channel 4 Voltage (V)"].rolling(window=64).mean(), color='gray', alpha=0.3)
 
     if suffix == '_aligned.csv':
         time_correction = 0.6e-3
@@ -102,14 +102,37 @@ def plot_all_shots_in_folder(root_folder: str, suffix='_averaged.csv'):
 
 
 if __name__ == "__main__":
-    root = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
-    summary_csv_averaged = os.path.join(root, "experiment_summary_averaged.csv")
-    summary_csv_aligned = os.path.join(root, "experiment_summary_aligned.csv")
+    # root = r"d:\pulse_shaping_data\2025-06-24\22-54-51"
+    # summary_csv_averaged = os.path.join(root, "experiment_summary_averaged.csv")
+    # summary_csv_aligned = os.path.join(root, "experiment_summary_aligned.csv")
 
-    # Plot experiment summary
-    plot_experiment_summary(summary_csv_averaged, save_path=os.path.join(root, "summary_plot_averaged.png"))
-    plot_experiment_summary(summary_csv_aligned, save_path=os.path.join(root, "summary_plot_aligned.png"))
+    # # Plot experiment summary
+    # plot_experiment_summary(summary_csv_averaged, save_path=os.path.join(root, "summary_plot_averaged.png"))
+    # plot_experiment_summary(summary_csv_aligned, save_path=os.path.join(root, "summary_plot_aligned.png"))
 
-    # Plot all shots
-    plot_all_shots_in_folder(root, suffix='_averaged.csv')
-    plot_all_shots_in_folder(root, suffix='_aligned.csv')
+    # # Plot all shots
+    # plot_all_shots_in_folder(root, suffix='_averaged.csv')
+    # plot_all_shots_in_folder(root, suffix='_aligned.csv')
+
+    while True:
+        user_input = input("Enter the root folder path or 'exit' to quit: ")
+        if user_input.lower() in ['exit', "x", "e"]:
+            break
+        if Path(user_input).is_dir():
+            root = Path(user_input)
+            summary_csv_averaged = os.path.join(root, "experiment_summary_averaged.csv")
+            summary_csv_aligned = os.path.join(root, "experiment_summary_aligned.csv")
+
+            # Plot experiment summary
+            print(f"Plotting summaries for {root}...")
+            #plot_experiment_summary(summary_csv_averaged, save_path=os.path.join(root, "summary_plot_averaged.png"))
+            plot_experiment_summary(summary_csv_aligned, save_path=os.path.join(root, "summary_plot_aligned.png"))
+            print("Summaries plotted successfully.")
+
+            # Plot all shots
+            print(f"Plotting all shots in {root}...")
+            #plot_all_shots_in_folder(root, suffix='_averaged.csv')
+            plot_all_shots_in_folder(root, suffix='_aligned.csv')
+            print("All shots plotted successfully.")
+        else:
+            print("Invalid folder path. Please try again.")
