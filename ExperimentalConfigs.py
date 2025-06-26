@@ -17,8 +17,10 @@ import re
 from typing import List, Tuple, Dict, Any
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
 from Sequence import Sequence
+from rabi_voltage_converter import RabiFreqVoltageConverter
 
 def toBool(string):
     GLOB_TRUE_BOOL_STRINGS = ['true', 't', 'yes', 'y']
@@ -148,10 +150,11 @@ class MotFluoresceConfiguration(GenericConfiguration):
             self.scope_data_channels = scope_dict["data_channels"]
 
         if self.use_awg:
-            self.awg_config_path_single = awg_dict["config_path_single"]
+            
             self.awg_config_path = awg_dict["config_path_full"]
             self.awg_config = awg_dict["awg_config"]
             self.awg_sequence_config = awg_dict["sequence_config"]
+            self.awg_config_path_single = awg_dict["config_path_single"]
             self.awg_config_single = awg_dict["awg_config_single"]
             self.awg_sequence_config_single = awg_dict[
                 "sequence_config_single"]
@@ -162,7 +165,7 @@ class MotFluoresceConfiguration(GenericConfiguration):
 class MotFluoresceConfigurationSweep:
 
     def __init__(self, base_config: 'MotFluoresceConfiguration', base_sequence: Sequence,
-                 sweep_type: str, num_shots:int, sweep_params: Dict[str:Any]):
+                 sweep_type: str, num_shots:int, sweep_params: Dict[Any:Any]):
 
         self.base_config = base_config
         self.base_sequence = base_sequence
@@ -173,18 +176,15 @@ class MotFluoresceConfigurationSweep:
         now = datetime.now()
         self.current_date = now.strftime("%Y-%m-%d")
         self.current_time = now.strftime("%H-%M-%S")
-        print(f"[DEBUG] Fecha congelada: {self.current_date}")
-        print(f"[DEBUG] Hora congelada: {self.current_time}")
+        print(f"[DEBUG] date: {self.current_date}")
+        print(f"[DEBUG] time: {self.current_time}")
         
         self.configs:List[MotFluoresceConfiguration] = []
         self.sequences:List[Sequence] = []
         print("Creating all MOT fluorescence configurations for the sweep...")
 
         if sweep_type == "awg_sequence":
-            pulse_pairs: List[Tuple[str, str]] = self.sweep_params["pulse_pairs"]
-            mod_freqs_ch1: List[float] = self.sweep_params["freq_list_1"]
-            mod_freqs_ch2: List[float] = self.sweep_params["freq_list_2"]
-            self.__configure_awg_sweep(pulse_pairs, mod_freqs_ch1, mod_freqs_ch2)
+            self.__configure_awg_sweep(sweep_params)
         
         elif sweep_type == "mot_imaging":
             # all these parameters need to be extracted from the config file
@@ -206,56 +206,134 @@ class MotFluoresceConfigurationSweep:
     def __len__(self):
         return len(self.configs)
     
-    def __configure_awg_sweep(self, pulse_pairs, mod_freqs_ch1, mod_freqs_ch2):
+    # def __configure_awg_sweep(self, rabi_freq, pulses_by_index_list:List[Dict[int:str]],
+    #                         pulse_waveform_indices, mod_freqs_ch1, mod_freqs_ch2,
+    #                         frequency_indices, calib_filepaths:Dict[int:str]):
+    #     print([f"{mod_freqs_ch1/1e6:.0f}" for mod_freqs_ch1 in mod_freqs_ch1])
+    #     print([f"{mod_freqs_ch2/1e6:.0f}" for mod_freqs_ch2 in mod_freqs_ch2])
+    #     print("Warning! If the steps are too small then the frequencies will be overwritten when rounded.")
+    #     print("Check that all the frequencies listed above are different.\n\n")
+    #     for i in range(self.num_shots):
+    #         for pulses_dict in pulses_by_index_list:
+    #             directories = {os.path.dirname(csv) for csv in pulses_dict.values()}
+    #             assert len(directories) == 1, "All CSVs must be in the same directory"
+    #             last_folder = os.path.basename(next(iter(directories)))
+
+    #             # if we are sending no pulses we don't need to sweep the frequency
+    #             if last_folder == r"no_pulse":
+    #                 ch1_freqs = [1]
+    #                 ch2_freqs = [1]
+    #             else:
+    #                 ch1_freqs = mod_freqs_ch1
+    #                 ch2_freqs = mod_freqs_ch2
+    #             for freq1 in ch1_freqs:
+    #                 freq1_str = f"{freq1/1e6:.0f}"
+    #                 for freq2 in ch2_freqs:
+    #                     freq2_str = f"{freq2/1e6:.0f}"
+    #                     freq_strs = [freq1_str, freq2_str]
+    #                     # Create the new waveforms with the voltages scaled based on the desired modulation frequencies
+    #                     new_paths = {}
+    #                     for idx, pulse in pulses_dict.items():
+    #                         if not freq_strs[idx-1] == "0":
+    #                             print(rabi_freq)
+    #                             calib_path = os.path.join(calib_filepaths[idx], f"{freq_strs[idx-1]}MHz\\rabi_data.csv")
+    #                             rabi_converter = RabiFreqVoltageConverter(calib_path)
+    #                             pulse_path = f"temp/{freq1/1e6:.0f}/{freq2/1e6:.0f}/{last_folder}"
+    #                             os.makedirs(os.path.dirname(pulse_path), exist_ok=True)
+    #                             rabi_converter.rescale_csv(rabi_freq*2*np.pi, pulse, pulse_path, normalised=False)
+    #                             new_paths[idx] = pulse_path
+    #                         else:
+    #                             new_paths[idx] = pulse
+
+    #                     # Clone and modify base configuration
+    #                     new_config = deepcopy(self.base_config)
+    #                     new_sequence = deepcopy(self.base_sequence)
+
+    #                     # Modify waveform and frequency settings
+    #                     modified_sequence_config = self.modify_awg_sequence_config(
+    #                         base_config=new_config.awg_sequence_config,
+    #                         waveform_csvs = {idx: new_paths[idx] for idx in pulse_waveform_indices},
+    #                         mod_freqs={
+    #                             frequency_indices[0]: freq1,
+    #                             frequency_indices[1]: freq2
+    #                         })
+
+    #                     # Update the new config with modified sequence
+    #                     new_config.awg_sequence_config = modified_sequence_config
+
+    #                     new_config.save_location = os.path.join(
+    #                         self.base_config.save_location,
+    #                         self.current_date,
+    #                         self.current_time,
+    #                         f"sweep_{last_folder}_{freq1/1e6:.0f}_{freq2/1e6:.0f}",
+    #                         f"shot{i}"
+    #                     )
+
+    #                     if not os.path.exists(self.base_config.save_location):
+    #                         raise FileNotFoundError(f"Base save location does not exist: {self.base_config.save_location}")
+    #                     # Ensure the directory exists
+    #                     save_dir = os.path.dirname(new_config.save_location)
+    #                     os.makedirs(save_dir, exist_ok=True)
+                        
+    #                     self.configs.append(new_config)
+    #                     self.sequences.append(new_sequence)
+
+    def __configure_awg_sweep(self, all_sweeps:Dict[int:Dict]):
         for i in range(self.num_shots):
-            for csv1, csv2 in pulse_pairs:
-                for freq1 in mod_freqs_ch1:
-                    for freq2 in mod_freqs_ch2:
-                        # Clone and modify base configuration
-                        new_config = deepcopy(self.base_config)
-                        new_sequence = deepcopy(self.base_sequence)
+            for key, sweep_dict in all_sweeps.items():
+                sweep_title = sweep_dict["title"]
+                wave_idxs = sweep_dict["waveform_indices"]
+                rabi_freqs = sweep_dict["rabi_frequencies"]
+                mod_freqs = sweep_dict["modulation_frequencies"]
+                waveforms_paths = sweep_dict["waveforms"]
+                calib_paths = sweep_dict["calibration_paths"]
 
-                        # Modify waveform and frequency settings
-                        modified_sequence_config = self.modify_awg_sequence_config(
-                            base_config=new_config.awg_sequence_config,
-                            waveform_csvs={
-                                1: csv1,
-                                2: csv2
-                            },
-                            mod_freqs={
-                                1: freq1,
-                                2: freq2
-                            })
+                new_paths = {}
+                for j in range(len(wave_idxs)):
+                    if waveforms_paths[j] == "":
+                        # This means the pulse shouldn't be changed
+                        new_paths[wave_idxs[j]] = waveforms_paths[j]  # No rescaling needed
+                    else:
+                        # if mod_freqs[j] == 0 or rabi_freqs[j] == 0:
+                        #     calib_path = os.path.join(calib_paths[j], "no_pulse\\rabi_data.csv")
+                        calib_path = os.path.join(calib_paths[j], f"{mod_freqs[j]/1e6:.0f}MHz\\rabi_data.csv")
+                        rabi_converter = RabiFreqVoltageConverter(calib_path)
+                        pulse_path = f"temp/{sweep_title}/{wave_idxs[j]}"
+                        os.makedirs(os.path.dirname(pulse_path), exist_ok=True)
+                        rabi_converter.rescale_csv(rabi_freqs[j]*2*np.pi, waveforms_paths[j],
+                                                    pulse_path, normalised=False)
+                        new_paths[wave_idxs[j]] = pulse_path
 
-                        # Update the new config with modified sequence
-                        new_config.awg_sequence_config = modified_sequence_config
-                        #print(f"Modified sequence config waveforms: {new_config.awg_sequence_config.waveforms}, ")
+                # Clone and modify base configuration
+                new_config = deepcopy(self.base_config)
+                new_sequence = deepcopy(self.base_sequence)
 
-                        # csv1_clean = sanitize_filename(os.path.basename(csv1))
-                        # csv2_clean = sanitize_filename(os.path.basename(csv2))
+                # Modify waveform and frequency settings
+                modified_sequence_config = self.modify_awg_sequence_config(
+                    base_config=new_config.awg_sequence_config,
+                    waveform_csvs = {idx: new_paths[idx] for idx in wave_idxs},
+                    mod_freqs={idx: mod_freqs[j] for j, idx in enumerate(wave_idxs)}
+                )
 
-                        directory_path1 = os.path.dirname(csv1)
-                        directory_path2 = os.path.dirname(csv2)
-                        assert directory_path1 == directory_path2
+                # Update the new config with modified sequence
+                new_config.awg_sequence_config = modified_sequence_config
 
-                        last_folder = os.path.basename(directory_path1)
+                new_config.save_location = os.path.join(
+                    self.base_config.save_location,
+                    self.current_date,
+                    self.current_time,
+                    sweep_title,
+                    f"shot{i:03d}"
+                )
 
-                        new_config.save_location = os.path.join(
-                            self.base_config.save_location,
-                            self.current_date,
-                            self.current_time,
-                            f"sweep_{last_folder}_{int(freq1/1e6)}_{int(freq2/1e6)}",
-                            f"shot{i}"
-                        )
-
-                        if not os.path.exists(self.base_config.save_location):
-                            raise FileNotFoundError(f"Base save location does not exist: {self.base_config.save_location}")
-                        # Ensure the directory exists
-                        save_dir = os.path.dirname(new_config.save_location)
-                        os.makedirs(save_dir, exist_ok=True)
-                      
-                        self.configs.append(new_config)
-                        self.sequences.append(new_sequence)
+                if not os.path.exists(self.base_config.save_location):
+                    raise FileNotFoundError(f"Base save location does not exist: {self.base_config.save_location}")
+                # Ensure the directory exists
+                save_dir = os.path.dirname(new_config.save_location)
+                os.makedirs(save_dir, exist_ok=True)
+                
+                self.configs.append(new_config)
+                self.sequences.append(new_sequence)
 
     def __configure_imaging_sweep(self, beam_powers, beam_frequencies, pulse_lengths):
         for i in range(self.num_shots):
@@ -333,7 +411,7 @@ class MotFluoresceConfigurationSweep:
     # for config in sweep:
 
 
-class AWGSequenceConfiguration(GenericConfiguration):
+class AWGSequenceConfiguration():
     """
     AWGSequenceConfiguration stores all configuration parameters
     required for a photon production experiment.
@@ -347,9 +425,6 @@ class AWGSequenceConfiguration(GenericConfiguration):
     """
 
     def __init__(self,
-                 save_location,
-                 mot_reload,
-                 iterations,
                  waveform_sequence,
                  waveforms,
                  interleave_waveforms,
@@ -357,7 +432,6 @@ class AWGSequenceConfiguration(GenericConfiguration):
                  awg_configuration,
                  ):
 
-        super().__init__(save_location, mot_reload, iterations)
 
         self._waveform_sequence = waveform_sequence
         self.waveforms: List[Waveform] = waveforms

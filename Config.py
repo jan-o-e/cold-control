@@ -240,6 +240,7 @@ class ExperimentConfigReader():
 
     def __init__(self, fname):
         self.fname = fname
+        print(f"Reading config file: {fname}")
         self.config = ConfigObj(fname)
 
     
@@ -339,73 +340,86 @@ class ExperimentConfigReader():
 
             config = ConfigObj(config_path)
             config_single = ConfigObj(config_path_single) if config_path_single else None
+
             # Reads the awg properties from the config object, and creates a new awg configuration with those settings        
-            awg_config = AwgConfiguration(sample_rate = float(config['AWG']['sample rate']),
-                                            burst_count = int(config['AWG']['burst count']),
-                                            waveform_output_channels = list(config['AWG']['waveform output channels']),
-                                            waveform_output_channel_lags = map(float, config['AWG']['waveform output channel lags']),  # Retrasos asociados a los canales de salida.
-                                            marked_channels = list(config['AWG']['marked channels']),
-                                            marker_width = eval(config['AWG']['marker width']),
-                                            waveform_aom_calibrations_locations = list(config['AWG']['waveform aom calibrations locations']))
-            
+            awg_config = AwgConfiguration(sample_rate=float(config['AWG']['sample rate']),
+                                        burst_count=int(config['AWG']['burst count']),
+                                        waveform_output_channels=list(config['AWG']['waveform output channels']),
+                                        waveform_output_channel_lags=map(float, config['AWG']['waveform output channel lags']),
+                                        marked_channels=list(config['AWG']['marked channels']),
+                                        marker_width=eval(config['AWG']['marker width']),
+                                        waveform_aom_calibrations_locations=list(config['AWG']['waveform aom calibrations locations']))
+
             # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
             waveforms = []
-            for x,v in config['waveforms'].items():
-                if v['phases']: 
+            for x, v in config['waveforms'].items():
+                if v['phases']:
                     phases_str = ' '.join(v['phases'])
                     phases_str = re.sub(r'\(([^)]+) ([^)]+)\)', r'(\1, \2)', phases_str)
                     phases_str = phases_str.replace(') (', '), (')
                     phases = ast.literal_eval(phases_str)
                 else:
-                    phases = [] 
-                waveforms.append(Waveform(fname = v['filename'],
-                                            mod_frequency= float(v['modulation frequency']),
-                                            phases = phases)) # map(float, v['phases']))) 
+                    phases = []
+                waveforms.append(Waveform(fname=v['filename'],
+                                        mod_frequency=float(v['modulation frequency']),
+                                        phases=phases))
 
             # Sets the general settings for the whole process as a photon production configuration
-            awg_sequence_config = AWGSequenceConfiguration(save_location = config['save location'],
-                                                                        mot_reload  = eval(config['mot reload']),
-                                                                        iterations = int(config['iterations']),
-                                                                        waveform_sequence = list(eval(config['waveform sequence'])),
-                                                                        waveforms = waveforms,
-                                                                        waveform_stitch_delays = list(eval(config['waveform stitch delays'])), #  Retrasos entre formas de onda.
-                                                                        interleave_waveforms = toBool(config['interleave waveforms']),  # Indica si las formas de onda deben intercalarse.
-                                                                        awg_configuration = awg_config)
-            
-            awg_config_single = AwgConfiguration(sample_rate = float(config_single['AWG']['sample rate']),
-                                         burst_count = int(config_single['AWG']['burst count']),
-                                         waveform_output_channels = list(config_single['AWG']['waveform output channels']),
-                                         waveform_output_channel_lags = map(float, config_single['AWG']['waveform output channel lags']),
-                                         marked_channels = list(config_single['AWG']['marked channels']),
-                                         marker_width = eval(config_single['AWG']['marker width']),
-                                         waveform_aom_calibrations_locations = list(config_single['AWG']['waveform aom calibrations locations']))
+            awg_sequence_config = AWGSequenceConfiguration(waveform_sequence=list(eval(config['waveform sequence'])),
+                                                            waveforms=waveforms,
+                                                            waveform_stitch_delays=list(eval(config['waveform stitch delays'])),
+                                                            interleave_waveforms=toBool(config['interleave waveforms']),
+                                                            awg_configuration=awg_config)
 
-            waveforms_single = []
-            for x,v in config_single['waveforms'].items():
-                waveforms_single.append(Waveform(fname = v['filename'],
-                                                mod_frequency= float(v['modulation frequency']),
-                                                phases=map(float, v['phases'])))
-
-            awg_sequence_config_single = AWGSequenceConfiguration(save_location = config_single['save location'],
-                                                                            mot_reload  = eval(config_single['mot reload']),
-                                                                            iterations = int(config_single['iterations']),
-                                                                            waveform_sequence = list(eval(config_single['waveform sequence'])),
-                                                                            waveforms = waveforms_single,
-                                                                            waveform_stitch_delays = list(eval(config_single['waveform stitch delays'])),
-                                                                            interleave_waveforms = toBool(config_single['interleave waveforms']),
-                                                                            awg_configuration = awg_config_single,
-                                                                            )
-
-
-
-            awg_settings_dict = {\
-                "config_path_single": config_path_single,
+            awg_settings_dict = {
                 "config_path_full": config_path,
                 "sequence_config": awg_sequence_config,
-                "sequence_config_single": awg_sequence_config_single,
                 "awg_config": awg_config,
-                "awg_config_single": awg_config_single
-                }
+                "config_path_single": None,  # Default to None if not provided
+                "awg_config_single": None,  # Default to None if not provided
+                "sequence_config_single": None  # Default to None if not provided
+            }
+
+            # Only add single configuration if config_path_single is not an empty string
+            if config_path_single:
+                awg_config_single = AwgConfiguration(sample_rate=float(config_single['AWG']['sample rate']),
+                                                    burst_count=int(config_single['AWG']['burst count']),
+                                                    waveform_output_channels=list(config_single['AWG']['waveform output channels']),
+                                                    waveform_output_channel_lags=map(float, config_single['AWG']['waveform output channel lags']),
+                                                    marked_channels=list(config_single['AWG']['marked channels']),
+                                                    marker_width=eval(config_single['AWG']['marker width']),
+                                                    waveform_aom_calibrations_locations=list(config_single['AWG']['waveform aom calibrations locations']))
+
+                waveforms_single = []
+                for x, v in config_single['waveforms'].items():
+                    waveforms_single.append(Waveform(fname=v['filename'],
+                                                    mod_frequency=float(v['modulation frequency']),
+                                                    phases=map(float, v['phases'])))
+
+                awg_sequence_config_single = AWGSequenceConfiguration(waveform_sequence=list(eval(config_single['waveform sequence'])),
+                                                                    waveforms=waveforms_single,
+                                                                    waveform_stitch_delays=list(eval(config_single['waveform stitch delays'])),
+                                                                    interleave_waveforms=toBool(config_single['interleave waveforms']),
+                                                                    awg_configuration=awg_config_single)
+
+                awg_settings_dict["config_path_single"] = config_path_single
+                awg_settings_dict["sequence_config_single"] = awg_sequence_config_single
+                awg_settings_dict["awg_config_single"] = awg_config_single
+
+            else:
+                awg_settings_dict["config_path_single"] = None
+
+            mot_fluoresce_config = MotFluoresceConfiguration(save_location=self.config['save location'],
+                                                            mot_reload=eval(self.config['mot reload']),
+                                                            iterations=int(self.config['iterations']),
+                                                            use_cam=use_camera,
+                                                            use_scope=use_scope,
+                                                            use_awg=use_awg,
+                                                            cam_dict=camera_settings_dict,
+                                                            scope_dict=scope_settings_dict,
+                                                            awg_dict=awg_settings_dict)
+
+            return mot_fluoresce_config
             
         else:
             awg_settings_dict = None
@@ -428,14 +442,161 @@ class ExperimentConfigReader():
         return mot_fluoresce_config
 
 
+    # def get_mot_flourescence_configuration_sweep(self):
+    #     """
+    #     Method to extract the MOT fluorescence configuration for sweep experiments.
+    #     First determines the sweep type, and then does different things from there.
+    #     Returns:
+    #      - sweep_type (str): The type of sweep being performed, e.g. "awg_sequence" or "mot_imaging".
+    #      - num_shots (int): The number of shots to take for the sweep.
+    #      - sweep_dict (dict): A dictionary containing the parameters for the sweep.
+    #     """
+
+    #     def generate_int_list(section):
+    #         start = float(self.config[section]['start'])
+    #         stop = float(self.config[section]['stop'])
+    #         step = float(self.config[section]['step'])
+
+    #         if step == 0:
+    #             return [int(round(start))]
+            
+    #         return list(np.round(np.arange(start, stop + step, step)).astype(int))
+        
+    #     def generate_float_list(section):
+    #         start = float(self.config[section]["start"])
+    #         stop = float(self.config[section]["stop"])
+    #         num_points = int(self.config[section]["num_points"])
+
+    #         if num_points == 1:
+    #             return [start] if start == stop else []
+            
+    #         array = np.linspace(start, stop, num_points)
+    #         return array.tolist()
+
+    #     def get_pulse_files_by_indices(self, waveform_indices):
+    #         # Validate waveform_indices
+    #         if not all(isinstance(idx, int) for idx in waveform_indices):
+    #             raise ValueError(f"Invalid waveform indices: {waveform_indices}. All indices must be integers.")
+            
+    #         base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
+            
+    #         waveform_dicts_list = []
+
+
+    #         subdirs = sorted([
+    #             os.path.join(base_dir, d) for d in os.listdir(base_dir)
+    #             if os.path.isdir(os.path.join(base_dir, d))
+    #         ])
+
+    #         # Collect all csv files in all subdirs
+    #         for subdir in subdirs:
+    #             csv_files = glob.glob(os.path.join(subdir, '*.csv'))
+    #             print(f"Found {len(csv_files)} CSV files in {subdir} and its subdirectories.")
+    #             waveform_dict = {}
+                
+    #             # Map files by waveform index (assumes filename starts with index)
+    #             for csv_file in csv_files:
+    #                 fname = os.path.basename(csv_file)
+    #                 idx_str = ''
+    #                 for c in fname:
+    #                     if c.isdigit():
+    #                         idx_str += c
+    #                     else:
+    #                         break
+    #                 if idx_str:
+    #                     idx = int(idx_str)
+    #                     waveform_dict[idx] = csv_file
+
+    #             # Check for missing or extra indices
+    #             if set(waveform_dict.keys()) != set(waveform_indices):
+    #                 missing = set(waveform_indices) - set(waveform_dict.keys())
+    #                 extra = set(waveform_dict.keys()) - set(waveform_indices)
+    #                 msg = []
+    #                 if missing:
+    #                     msg.append(f"Missing waveform indices in {subdir}: {sorted(missing)}")
+    #                 if extra:
+    #                     msg.append(f"Extra waveform indices in {subdir}: {sorted(extra)}")
+    #                 raise ValueError("; ".join(msg))
+    #             if len(waveform_dict) != len(waveform_indices):
+    #                 raise ValueError(f"Number of files ({len(waveform_dict)}) does not match number of waveform indices ({len(waveform_indices)}) in {subdir}")
+                
+    #             waveform_dicts_list.append(waveform_dict)
+
+    #         return waveform_dicts_list
+        
+    #     def get_waveform_indices(self):
+    #         # Retrieve the raw indices
+    #         raw_indices = self.config['waveform_indices']['amp_waveform_indices']
+            
+    #         # Check if raw_indices is a list
+    #         if isinstance(raw_indices, list):
+    #             try:
+    #                 # Convert list of strings to list of integers
+    #                 return list(map(int, raw_indices))
+    #             except ValueError:
+    #                 raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected a list of integers.")
+    #         elif isinstance(raw_indices, str):
+    #             # If it's a string, clean and split it
+    #             cleaned_indices = raw_indices.replace('[', '').replace(']', '').replace('"', '').replace("'", "")
+    #             try:
+    #                 return list(map(int, cleaned_indices.split(',')))
+    #             except ValueError:
+    #                 raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected comma-separated integers.")
+    #         else:
+    #             raise TypeError(f"Unexpected type for waveform indices: {type(raw_indices)}. Expected list or string.")
+            
+    #     def get_calib_files_by_indices(self, waveform_indices):
+    #         calib_dict = {}
+    #         for idx in waveform_indices:
+    #             path_to_calib = self.config["calibration_paths"][f"{idx}"]
+    #             calib_dict[idx] = path_to_calib
+
+    #         return calib_dict
+        
+        
+    #     sweep_type = self.config["sweep_type"]
+    #     num_shots = int(self.config['num_shots'])
+
+    #     if sweep_type == "awg_sequence":
+    #         rabi_freq = float(self.config["frequencies"]['rabi_freq'])
+    #         freq_list_1 = list(map(lambda x:int(float(x)),self.config["frequencies"]["1"]))
+    #         freq_list_2 = list(map(lambda x:int(float(x)),self.config["frequencies"]["2"]))
+    #         frequency_waveform_indices=list(map(int, self.config['waveform_indices']['frequency_waveform_indices']))
+    #         pulse_waveform_config_indices=get_waveform_indices(self)
+    #         pulses_by_index_list= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
+    #         calib_files_dict = get_calib_files_by_indices(self, frequency_waveform_indices)
+    #         sweep_dict = {
+    #             "rabi_frequency": rabi_freq,
+    #             "freq_list_1": freq_list_1,
+    #             "freq_list_2": freq_list_2,
+    #             "pulses_by_index_list": pulses_by_index_list,
+    #             "waveform_config_indices": pulse_waveform_config_indices,
+    #             "frequency_waveform_indices": frequency_waveform_indices,
+    #             "calibration_paths": calib_files_dict
+    #         }
+
+
+    #     elif sweep_type == "mot_imaging":
+    #         beam_powers = generate_float_list("beam_powers")
+    #         beam_frequencies = generate_float_list("beam_frequencies")
+    #         pulse_lengths = generate_int_list("pulse_lengths")
+    #         sweep_dict = {
+    #             "beam_powers": beam_powers,
+    #             "beam_frequencies": beam_frequencies,
+    #             "pulse_lengths": pulse_lengths
+    #         }
+
+    #     return sweep_type, num_shots, sweep_dict
+
+
     def get_mot_flourescence_configuration_sweep(self):
         """
         Method to extract the MOT fluorescence configuration for sweep experiments.
         First determines the sweep type, and then does different things from there.
         Returns:
-            pulse_file_pairs (list[tuple[str, str]]): List of (channel_1, channel_2) CSV file paths from subdirectories.
-            freq_list_1 (list[int]): Rounded frequency sweep from freq_1 section.
-            freq_list_2 (list[int]): Rounded frequency sweep from freq_2 section.
+         - sweep_type (str): The type of sweep being performed, e.g. "awg_sequence" or "mot_imaging".
+         - num_shots (int): The number of shots to take for the sweep.
+         - sweep_dict (dict): A dictionary containing the parameters for the sweep.
         """
 
         def generate_int_list(section):
@@ -458,40 +619,62 @@ class ExperimentConfigReader():
             
             array = np.linspace(start, stop, num_points)
             return array.tolist()
+        
+        def toIntList(arg):
+            return list(map(int,arg))
+        
+        def toFloatList(arg):
+            if isinstance(arg, list):
+                return list(map(float, arg))
+            elif isinstance(arg, (int, float)):
+                return [float(arg)]
+            elif isinstance(arg, str):
+                items = [x.strip() for x in arg.replace(',', '\n').split('\n') if x.strip()]
+                try:
+                    return list(map(float, items))
+                except ValueError as e:
+                    raise ValueError(f"Could not convert one of the entries to float: {items}") from e
+            else:
+                raise TypeError(f"Unsupported input type for toFloatList: {type(arg)}")
 
-        def get_pulse_file_pairs():
-            base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
-            pulse_file_pairs = []
-
-            subdirs = sorted([
-                os.path.join(base_dir, d) for d in os.listdir(base_dir)
-                if os.path.isdir(os.path.join(base_dir, d))
-            ])
-
-            for subdir in subdirs:
-                csv_files = sorted(glob.glob(os.path.join(subdir, '*.csv')))
-                if len(csv_files) != 2:
-                    raise ValueError(f"Expected 2 CSV files in {subdir}, found {len(csv_files)}")
-                if self.config['pulse_directories']['channel_1'] == 'pump':
-                    pulse_file_pairs.append((csv_files[0], csv_files[1]))
-                else:
-                    pulse_file_pairs.append((csv_files[1], csv_files[0]))
-
-            return pulse_file_pairs
+        
+        def ensure_list(value):
+            if isinstance(value, list):
+                return value
+            else:
+                return [value]
+        
         
         sweep_type = self.config["sweep_type"]
         num_shots = int(self.config['num_shots'])
 
-        
         if sweep_type == "awg_sequence":
-            freq_list_1 = generate_int_list('freq_1')
-            freq_list_2 = generate_int_list('freq_2')
-            pulse_pairs = get_pulse_file_pairs()
-            sweep_dict = {
-                "freq_list_1": freq_list_1,
-                "freq_list_2": freq_list_2,
-                "pulse_pairs": pulse_pairs
-            }
+            all_sweeps = {}
+            for sweep_idx in self.config["sweeps"]:
+                sweep = self.config["sweeps"][sweep_idx]
+                title = sweep['title']
+                waveform_indices = toIntList((sweep['waveform_indices']))
+                rabi_freqs = toFloatList(sweep['rabi_frequencies'])
+                print(sweep["modulation_frequencies"])
+                mod_freqs = toFloatList(sweep['modulation_frequencies'])
+                waveforms = ensure_list(sweep["waveforms"])
+                calib_paths = ensure_list(sweep["calibration_paths"])
+
+                assert len(waveform_indices) == len(rabi_freqs) == len(mod_freqs) == len(waveforms) == len(calib_paths)
+
+                sweep_dict = {
+                    "title": title,
+                    "waveform_indices": waveform_indices,
+                    "rabi_frequencies": rabi_freqs,
+                    "modulation_frequencies": mod_freqs,
+                    "waveforms": waveforms,
+                    "calibration_paths": calib_paths
+                }
+                all_sweeps[int(sweep_idx)]=sweep_dict
+            
+            return sweep_type, num_shots, all_sweeps
+
+
 
 
         elif sweep_type == "mot_imaging":
@@ -503,8 +686,7 @@ class ExperimentConfigReader():
                 "beam_frequencies": beam_frequencies,
                 "pulse_lengths": pulse_lengths
             }
-
-        return sweep_type, num_shots, sweep_dict
+            return sweep_type, num_shots, sweep_dict
 
     
     def get_absorbtion_imaging_configuration(self):

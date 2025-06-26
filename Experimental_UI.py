@@ -297,7 +297,8 @@ class Experimental_UI(tk.LabelFrame):
             experiment = MotFluoresceExperiment(daq_controller=self.daq_ui.daq_controller,
                                                 sequence = self.sequence_ui.sequence,
                                                 mot_fluoresce_configuration=self.photon_production_config,
-                                                ic_imaging_control=camera_control)
+                                                ic_imaging_control=camera_control,
+                                                sweep = False)
             # The mot fluoresce experiment is a special case where the Live UI is not set up.
             liveUI = False
             autoCloseLiveUI = False
@@ -313,7 +314,7 @@ class Experimental_UI(tk.LabelFrame):
                 button.invoke()
                 
         fname = tkFileDialog.askopenfilename(master=self, title="Choose an MOT Fluoresce Sweep Configuration",
-                                             initialdir=os.path.join(os.getcwd(),"/configs/"))
+                                             initialdir=os.path.join(os.getcwd(),"/configs/pulse_shaping_expt/sweeps/"))
         if fname!= '':
             parameter_list = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
             print(parameter_list[2])

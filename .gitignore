@@ -13,3 +13,4 @@ exceptions
 exceptions.log
 
 data/**
+temp/** 

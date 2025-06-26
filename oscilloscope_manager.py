@@ -131,8 +131,7 @@ class OscilloscopeManager:
         self.read_speed = high_speed
         self.scope.write('*CLS')
         print("configuring the scope settings")
-        self.scope.write(':ACQUIRE:TYPE HRESOLUTION')
-        self.scope.write(':ACQUIRE:MODE RTIME')
+        self.scope.write('ACQUIRE:TYPE HRESOLUTION')
         #self.scope.write(f'ACQUIRE:SRATE:ANALOG {samp_rate}') # 9000 series scope
         if not centered_0:
             self.scope.write(':TIMEBASE:REFERENCE LEFT')
@@ -257,11 +256,16 @@ class OscilloscopeManager:
             self.scope.write(f'WAVEFORM:SOURCE CHANNEL{channel}')
 
             print(f"Collecting data from channel {channel}...")
+            errors = self.scope.query('SYSTem:ERRor?')  # Check for errors
+            print(f"Errors: {errors.strip()}")  # Print any errors that might have occurred
             preamble = self.scope.query('WAVEFORM:PREAMBLE?')  # Get preamble information
+            opc = self.scope.query('*OPC?')  # Wait for operation complete
+            if opc.strip() != '1':
+                raise RuntimeError(f"Operation did not complete successfully. OPC returned: {opc.strip()}")
             print(f"Preamble info: {preamble}")
             y_incr = float(self.scope.query('WAVEFORM:YINCREMENT?'))
             y_orig = float(self.scope.query('WAVEFORM:YORIGIN?'))
-            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='h', container=np.array, is_big_endian=False)
+            y_data = self.scope.query_binary_values('WAVEFORM:DATA?', datatype='H', container=np.array, is_big_endian=False)
             y_data = y_data * y_incr + y_orig
 
             if len(y_data) == 0:
@@ -372,37 +376,45 @@ class OscilloscopeManager:
         return True
     
 
-    def wait_for_acquisition(self, max_acq_wait_sec=10, poll_interval_sec=0.1):
+    def wait_for_acquisition(self, max_acq_wait_sec=1, poll_interval_sec=0.01):
         # --- Wait for Acquisition to Complete ---
         # Now that the trigger pulse is sent, the oscilloscope should trigger and acquire data.
-        # Poll :ACQuire:COMPlete? to know when the acquisition is complete
 
-        print("Waiting for acquisition to complete (polling :ACQ:COMP?)...\n")
+        print("Waiting for acquisition to complete...") 
         StartTime = time.perf_counter() # Reset timer for acquisition wait
-        acq_complete = 0
+        triggered = 0
+        success = False
 
-        print(time.perf_counter()-StartTime)
-        while acq_complete != 1 and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
-            
+
+        # Wait until acquisition is done  or timeout
+        while success != True and (time.perf_counter() - StartTime) <= max_acq_wait_sec:
+            time.sleep(poll_interval_sec)
             try:
-                # query_result = self.scope.query(":TER?")
-                query_result = self.scope.query(":ACQuire:COMPlete?")
-                acq_complete = float(query_result) == float(100) # Check if acquisition is complete
-                if acq_complete:
-                    break #
+                acq_complete = self.scope.query(":ACQuire:COMPlete?")
+                if triggered == 0:
+                    # Once the triggered event register is read, it is reset to zero
+                    triggered = bool(self.scope.query(":TER?"))
+                run_state = self.scope.query(":RSTATE?")
+
+                acq_complete_bool = int(acq_complete) == 100
+                run_state_bool = run_state.strip() == "STOP"
+
+                success = acq_complete_bool and run_state_bool and triggered
+
+                if success:
+                    break # Exit loop once acquisition is done
             except Exception as e:
                 print(f"Error during completion poll: {e}")
                 break
 
             time.sleep(poll_interval_sec)
 
-        if acq_complete != True:
+        if success != True:
             print("Acquisition did not complete within the maximum wait time.")
-            self.scope.clear()
-            self.scope.close()
-            raise RuntimeError("Oscilloscope acquisition failed to complete within the specified time.")
 
-        triggered = self.scope.query(":TER?")
-        print(f"Triggered: {triggered.strip()}")
+        print(f"Acquisition complete: {acq_complete_bool}")
+        print(f"Triggered: {triggered}")
+        print(f"Run state: {run_state.strip()}")
 
-        print("Acquisition complete. Ready to retrieve data.")
+        print("Acquisition complete. Ready to retrieve data.\n") # [14]
+        return success
