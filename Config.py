@@ -347,8 +347,7 @@ class ExperimentConfigReader():
                                         waveform_output_channels=list(config['AWG']['waveform output channels']),
                                         waveform_output_channel_lags=map(float, config['AWG']['waveform output channel lags']),
                                         marked_channels=list(config['AWG']['marked channels']),
-                                        marker_width=eval(config['AWG']['marker width']),
-                                        waveform_aom_calibrations_locations=list(config['AWG']['waveform aom calibrations locations']))
+                                        marker_width=eval(config['AWG']['marker width']))
 
             # Reads the waveforms from the config object, and creates a list of Waveforms with those properties
             waveforms = []
@@ -442,152 +441,6 @@ class ExperimentConfigReader():
         return mot_fluoresce_config
 
 
-    # def get_mot_flourescence_configuration_sweep(self):
-    #     """
-    #     Method to extract the MOT fluorescence configuration for sweep experiments.
-    #     First determines the sweep type, and then does different things from there.
-    #     Returns:
-    #      - sweep_type (str): The type of sweep being performed, e.g. "awg_sequence" or "mot_imaging".
-    #      - num_shots (int): The number of shots to take for the sweep.
-    #      - sweep_dict (dict): A dictionary containing the parameters for the sweep.
-    #     """
-
-    #     def generate_int_list(section):
-    #         start = float(self.config[section]['start'])
-    #         stop = float(self.config[section]['stop'])
-    #         step = float(self.config[section]['step'])
-
-    #         if step == 0:
-    #             return [int(round(start))]
-            
-    #         return list(np.round(np.arange(start, stop + step, step)).astype(int))
-        
-    #     def generate_float_list(section):
-    #         start = float(self.config[section]["start"])
-    #         stop = float(self.config[section]["stop"])
-    #         num_points = int(self.config[section]["num_points"])
-
-    #         if num_points == 1:
-    #             return [start] if start == stop else []
-            
-    #         array = np.linspace(start, stop, num_points)
-    #         return array.tolist()
-
-    #     def get_pulse_files_by_indices(self, waveform_indices):
-    #         # Validate waveform_indices
-    #         if not all(isinstance(idx, int) for idx in waveform_indices):
-    #             raise ValueError(f"Invalid waveform indices: {waveform_indices}. All indices must be integers.")
-            
-    #         base_dir = self.config['pulse_directories']['directory_path'].strip('"').strip("'")
-            
-    #         waveform_dicts_list = []
-
-
-    #         subdirs = sorted([
-    #             os.path.join(base_dir, d) for d in os.listdir(base_dir)
-    #             if os.path.isdir(os.path.join(base_dir, d))
-    #         ])
-
-    #         # Collect all csv files in all subdirs
-    #         for subdir in subdirs:
-    #             csv_files = glob.glob(os.path.join(subdir, '*.csv'))
-    #             print(f"Found {len(csv_files)} CSV files in {subdir} and its subdirectories.")
-    #             waveform_dict = {}
-                
-    #             # Map files by waveform index (assumes filename starts with index)
-    #             for csv_file in csv_files:
-    #                 fname = os.path.basename(csv_file)
-    #                 idx_str = ''
-    #                 for c in fname:
-    #                     if c.isdigit():
-    #                         idx_str += c
-    #                     else:
-    #                         break
-    #                 if idx_str:
-    #                     idx = int(idx_str)
-    #                     waveform_dict[idx] = csv_file
-
-    #             # Check for missing or extra indices
-    #             if set(waveform_dict.keys()) != set(waveform_indices):
-    #                 missing = set(waveform_indices) - set(waveform_dict.keys())
-    #                 extra = set(waveform_dict.keys()) - set(waveform_indices)
-    #                 msg = []
-    #                 if missing:
-    #                     msg.append(f"Missing waveform indices in {subdir}: {sorted(missing)}")
-    #                 if extra:
-    #                     msg.append(f"Extra waveform indices in {subdir}: {sorted(extra)}")
-    #                 raise ValueError("; ".join(msg))
-    #             if len(waveform_dict) != len(waveform_indices):
-    #                 raise ValueError(f"Number of files ({len(waveform_dict)}) does not match number of waveform indices ({len(waveform_indices)}) in {subdir}")
-                
-    #             waveform_dicts_list.append(waveform_dict)
-
-    #         return waveform_dicts_list
-        
-    #     def get_waveform_indices(self):
-    #         # Retrieve the raw indices
-    #         raw_indices = self.config['waveform_indices']['amp_waveform_indices']
-            
-    #         # Check if raw_indices is a list
-    #         if isinstance(raw_indices, list):
-    #             try:
-    #                 # Convert list of strings to list of integers
-    #                 return list(map(int, raw_indices))
-    #             except ValueError:
-    #                 raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected a list of integers.")
-    #         elif isinstance(raw_indices, str):
-    #             # If it's a string, clean and split it
-    #             cleaned_indices = raw_indices.replace('[', '').replace(']', '').replace('"', '').replace("'", "")
-    #             try:
-    #                 return list(map(int, cleaned_indices.split(',')))
-    #             except ValueError:
-    #                 raise ValueError(f"Invalid format for waveform indices: {raw_indices}. Expected comma-separated integers.")
-    #         else:
-    #             raise TypeError(f"Unexpected type for waveform indices: {type(raw_indices)}. Expected list or string.")
-            
-    #     def get_calib_files_by_indices(self, waveform_indices):
-    #         calib_dict = {}
-    #         for idx in waveform_indices:
-    #             path_to_calib = self.config["calibration_paths"][f"{idx}"]
-    #             calib_dict[idx] = path_to_calib
-
-    #         return calib_dict
-        
-        
-    #     sweep_type = self.config["sweep_type"]
-    #     num_shots = int(self.config['num_shots'])
-
-    #     if sweep_type == "awg_sequence":
-    #         rabi_freq = float(self.config["frequencies"]['rabi_freq'])
-    #         freq_list_1 = list(map(lambda x:int(float(x)),self.config["frequencies"]["1"]))
-    #         freq_list_2 = list(map(lambda x:int(float(x)),self.config["frequencies"]["2"]))
-    #         frequency_waveform_indices=list(map(int, self.config['waveform_indices']['frequency_waveform_indices']))
-    #         pulse_waveform_config_indices=get_waveform_indices(self)
-    #         pulses_by_index_list= get_pulse_files_by_indices(self, pulse_waveform_config_indices)
-    #         calib_files_dict = get_calib_files_by_indices(self, frequency_waveform_indices)
-    #         sweep_dict = {
-    #             "rabi_frequency": rabi_freq,
-    #             "freq_list_1": freq_list_1,
-    #             "freq_list_2": freq_list_2,
-    #             "pulses_by_index_list": pulses_by_index_list,
-    #             "waveform_config_indices": pulse_waveform_config_indices,
-    #             "frequency_waveform_indices": frequency_waveform_indices,
-    #             "calibration_paths": calib_files_dict
-    #         }
-
-
-    #     elif sweep_type == "mot_imaging":
-    #         beam_powers = generate_float_list("beam_powers")
-    #         beam_frequencies = generate_float_list("beam_frequencies")
-    #         pulse_lengths = generate_int_list("pulse_lengths")
-    #         sweep_dict = {
-    #             "beam_powers": beam_powers,
-    #             "beam_frequencies": beam_frequencies,
-    #             "pulse_lengths": pulse_lengths
-    #         }
-
-    #     return sweep_type, num_shots, sweep_dict
-
 
     def get_mot_flourescence_configuration_sweep(self):
         """
@@ -649,30 +502,43 @@ class ExperimentConfigReader():
         num_shots = int(self.config['num_shots'])
 
         if sweep_type == "awg_sequence":
-            all_sweeps = {}
+            defaults = self.config["defaults"]
+            wave_idxs = toIntList(defaults['waveform_indices'])
+            rabi_freqs = toFloatList(defaults['rabi_frequencies'])
+            mod_freqs = toFloatList(defaults['modulation_frequencies'])
+            waveforms = ensure_list(defaults["waveforms"])
+            calib_paths = ensure_list(defaults["calibration_paths"])
+
+            all_sweeps = []
             for sweep_idx in self.config["sweeps"]:
                 sweep = self.config["sweeps"][sweep_idx]
-                title = sweep['title']
-                waveform_indices = toIntList((sweep['waveform_indices']))
-                rabi_freqs = toFloatList(sweep['rabi_frequencies'])
-                print(sweep["modulation_frequencies"])
-                mod_freqs = toFloatList(sweep['modulation_frequencies'])
-                waveforms = ensure_list(sweep["waveforms"])
-                calib_paths = ensure_list(sweep["calibration_paths"])
+                sweep_changes = {"title":sweep["title"]}
+                for key, value in sweep.items():
+                    if key == "title":
+                        continue
+                    elif key == "rabi_frequencies":
+                        sweep_changes[key] = toFloatList(value)
+                    elif key == "modulation_frequencies":
+                        sweep_changes[key] = toFloatList(value)
+                    elif key == "waveforms":
+                        sweep_changes[key] = ensure_list(value)
+                    elif key == "calibration_paths":
+                        sweep_changes[key] = ensure_list(value)
 
-                assert len(waveform_indices) == len(rabi_freqs) == len(mod_freqs) == len(waveforms) == len(calib_paths)
+                    assert len(sweep_changes[key]) == len(wave_idxs), f"Length mismatch for {key} in sweep {sweep_idx}"
 
-                sweep_dict = {
-                    "title": title,
-                    "waveform_indices": waveform_indices,
-                    "rabi_frequencies": rabi_freqs,
-                    "modulation_frequencies": mod_freqs,
-                    "waveforms": waveforms,
-                    "calibration_paths": calib_paths
-                }
-                all_sweeps[int(sweep_idx)]=sweep_dict
+                all_sweeps.append(sweep_changes)
+
+            sweep_dict = {
+                "waveform_indices": wave_idxs,
+                "rabi_frequencies": rabi_freqs,
+                "modulation_frequencies": mod_freqs,
+                "waveforms": waveforms,
+                "calibration_paths": calib_paths,
+                "sweeps": all_sweeps,
+            }
             
-            return sweep_type, num_shots, all_sweeps
+            return sweep_type, num_shots, sweep_dict
 
 
 

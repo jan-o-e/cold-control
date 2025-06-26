@@ -206,12 +206,14 @@ def write_markers(marker_data, awg:WX218x_awg, awg_chs, marker_width):
         marker_starts = marker_starts[:2]
 
     # print('Writing markers to marker channels at {0}'.format(marker_starts))
-
-    awg.configure_marker(awg_chs[0], 
-                                index = 1, 
-                                position = marker_starts[0] - marker_width/4,
-                                levels = MARKER_LEVS,
-                                width = marker_width/2)
+    if len(marker_starts) == 1:
+        awg.configure_marker(awg_chs[0], 
+                                    index = 1, 
+                                    position = marker_starts[0] - marker_width/4,
+                                    levels = MARKER_LEVS,
+                                    width = marker_width/2)
+    else:
+        print("No markers defined, not using a marker")
     #awg.configure_marker(awg_chs[1], # changed to channel 2 to investigate pulses
     #                            index = 2, 
     #                            position = marker_starts[1] - marker_width/4,
@@ -311,14 +313,14 @@ def run_awg(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguratio
         constant_V=False    
 
         # 2 Loading calibration files     Carga los archivos de calibración para los AOM y los almacena en un diccionario.
-        waveform_aom_calibs = {}
-        aom_calibration_loc = awg_config.waveform_aom_calibrations_locations[j]
-        print('For {0} using aom calibrations in {1}'.format(channel, os.path.join(aom_calibration_loc, '*MHz.txt')))
-        for filename in glob.glob(os.path.join(aom_calibration_loc, '*MHz.txt')):
-            try:
-                waveform_aom_calibs[float(re.match(r'\d+\.*\d*', os.path.split(filename)[1]).group(0))] = get_waveform_calib_fnc(filename)
-            except AttributeError:
-                print("Warning, waveform_aom_calibs is undefined.")
+        # waveform_aom_calibs = {}
+        # aom_calibration_loc = awg_config.waveform_aom_calibrations_locations[j]
+        # print('For {0} using aom calibrations in {1}'.format(channel, os.path.join(aom_calibration_loc, '*MHz.txt')))
+        # for filename in glob.glob(os.path.join(aom_calibration_loc, '*MHz.txt')):
+        #     try:
+        #         waveform_aom_calibs[float(re.match(r'\d+\.*\d*', os.path.split(filename)[1]).group(0))] = get_waveform_calib_fnc(filename)
+        #     except AttributeError:
+        #         print("Warning, waveform_aom_calibs is undefined.")
         
         # 3 Marker data and delays
         marker_data = []
@@ -331,13 +333,6 @@ def run_awg(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguratio
         # 4 Processing each waveform                               
         for ind, waveform in enumerate(waveforms):
             waveform: Waveform                   # Aplica la calibración correspondiente a cada forma de onda, basándose en su frecuencia de modulación.
-            if not waveform_aom_calibs: 
-                calib_fun = lambda x: x
-            else:                                     # diccionario que contiene las funciones de calibración para las formas de onda
-                calib_fun = waveform_aom_calibs[min(waveform_aom_calibs,
-                                                    key=lambda calib_freq: np.abs(calib_freq - waveform.get_mod_frequency()*10**-6))]
-                # print('\tFor waveform with freq {0}MHz, using calib for {1}MHz'.format(waveform.get_mod_frequency()*10**-6, 
-                                                                                        # min(waveform_aom_calibs, key=lambda calib_freq: np.abs(calib_freq - waveform.get_mod_frequency()*10**-6))))
             
             seg_length = waveform.get_n_samples() + abs(delay) + abs(channel_abs_offset)
             marker_pos = []    # Calcula las posiciones de los marcadores en la secuencia de formas de onda.
@@ -364,14 +359,14 @@ def run_awg(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguratio
                 # print('\tOnly one waveform in sequence')
                 # write delay to the single waveform in a sequence
                 if delay < 0: 
-                    waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V )
+                    waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V )
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=MARKER_WF_LEVS, marker_width=marker_wid, n_pad_left=abs(delay))
                 elif delay > 0:
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V) + [0]*delay
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V) + [0]*delay
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=MARKER_WF_LEVS, marker_width=marker_wid, n_pad_right=delay)
                 else:
                     #no delay    Escribe los datos de la forma de onda y los marcadores en el canal correspondiente.
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V)
                     marker_data   += waveform.get_marker_data(marker_positions=marker_pos, marker_levels=MARKER_WF_LEVS, marker_width=marker_wid)
                 
                     
@@ -398,22 +393,22 @@ def run_awg(awg_config: AwgConfiguration, photon_config: AWGSequenceConfiguratio
                         for i,pos in enumerate(marker_pos):
                             marker_pos[i]=abs(delay)+pos
 
-                        waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+                        waveform_data += [0]*abs(delay) + waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V)
                         #write marker data directly with a single call with multiple defined marker positions inside multi waveform sequence
                         marker_data= get_multiwaveform_marker_data(marker_length,marker_positions=marker_pos, marker_levels=MARKER_WF_LEVS, marker_width=marker_wid, n_pad_left=abs(delay))
 
                     else:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V)
                         #write marker data directly with a single call with multiple defined marker positions inside multi waveform sequence
                         marker_data = get_multiwaveform_marker_data(marker_length,marker_positions=marker_pos, marker_levels=MARKER_WF_LEVS, marker_width=marker_wid, n_pad_right=abs(delay))
                 elif ind==len(waveforms)-1:
                     #write delay to the last waveform in a sequence if a sequence contains more than one waveform
                     if delay >0:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V) + [0]*delay
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V) + [0]*delay
                     else:
-                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+                        waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V)
                 else:
-                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, calibration_function=calib_fun, constant_voltage=constant_V)
+                    waveform_data += waveform.get(sample_rate=awg_config.sample_rate, constant_voltage=constant_V)
 
             
             # 6 Channel offset handling

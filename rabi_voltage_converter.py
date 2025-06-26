@@ -112,8 +112,10 @@ class RabiFreqVoltageConverter:
 
         # Step 2: Normalize to [0, 1]
         values = df.iloc[0].values.astype(float)
-        if normalised or rescale_factor == 0:
+        if normalised:
             norm_values = values
+        elif (np.max(values) - np.min(values)) == 0:  # Avoid division by zero
+            norm_values = np.zeros_like(values)
         else:
             norm_values = (values - np.min(values)) / (np.max(values) - np.min(values))
 

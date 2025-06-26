@@ -208,6 +208,15 @@ class OscilloscopeManager:
             print(f"Oscilloscope digitized channels {channels}.")
         
         return query_result.strip() == '1'
+    
+
+    def set_to_stop(self):
+        """
+        Function to set the scope to stop mode. This is used to stop the scope from collecting data.
+        """
+        self.scope.write(':STOP')
+        print("Oscilloscope set to stop mode.")
+        return True
 
     def reset_scope(self):
         """

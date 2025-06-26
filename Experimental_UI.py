@@ -317,7 +317,7 @@ class Experimental_UI(tk.LabelFrame):
                                              initialdir=os.path.join(os.getcwd(),"/configs/pulse_shaping_expt/sweeps/"))
         if fname!= '':
             parameter_list = ExperimentConfigReader(fname).get_mot_flourescence_configuration_sweep()
-            print(parameter_list[2])
+            #print(parameter_list[2])
             #Number of iterations needs to be pased from config
             sweep_config = MotFluoresceConfigurationSweep(self.photon_production_config,
                                                           self.sequence_ui.sequence,

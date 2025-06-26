@@ -1178,6 +1178,7 @@ class MotFluoresceExperiment(GenericExperiment):
             else:
                 fails += 1
                 if fails >= 10:
+                    self.scope.set_to_stop()
                     break
                 print("Failed to trigger, running again")
 
