@@ -1139,7 +1139,7 @@ class MotFluoresceExperiment(GenericExperiment):
             date_str = now.strftime("%Y-%m-%d")
             time_str = now.strftime("%H-%M-%S")
             # Create full path with date and time subdirectories
-            full_directory = os.path.join(directory, date_str, time_str)
+            full_directory = os.path.join(directory, date_str, time_str, "experiment", "shot0")
         else:
             full_directory = directory
 

@@ -125,13 +125,13 @@ if __name__ == "__main__":
 
             # Plot experiment summary
             print(f"Plotting summaries for {root}...")
-            #plot_experiment_summary(summary_csv_averaged, save_path=os.path.join(root, "summary_plot_averaged.png"))
+            plot_experiment_summary(summary_csv_averaged, save_path=os.path.join(root, "summary_plot_averaged.png"))
             plot_experiment_summary(summary_csv_aligned, save_path=os.path.join(root, "summary_plot_aligned.png"))
             print("Summaries plotted successfully.")
 
             # Plot all shots
             print(f"Plotting all shots in {root}...")
-            #plot_all_shots_in_folder(root, suffix='_averaged.csv')
+            plot_all_shots_in_folder(root, suffix='_averaged.csv')
             plot_all_shots_in_folder(root, suffix='_aligned.csv')
             print("All shots plotted successfully.")
         else:

@@ -454,13 +454,13 @@ if __name__ == "__main__":
             rolling_window=64  # Apply rolling average to reduce noise
         )
 
-        MARKER_DROP = 7.45 # The level below which the AWG marker will drop
+        MARKER_DROP = -2.9 # The level below which the AWG marker will drop
         IMG_WIDTH = 500e-6 # The width of the imaging pulse
-        TARGET_TIME = 1.46e-3 # The expected time of the AWG marker
-        TOLERANCE = 50e-6 # How far around the target time to check for the marker
-        MOT_DROP = 19.4e-3 # The level below which the fluorescence will drop after the MOT is turned off
+        TARGET_TIME = 1.6e-3 # The expected time of the AWG marker
+        TOLERANCE = 100e-6 # How far around the target time to check for the marker
+        MOT_DROP = -0.0267 # The level below which the fluorescence will drop after the MOT is turned off
         MOT_DROP_TIME = 600e-6 # The expected time of the MOT drop, when the MOT is turned off
-        T_RISE = MOT_DROP_TIME + 1e-3
+        T_RISE = MOT_DROP_TIME + 1.23e-3
 
         
         # Example parameters (adjust these based on your data)
@@ -476,7 +476,7 @@ if __name__ == "__main__":
         fluor_drop_voltage = MOT_DROP  # Voltage threshold for fluorescence drop
         fluor_drop_time_range = (MOT_DROP_TIME-TOLERANCE, MOT_DROP_TIME+TOLERANCE)  # When fluorescence drop should occur
         integration_time_range = (T_RISE, T_RISE+IMG_WIDTH)  # Time range for integration
-        background_time_range = (T_RISE+IMG_WIDTH+0.1e-3, 1)  # Time range for background calculation
+        background_time_range = (MOT_DROP_TIME+10e-6, T_RISE-10e-6)  # Time range for background calculation
         
         # Process all experiments with standard averaging
         try:
@@ -507,7 +507,7 @@ if __name__ == "__main__":
                 use_alignment=True,
                 alignment_params={
                     'time_before_drop': 1.0e-3,  # 1.1ms before drop
-                    'time_after_drop': 3.9e-3,   # 4ms after drop
+                    'time_after_drop': 1.8e-3,   # 1.8ms after drop
                     'num_points': 50000          # High resolution
                 }
             )
