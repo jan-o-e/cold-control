@@ -23,7 +23,7 @@ from ToolTip_UI import ToolTip
 from Sequence_UI import Sequence_UI
 from DAQ_UI import DAQ_UI
 from PIL import Image, ImageTk
-from DAQ import DaqPlayException
+from DAQ import DaqPlayException, DAQ_dio
 from ExperimentalConfigs import PhotonProductionConfiguration, GenericConfiguration,\
      AwgConfiguration, TdcConfiguration, Waveform, MotFluoresceConfiguration,\
      MotFluoresceConfigurationSweep
@@ -598,6 +598,17 @@ class Experimental_UI(tk.LabelFrame):
             tkMessageBox.showwarning("Error", "No channel to flash configured.")
             return
         
+        duration = self.flash_channel_config['duration']
+        repeats = self.flash_channel_config['repeats']
+        
+        if channel == "dio":
+            dio:DAQ_dio = self.daq_ui.daq_controller.getDIOs()[0]  # Assuming we flash the first DIO
+            for i in range(repeats):
+                dio.toggle_state()
+                time.sleep(duration)
+                print(f"Flash number {i+1} complete for DIO channel {dio.dio_name}")
+            return
+        
         num_name_dict = self.daq_ui.daq_controller.getChannelNumberNameDict()
 
 
@@ -605,8 +616,7 @@ class Experimental_UI(tk.LabelFrame):
 
         low_val = self.flash_channel_config['low_val']
         high_val = self.flash_channel_config['high_val']
-        duration = self.flash_channel_config['duration']
-        repeats = self.flash_channel_config['repeats']
+
 
         for i in range(repeats):
             self.daq_ui.daq_controller.updateChannelValue(channel, low_val)
@@ -624,11 +634,14 @@ class Experimental_UI(tk.LabelFrame):
                 tkMessageBox.showwarning("Error", "Invalid number of inputs.")
                 return
             try:
-                channel = int(inputs[0])
                 duration = float(inputs[1])
                 low_val = float(inputs[2])
                 high_val = float(inputs[3])
                 repeats = int(inputs[4])
+                if inputs[0] == "dio":
+                    channel = "dio"
+                else:
+                    channel = int(inputs[0])
             except ValueError:
                 tkMessageBox.showwarning("Error", "Invalid input format.")
                 return

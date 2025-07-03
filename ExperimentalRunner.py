@@ -1176,9 +1176,9 @@ class MotFluoresceExperiment(GenericExperiment):
                 print(f"Data saved to {full_name}")
                 i += 1
             else:
+                self.scope.set_to_stop()
                 fails += 1
                 if fails >= 10:
-                    self.scope.set_to_stop()
                     break
                 print("Failed to trigger, running again")
 
